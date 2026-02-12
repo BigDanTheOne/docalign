@@ -214,6 +214,8 @@ export async function processPRScan(
       const mappings = await deps.mapper.getMappingsForClaim(claim.id);
       const result = await deps.verifier.verifyDeterministic(claim, mappings);
       if (result) {
+        // Persist result and update claim status
+        await deps.verifier.storeResult(result);
         results.push({ claim, result });
 
         if (result.verdict === 'drifted') stats.claims_drifted++;

@@ -62,7 +62,7 @@ export function stripVersionPrefix(version: string): string {
 }
 
 function hasRangePrefix(version: string): boolean {
-  return /^[^~>=<!]/.test(version) === false;
+  return /^[~^>=<!]/.test(version);
 }
 
 function compareAgainstBase(
