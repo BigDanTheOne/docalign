@@ -31,7 +31,7 @@ docker compose down    # Stop local services
 1. **Read the task file before starting.** Each task references specific TDD sections, types, and test cases. Read them.
 2. **Read before writing.** Before modifying any file, read it and its relevant spec sections. Do not work from memory.
 3. **Follow existing patterns.** Match the code style, error handling, and naming conventions established by prior tasks.
-4. **TDD is the authority.** If the task file and TDD disagree, the TDD wins. If the TDD and `phase4-api-contracts.md` disagree, escalate.
+4. **TDD is the authority.** If the task file and TDD disagree, the TDD wins. If the TDD and `phases/phase4-api-contracts.md` disagree, escalate.
 5. **All tests must pass.** `npm run typecheck && npm run test` must succeed after every task.
 6. **No scope creep.** Implement exactly what the task specifies. No extra features, no premature abstractions.
 7. **Escalate unknowns.** If a spec is ambiguous or contradictory, ask. Do not guess.
