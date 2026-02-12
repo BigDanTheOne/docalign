@@ -119,6 +119,11 @@ export class SqliteAdapter implements StorageAdapter {
     return row ? mapRepoRow(row) : null;
   }
 
+  async getRepoByOwnerAndName(owner: string, repo: string): Promise<RepoRow | null> {
+    const row = this.db.prepare('SELECT * FROM repos WHERE github_owner = ? AND github_repo = ?').get(owner, repo) as SqliteRepoRow | undefined;
+    return row ? mapRepoRow(row) : null;
+  }
+
   async updateRepo(id: string, data: UpdateRepoData): Promise<RepoRow | null> {
     const { setClauses, values } = buildSqliteUpdateClauses(data, {
       config: (v) => JSON.stringify(v),

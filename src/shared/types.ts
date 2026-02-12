@@ -383,6 +383,36 @@ export interface InstallationCreatedPayload {
   }>;
 }
 
+export interface InstallationRepositoriesPayload {
+  action: 'added' | 'removed';
+  installation: {
+    id: number;
+    account: { login: string; type: 'User' | 'Organization' };
+  };
+  repositories_added: Array<{ id: number; full_name: string; private: boolean }>;
+  repositories_removed: Array<{ id: number; full_name: string; private: boolean }>;
+}
+
+export interface IssueCommentPayload {
+  action: 'created' | 'edited' | 'deleted';
+  comment: {
+    id: number;
+    body: string;
+    user: { login: string };
+  };
+  issue: {
+    number: number;
+    pull_request?: Record<string, unknown>;
+  };
+  repository: {
+    id: number;
+    full_name: string;
+    owner: { login: string };
+    name: string;
+  };
+  installation: { id: number };
+}
+
 // === Error Type (phase4-api-contracts.md Section 13) ===
 
 export type ErrorSeverity = 'critical' | 'high' | 'medium' | 'low';

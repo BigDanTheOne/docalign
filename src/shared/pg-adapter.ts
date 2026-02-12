@@ -43,6 +43,14 @@ export class PostgresAdapter implements StorageAdapter {
     return result.rows[0] ?? null;
   }
 
+  async getRepoByOwnerAndName(owner: string, repo: string): Promise<RepoRow | null> {
+    const result = await this.db.query<RepoRow>(
+      'SELECT * FROM repos WHERE github_owner = $1 AND github_repo = $2',
+      [owner, repo],
+    );
+    return result.rows[0] ?? null;
+  }
+
   async updateRepo(id: string, data: UpdateRepoData): Promise<RepoRow | null> {
     const { setClauses, values } = buildUpdateClauses(data, {
       config: (v) => JSON.stringify(v),

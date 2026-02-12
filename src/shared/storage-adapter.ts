@@ -84,6 +84,7 @@ export interface StorageAdapter {
   // Repos
   createRepo(data: CreateRepoData): Promise<RepoRow>;
   getRepoById(id: string): Promise<RepoRow | null>;
+  getRepoByOwnerAndName(owner: string, repo: string): Promise<RepoRow | null>;
   updateRepo(id: string, data: UpdateRepoData): Promise<RepoRow | null>;
   deleteRepo(id: string): Promise<boolean>;
 
