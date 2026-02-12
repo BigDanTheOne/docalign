@@ -60,6 +60,24 @@ describe('parseArgs', () => {
     expect(result.command).toBe('fix');
     expect(result.args).toEqual([]);
   });
+
+  it('parses --key=value options', () => {
+    const result = parseArgs(['node', 'docalign', 'scan', '--exclude=FOO.md,BAR.md']);
+    expect(result.command).toBe('scan');
+    expect(result.options.exclude).toBe('FOO.md,BAR.md');
+  });
+
+  it('parses --key value options', () => {
+    const result = parseArgs(['node', 'docalign', 'scan', '--exclude', 'FOO.md']);
+    expect(result.command).toBe('scan');
+    expect(result.options.exclude).toBe('FOO.md');
+  });
+
+  it('treats --verbose as boolean flag even with next arg', () => {
+    const result = parseArgs(['node', 'docalign', 'check', '--verbose', 'README.md']);
+    expect(result.flags.verbose).toBe(true);
+    expect(result.args).toEqual(['README.md']);
+  });
 });
 
 describe('run', () => {

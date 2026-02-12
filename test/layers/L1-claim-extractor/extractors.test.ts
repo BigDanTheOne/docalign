@@ -515,6 +515,48 @@ describe('extractors', () => {
       expect(results).toHaveLength(1);
       expect(results[0].claim_text.length).toBeLessThanOrEqual(200);
     });
+
+    it('skips directory tree code blocks', () => {
+      const doc = makeDoc(
+        '```\ndocalign/\n├── src/\n│   ├── app.ts\n│   └── config/\n└── test/\n```',
+      );
+      const results = extractCodeExamples(doc);
+      expect(results).toHaveLength(0);
+    });
+
+    it('skips diagram code blocks with box-drawing chars', () => {
+      const doc = makeDoc(
+        '```\n+--repos\n+-- code_entities\n+-- claims\n|     +-- mappings\n```',
+      );
+      const results = extractCodeExamples(doc);
+      expect(results).toHaveLength(0);
+    });
+
+    it('skips prose-heavy untagged code blocks', () => {
+      const doc = makeDoc(
+        '```\nGiven this documentation file, extract every factual claim\nabout the codebase. For each claim, output the type and text.\n```',
+      );
+      const results = extractCodeExamples(doc);
+      expect(results).toHaveLength(0);
+    });
+
+    it('keeps code blocks with actual code even without language tag', () => {
+      const doc = makeDoc(
+        '```\nconst x = 1;\nfunction hello() { return "world"; }\n```',
+      );
+      const results = extractCodeExamples(doc);
+      expect(results).toHaveLength(1);
+    });
+
+    it('skips purely lowercase words from symbol extraction', () => {
+      const doc = makeDoc('```ts\npreferences(x);\nstatements(y);\nhandleLogin();\n```');
+      const results = extractCodeExamples(doc);
+      expect(results).toHaveLength(1);
+      const symbols = (results[0].extracted_value as Record<string, unknown>).symbols as string[];
+      expect(symbols).toContain('handleLogin');
+      expect(symbols).not.toContain('preferences');
+      expect(symbols).not.toContain('statements');
+    });
   });
 
   // === Appendix E: Deduplication ===

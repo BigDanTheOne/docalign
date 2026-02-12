@@ -9,7 +9,7 @@ import { makeResult } from './result-helpers';
  */
 // Runners whose scripts can be verified against manifest files
 const VERIFIABLE_RUNNERS = new Set([
-  'npm', 'npx', 'yarn', 'pnpm', 'bun', 'pip', 'pip3', 'poetry', 'cargo',
+  'npm', 'yarn', 'pnpm', 'bun', 'pip', 'pip3', 'poetry', 'cargo',
 ]);
 
 export async function verifyCommand(

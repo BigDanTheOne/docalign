@@ -77,12 +77,19 @@ export class LocalPipeline implements CliPipeline {
     return { claims, results, fixes: [], durationMs };
   }
 
-  async scanRepo(onProgress?: (current: number, total: number) => void): Promise<ScanResult> {
+  async scanRepo(onProgress?: (current: number, total: number) => void, exclude?: string[]): Promise<ScanResult> {
     const startTime = Date.now();
     await this.ensureInitialized();
 
     const fileTree = await this.index.getFileTree('local');
-    const docFiles = discoverDocFiles(fileTree);
+    let docFiles = discoverDocFiles(fileTree);
+
+    // Apply user-specified exclusions
+    if (exclude && exclude.length > 0) {
+      docFiles = docFiles.filter((f) =>
+        !exclude.some((pattern) => f === pattern || f.endsWith('/' + pattern)),
+      );
+    }
 
     const files: ScanFileResult[] = [];
     let totalClaims = 0;

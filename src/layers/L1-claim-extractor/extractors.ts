@@ -375,6 +375,12 @@ export function extractCodeExamples(doc: PreProcessedDoc): RawExtraction[] {
     // Skip CLI-only blocks
     if (language && CLI_LANGUAGES.has(language.toLowerCase())) continue;
 
+    // Skip directory tree / diagram blocks
+    if (isDirectoryTreeBlock(blockContent)) continue;
+
+    // Skip prose-heavy blocks (e.g., LLM prompts, schema descriptions) without a language tag
+    if (!language && isProseBlock(blockContent)) continue;
+
     const blockStartLine = content.slice(0, match.index).split('\n').length;
     const lineNum = doc.original_line_map[blockStartLine - 1] ?? blockStartLine;
 
@@ -398,6 +404,34 @@ export function extractCodeExamples(doc: PreProcessedDoc): RawExtraction[] {
   }
 
   return results;
+}
+
+/**
+ * Detect directory tree / diagram code blocks.
+ * Blocks where >30% of non-empty lines contain tree-drawing characters.
+ */
+function isDirectoryTreeBlock(content: string): boolean {
+  const lines = content.split('\n').filter((l) => l.trim());
+  if (lines.length === 0) return false;
+  const treeLines = lines.filter(
+    (l) => /[├└│─┌┐┘┬┴┼]/.test(l) || /^\s*[+|][-=+|]+/.test(l.trim()),
+  );
+  return treeLines.length / lines.length > 0.3;
+}
+
+/**
+ * Detect prose-heavy code blocks (LLM prompts, schema descriptions, etc.).
+ * Returns true if the block has few code-like tokens and looks like natural language.
+ */
+const CODE_TOKENS = /[;{}=>[\]]/;
+const CODE_KEYWORDS = /\b(?:import|export|const|let|var|function|class|def|fn|pub|use|return|async|await)\b/;
+
+function isProseBlock(content: string): boolean {
+  const lines = content.split('\n').filter((l) => l.trim());
+  if (lines.length === 0) return false;
+  const codeLines = lines.filter((l) => CODE_TOKENS.test(l) || CODE_KEYWORDS.test(l));
+  // If less than 20% of lines look like code, it's probably prose
+  return codeLines.length / lines.length < 0.2;
 }
 
 function extractImportsFromBlock(content: string): string[] {
@@ -425,11 +459,13 @@ function extractSymbolsFromBlock(content: string): string[] {
 
   const camelRegex = new RegExp(SYMBOL_PATTERN_CAMEL.source, SYMBOL_PATTERN_CAMEL.flags);
   while ((match = camelRegex.exec(content)) !== null) {
-    // Skip very common false positives
     const name = match[1];
-    if (!['if', 'for', 'while', 'switch', 'catch', 'return', 'new', 'var', 'let', 'const', 'function'].includes(name)) {
-      symbols.add(name);
-    }
+    // Skip language keywords
+    if (['if', 'for', 'while', 'switch', 'catch', 'return', 'new', 'var', 'let', 'const', 'function'].includes(name)) continue;
+    // Skip purely lowercase words — not actually camelCase, likely English words
+    // that happen to precede '(' in prose (e.g., "claim (e.g.", "wrong (because")
+    if (!/[A-Z]/.test(name)) continue;
+    symbols.add(name);
   }
 
   return Array.from(symbols);

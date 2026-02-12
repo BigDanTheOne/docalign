@@ -17,6 +17,7 @@ export async function runScan(
       process.stdout.write('\r\x1b[K');
     }
   },
+  exclude: string[] = [],
 ): Promise<number> {
   try {
     write(`DocAlign: Scanning repository...`);
@@ -24,7 +25,7 @@ export async function runScan(
     const result = await pipeline.scanRepo((current, total) => {
       clearLine();
       process.stdout.write(progressBar(current, total));
-    });
+    }, exclude);
 
     // Clear progress bar
     clearLine();
