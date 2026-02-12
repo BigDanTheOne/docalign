@@ -5,7 +5,8 @@
   "description": "Documentation-reality alignment engine",
   "main": "dist/app.js",
   "bin": {
-    "docalign": "./dist/cli/main.js"
+    "docalign": "./dist/cli/main.js",
+    "docalign-mcp": "./dist/layers/L6-mcp/local-server.js"
   },
   "scripts": {
     "build": "tsc",
