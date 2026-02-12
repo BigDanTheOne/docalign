@@ -68,6 +68,135 @@ export type SuppressionScope = 'claim' | 'file' | 'claim_type' | 'pattern';
 
 export type EntityType = 'function' | 'class' | 'route' | 'type' | 'config';
 
+// === L0 Codebase Index Types (phase4-api-contracts.md Section 2) ===
+
+export interface CodeEntity {
+  id: string;
+  repo_id: string;
+  file_path: string;
+  line_number: number;
+  end_line_number: number;
+  entity_type: EntityType;
+  name: string;
+  signature: string;
+  embedding: number[] | null;
+  raw_code: string;
+  last_commit_sha: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface FileChange {
+  filename: string;
+  status: 'added' | 'modified' | 'removed' | 'renamed';
+  previous_filename?: string;
+  additions: number;
+  deletions: number;
+  patch?: string;
+}
+
+export interface DependencyVersion {
+  version: string;
+  source: 'lockfile' | 'manifest';
+}
+
+export interface RouteEntity {
+  id: string;
+  file_path: string;
+  line_number: number;
+  method: string;
+  path: string;
+}
+
+export interface ScriptInfo {
+  name: string;
+  command: string;
+  file_path: string;
+}
+
+export interface IndexUpdateResult {
+  entities_added: number;
+  entities_updated: number;
+  entities_removed: number;
+  files_skipped: string[];
+}
+
+// === L0 Internal Types (TDD-0 Section 3) ===
+
+export type SupportedLanguage = 'typescript' | 'javascript' | 'python';
+
+export type ExtensionMap = Record<string, SupportedLanguage>;
+
+export interface ParsedFileResult {
+  file_path: string;
+  language: SupportedLanguage;
+  entities: ParsedEntity[];
+  has_errors: boolean;
+  parse_duration_ms: number;
+}
+
+export interface ParsedEntity {
+  name: string;
+  entity_type: EntityType;
+  line_number: number;
+  end_line_number: number;
+  signature: string;
+  raw_code: string;
+}
+
+export interface ParsedManifest {
+  file_path: string;
+  dependencies: Record<string, string>;
+  dev_dependencies: Record<string, string>;
+  scripts: Record<string, string>;
+  source: 'lockfile' | 'manifest';
+}
+
+// === L1 Claim Extractor Types (phase4-api-contracts.md Section 3) ===
+
+export interface Claim {
+  id: string;
+  repo_id: string;
+  source_file: string;
+  line_number: number;
+  claim_text: string;
+  claim_type: ClaimType;
+  testability: Testability;
+  extracted_value: Record<string, unknown>;
+  keywords: string[];
+  extraction_confidence: number;
+  extraction_method: ExtractionMethod;
+  verification_status: string;
+  last_verified_at: Date | null;
+  embedding: number[] | null;
+  last_verification_result_id: string | null;
+  parent_claim_id: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// === L1 Internal Types (TDD-1 Section 3) ===
+
+export interface PreProcessedDoc {
+  cleaned_content: string;
+  original_line_map: number[];
+  format: 'markdown' | 'mdx' | 'rst' | 'plaintext';
+  file_size_bytes: number;
+}
+
+export interface RawExtraction {
+  claim_text: string;
+  claim_type: ClaimType;
+  extracted_value: Record<string, unknown>;
+  line_number: number;
+  pattern_name: string;
+}
+
+export interface ExtractionConfig {
+  enabled_claim_types: Set<ClaimType>;
+  doc_exclude_patterns: string[];
+}
+
 // === Database Row Types (phase4-api-contracts.md Section 12) ===
 
 export interface RepoRow {
@@ -120,6 +249,43 @@ export interface AgentTaskRow {
   expires_at: Date;
   created_at: Date;
   completed_at: Date | null;
+}
+
+export interface CodeEntityRow {
+  id: string;
+  repo_id: string;
+  file_path: string;
+  line_number: number;
+  end_line_number: number;
+  entity_type: EntityType;
+  name: string;
+  signature: string | null;
+  raw_code: string | null;
+  embedding: number[] | null;
+  last_commit_sha: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface ClaimRow {
+  id: string;
+  repo_id: string;
+  source_file: string;
+  line_number: number;
+  claim_text: string;
+  claim_type: ClaimType;
+  testability: Testability;
+  extracted_value: Record<string, unknown>;
+  keywords: string[];
+  extraction_confidence: number;
+  extraction_method: ExtractionMethod;
+  verification_status: string;
+  last_verified_at: Date | null;
+  embedding: number[] | null;
+  last_verification_result_id: string | null;
+  parent_claim_id: string | null;
+  created_at: Date;
+  updated_at: Date;
 }
 
 // === API Response Types (phase4-api-contracts.md Section 11.3) ===
