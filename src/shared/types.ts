@@ -672,6 +672,55 @@ export interface SuppressionRuleRow {
   created_at: Date;
 }
 
+// === L5 Reporter Types (phase4-api-contracts.md Section 7) ===
+
+export interface DocFix {
+  file: string;
+  line_start: number;
+  line_end: number;
+  old_text: string;
+  new_text: string;
+  reason: string;
+  claim_id: string;
+  confidence: number;
+}
+
+export interface HealthScore {
+  total_claims: number;
+  verified: number;
+  drifted: number;
+  uncertain: number;
+  pending: number;
+  score: number; // 0-1
+  by_file: FileHealth[];
+  by_type: Record<string, { verified: number; drifted: number; uncertain: number; pending: number }>;
+  hotspots: FileHealth[];
+}
+
+export interface FileHealth {
+  file: string;
+  total: number;
+  verified: number;
+  drifted: number;
+  uncertain: number;
+}
+
+export interface Finding {
+  claim: Claim;
+  result: VerificationResult;
+  fix: DocFix | null;
+  suppressed: boolean;
+}
+
+export interface PRCommentPayload {
+  findings: Finding[];
+  health_score: HealthScore;
+  scan_run_id: string;
+  agent_unavailable_pct: number;
+}
+
+export type CheckConclusion = 'success' | 'neutral' | 'action_required' | 'failure';
+
 // === L7 Learning Service Interface (phase4-api-contracts.md Section 9.2) ===
 
 export interface LearningService {
