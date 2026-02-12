@@ -57,8 +57,15 @@ export async function verifyCodeExample(
     });
   }
 
-  // Partial issues — severity by ratio
   const totalChecks = imports.length + symbols.length;
+
+  // If NONE of the symbols/imports resolve, this is likely tutorial/example code
+  // or references an external library — not verifiable against this codebase.
+  if (uniqueFiles.length === 0) {
+    return null;
+  }
+
+  // Partial issues — severity by ratio
   const severity: Severity = issues.length > totalChecks / 2 ? 'high' : 'medium';
 
   return makeResult(claim, {

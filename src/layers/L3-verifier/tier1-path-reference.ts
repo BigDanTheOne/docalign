@@ -41,6 +41,24 @@ export async function verifyPathReference(
     }
   }
 
+  // Step 1c: Basename search for bare filenames (no directory component).
+  // If docs say "containing HOOK.md and handler.ts", the file likely exists
+  // somewhere in the repo even if not at the doc-relative path.
+  if (!path.includes('/')) {
+    const fileTree = await index.getFileTree(claim.repo_id);
+    const basename = path;
+    const matches = fileTree.filter(
+      (f) => f === basename || f.endsWith('/' + basename),
+    );
+    if (matches.length > 0) {
+      return makeResult(claim, {
+        verdict: 'verified',
+        evidence_files: [matches[0]],
+        reasoning: `File '${path}' found at '${matches[0]}' (basename match).`,
+      });
+    }
+  }
+
   // Step 2: Similar path search
   const similar = await findSimilarPaths(claim.repo_id, path, index, 5);
   if (similar.length > 0) {

@@ -22,9 +22,12 @@ export async function runScan(
   try {
     write(`DocAlign: Scanning repository...`);
 
+    const showProgress = process.stdout.isTTY ?? false;
     const result = await pipeline.scanRepo((current, total) => {
-      clearLine();
-      process.stdout.write(progressBar(current, total));
+      if (showProgress) {
+        clearLine();
+        process.stdout.write(progressBar(current, total));
+      }
     }, exclude);
 
     // Clear progress bar

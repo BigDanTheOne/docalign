@@ -97,6 +97,21 @@ describe('verifyPathReference', () => {
     expect(result!.verdict).toBe('drifted');
     expect(result!.severity).toBe('high');
   });
+
+  it('verifies bare filename via basename search', async () => {
+    const index = makeMockIndex({
+      fileExists: async () => false,
+      getFileTree: async () => ['src/hooks/bundled/boot-md/HOOK.md', 'src/other.ts'],
+    });
+    const claim = makeClaim({
+      source_file: 'docs/automation/hooks.md',
+      extracted_value: { path: 'HOOK.md' },
+    });
+    const result = await verifyPathReference(claim, index);
+    expect(result).not.toBeNull();
+    expect(result!.verdict).toBe('verified');
+    expect(result!.evidence_files).toContain('src/hooks/bundled/boot-md/HOOK.md');
+  });
 });
 
 // === Tier 1: api_route ===
@@ -214,6 +229,47 @@ describe('verifyCommand', () => {
     expect(result!.verdict).toBe('drifted');
     expect(result!.severity).toBe('high');
   });
+
+  it('skips npm built-in subcommands like install', async () => {
+    const index = makeMockIndex({ scriptExists: async () => false });
+    const claim = makeClaim({
+      claim_type: 'command',
+      extracted_value: { runner: 'npm', script: 'install --omit=dev' },
+    });
+    const result = await verifyCommand(claim, index);
+    expect(result).toBeNull();
+  });
+
+  it('skips pnpm built-in subcommands like publish', async () => {
+    const index = makeMockIndex({ scriptExists: async () => false });
+    const claim = makeClaim({
+      claim_type: 'command',
+      extracted_value: { runner: 'pnpm', script: 'publish' },
+    });
+    const result = await verifyCommand(claim, index);
+    expect(result).toBeNull();
+  });
+
+  it('skips yarn add as built-in', async () => {
+    const index = makeMockIndex({ scriptExists: async () => false });
+    const claim = makeClaim({
+      claim_type: 'command',
+      extracted_value: { runner: 'yarn', script: 'add react' },
+    });
+    const result = await verifyCommand(claim, index);
+    expect(result).toBeNull();
+  });
+
+  it('still verifies user-defined scripts like test/build', async () => {
+    const index = makeMockIndex({ scriptExists: async () => true });
+    const claim = makeClaim({
+      claim_type: 'command',
+      extracted_value: { runner: 'npm', script: 'test' },
+    });
+    const result = await verifyCommand(claim, index);
+    expect(result).not.toBeNull();
+    expect(result!.verdict).toBe('verified');
+  });
 });
 
 // === Tier 1: code_example ===
@@ -233,14 +289,31 @@ describe('verifyCodeExample', () => {
     expect(result!.verdict).toBe('verified');
   });
 
-  it('returns drifted when some imports missing', async () => {
-    const index = makeMockIndex({ findSymbol: async (_, name) => name === 'express' ? [] : [] });
+  it('returns drifted when some imports missing but some found', async () => {
+    const entity: CodeEntity = {
+      id: 'e1', repo_id: 'r1', file_path: 'src/express.ts', line_number: 1, end_line_number: 10,
+      entity_type: 'function', name: 'express', signature: '',
+      embedding: null, raw_code: '', last_commit_sha: '', created_at: new Date(), updated_at: new Date(),
+    };
+    const index = makeMockIndex({
+      findSymbol: async (_, name) => name === 'express' ? [entity] : [],
+    });
     const claim = makeClaim({
       claim_type: 'code_example',
-      extracted_value: { imports: ['express', 'missing'], symbols: [] },
+      extracted_value: { imports: ['express', 'missing-pkg'], symbols: [] },
     });
     const result = await verifyCodeExample(claim, index);
     expect(result!.verdict).toBe('drifted');
+  });
+
+  it('returns null when all symbols missing (likely tutorial code)', async () => {
+    const index = makeMockIndex({ findSymbol: async () => [] });
+    const claim = makeClaim({
+      claim_type: 'code_example',
+      extracted_value: { imports: ['fake-lib'], symbols: ['FakeClass'] },
+    });
+    const result = await verifyCodeExample(claim, index);
+    expect(result).toBeNull();
   });
 
   it('returns null when no imports or symbols', async () => {
