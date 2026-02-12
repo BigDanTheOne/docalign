@@ -276,7 +276,7 @@ describe('extractors', () => {
       const cmd = results.find((r) => r.pattern_name === 'inline_runner_command');
       expect(cmd).toBeDefined();
       expect((cmd!.extracted_value as Record<string, unknown>).runner).toBe('npm');
-      expect((cmd!.extracted_value as Record<string, unknown>).script).toBe('run test');
+      expect((cmd!.extracted_value as Record<string, unknown>).script).toBe('test');
     });
 
     it('extracts "run" pattern commands', () => {
@@ -339,8 +339,27 @@ describe('extractors', () => {
       const results = extractCommands(doc);
       const blockResults = results.filter((r) => r.pattern_name === 'code_block_command');
       expect(blockResults).toHaveLength(2);
-      expect((blockResults[0].extracted_value as Record<string, unknown>).script).toBe('run build');
-      expect((blockResults[1].extracted_value as Record<string, unknown>).script).toBe('run test');
+      expect((blockResults[0].extracted_value as Record<string, unknown>).script).toBe('build');
+      expect((blockResults[1].extracted_value as Record<string, unknown>).script).toBe('test');
+    });
+
+    it('strips run prefix from npm/yarn/pnpm commands', () => {
+      const doc = makeDoc('```bash\nnpm run build\nyarn run test\npnpm run lint\n```');
+      const results = extractCommands(doc);
+      const blockResults = results.filter((r) => r.pattern_name === 'code_block_command');
+      expect(blockResults).toHaveLength(3);
+      expect((blockResults[0].extracted_value as Record<string, unknown>).script).toBe('build');
+      expect((blockResults[1].extracted_value as Record<string, unknown>).script).toBe('test');
+      expect((blockResults[2].extracted_value as Record<string, unknown>).script).toBe('lint');
+    });
+
+    it('preserves npm commands that are not run', () => {
+      const doc = makeDoc('```bash\nnpm install\nnpm test\n```');
+      const results = extractCommands(doc);
+      const blockResults = results.filter((r) => r.pattern_name === 'code_block_command');
+      expect(blockResults).toHaveLength(2);
+      expect((blockResults[0].extracted_value as Record<string, unknown>).script).toBe('install');
+      expect((blockResults[1].extracted_value as Record<string, unknown>).script).toBe('test');
     });
   });
 

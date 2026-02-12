@@ -257,7 +257,12 @@ function isAsciiArt(line: string): boolean {
 function detectRunner(command: string): { runner: string; script: string } {
   const firstWord = command.split(/\s+/)[0].toLowerCase();
   if (KNOWN_RUNNERS.has(firstWord)) {
-    return { runner: firstWord, script: command.slice(firstWord.length).trim() };
+    let script = command.slice(firstWord.length).trim();
+    // For npm/yarn/pnpm: strip 'run ' prefix to get the actual script name
+    if (['npm', 'yarn', 'pnpm'].includes(firstWord) && script.startsWith('run ')) {
+      script = script.slice(4);
+    }
+    return { runner: firstWord, script };
   }
   return { runner: 'unknown', script: command };
 }
