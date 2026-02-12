@@ -137,25 +137,40 @@ export function createTriggerService(
       const scanRun = await getScanRun(pool, scanRunId);
       if (!scanRun) return;
 
+      if (scanRun.status === 'completed' || scanRun.status === 'failed' || scanRun.status === 'cancelled') {
+        return; // Terminal state - no-op
+      }
+
       if (scanRun.status === 'queued') {
-        // Just update status directly
+        // Remove BullMQ job if it exists
+        const jobId = scanRun.trigger_type === 'pr'
+          ? `pr-scan-${scanRun.repo_id}-${scanRun.trigger_ref}`
+          : `full-scan-${scanRun.repo_id}`;
+        try {
+          const job = await queue.getJob(jobId);
+          if (job) await job.remove();
+        } catch {
+          // Best-effort: job may already be picked up
+        }
         await updateScanStatus(pool, scanRunId, 'cancelled');
         return;
       }
 
       if (scanRun.status === 'running') {
         // Set cancel flag in Redis for the worker to pick up
-        // We need to find the BullMQ job ID to set the cancel key
         const jobPrefix = scanRun.trigger_type === 'pr'
           ? `pr-scan-${scanRun.repo_id}-${scanRun.trigger_ref}`
           : `full-scan-${scanRun.repo_id}`;
 
-        await redis.set(`cancel:${jobPrefix}`, '1', 'EX', 600);
-        logger.info({ scanRunId }, 'Cancel flag set for running scan');
+        try {
+          await redis.set(`cancel:${jobPrefix}`, '1', 'EX', 600);
+          logger.info({ scanRunId }, 'Cancel flag set for running scan');
+        } catch (err) {
+          // Redis failure is best-effort - scan will continue to completion
+          logger.warn({ scanRunId, err }, 'Failed to set cancel flag in Redis');
+        }
         return;
       }
-
-      // Already completed/failed/cancelled - no-op
     },
 
     /**

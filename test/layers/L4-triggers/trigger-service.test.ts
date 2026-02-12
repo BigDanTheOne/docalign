@@ -166,6 +166,57 @@ describe('TriggerService', () => {
       // Should not throw
       await svc.cancelScan(randomUUID());
     });
+
+    it('sets completed_at when cancelling queued scan', async () => {
+      const svc = createTriggerService(pool, queue, redis);
+      const scanRunId = await svc.enqueuePRScan(repoId, 13, 'sha', 1, 'delivery-cancel-ts');
+
+      await svc.cancelScan(scanRunId);
+
+      const result = await pool.query('SELECT status, completed_at FROM scan_runs WHERE id = $1', [scanRunId]);
+      expect(result.rows[0].status).toBe('cancelled');
+      expect(result.rows[0].completed_at).not.toBeNull();
+    });
+
+    it('handles rapid-fire cancel calls idempotently', async () => {
+      const svc = createTriggerService(pool, queue, redis);
+      const scanRunId = await svc.enqueuePRScan(repoId, 14, 'sha', 1, 'delivery-rapid');
+
+      // Fire multiple cancels simultaneously
+      await Promise.all([
+        svc.cancelScan(scanRunId),
+        svc.cancelScan(scanRunId),
+        svc.cancelScan(scanRunId),
+      ]);
+
+      const result = await pool.query('SELECT status FROM scan_runs WHERE id = $1', [scanRunId]);
+      expect(result.rows[0].status).toBe('cancelled');
+    });
+
+    it('no-ops for already cancelled scan', async () => {
+      const svc = createTriggerService(pool, queue, redis);
+      const scanRunId = await svc.enqueuePRScan(repoId, 15, 'sha', 1, 'delivery-already-cancelled');
+
+      await pool.query(`UPDATE scan_runs SET status = 'cancelled', completed_at = NOW() WHERE id = $1`, [scanRunId]);
+
+      // Should not throw
+      await svc.cancelScan(scanRunId);
+
+      const result = await pool.query('SELECT status FROM scan_runs WHERE id = $1', [scanRunId]);
+      expect(result.rows[0].status).toBe('cancelled');
+    });
+
+    it('no-ops for failed scan', async () => {
+      const svc = createTriggerService(pool, queue, redis);
+      const scanRunId = await svc.enqueuePRScan(repoId, 16, 'sha', 1, 'delivery-failed');
+
+      await pool.query(`UPDATE scan_runs SET status = 'failed' WHERE id = $1`, [scanRunId]);
+
+      await svc.cancelScan(scanRunId);
+
+      const result = await pool.query('SELECT status FROM scan_runs WHERE id = $1', [scanRunId]);
+      expect(result.rows[0].status).toBe('failed');
+    });
   });
 
   describe('updateScanStatus', () => {
