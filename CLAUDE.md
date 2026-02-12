@@ -6,15 +6,36 @@ A documentation-reality alignment engine that detects when repo documentation dr
 
 IMPLEMENTATION. Planning is complete. All specs, TDDs, and task breakdowns are finalized.
 
+## Commands
+
+```bash
+npm run build          # TypeScript compilation
+npm run lint           # ESLint check
+npm run lint:fix       # ESLint auto-fix
+npm run format         # Prettier format
+npm run typecheck      # tsc --noEmit
+npm run test           # Vitest run (all tests)
+npm run test:watch     # Vitest watch mode
+npm run migrate:up     # Run database migrations
+npm run migrate:down   # Rollback last migration
+docker compose up -d   # Start PostgreSQL + Redis (local dev)
+docker compose down    # Stop local services
+```
+
+**After every task:** run `npm run typecheck && npm run test` to verify. Do not move to the next task until both pass.
+
+**After every file edit:** run `npm run lint:fix` on changed files.
+
 ## Rules
 
 1. **Read the task file before starting.** Each task references specific TDD sections, types, and test cases. Read them.
 2. **Read before writing.** Before modifying any file, read it and its relevant spec sections. Do not work from memory.
 3. **Follow existing patterns.** Match the code style, error handling, and naming conventions established by prior tasks.
 4. **TDD is the authority.** If the task file and TDD disagree, the TDD wins. If the TDD and `phase4-api-contracts.md` disagree, escalate.
-5. **All tests must pass.** `npx vitest run` and `npx tsc --noEmit` must succeed after every task.
+5. **All tests must pass.** `npm run typecheck && npm run test` must succeed after every task.
 6. **No scope creep.** Implement exactly what the task specifies. No extra features, no premature abstractions.
 7. **Escalate unknowns.** If a spec is ambiguous or contradictory, ask. Do not guess.
+8. **Commit after each task.** One task = one commit. Use descriptive messages.
 
 ## Tech Stack
 
