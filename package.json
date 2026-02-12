@@ -4,6 +4,9 @@
   "private": true,
   "description": "Documentation-reality alignment engine",
   "main": "dist/app.js",
+  "bin": {
+    "docalign": "./dist/cli/main.js"
+  },
   "scripts": {
     "build": "tsc",
     "lint": "eslint src/ test/",
