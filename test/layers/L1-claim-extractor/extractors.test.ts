@@ -361,6 +361,24 @@ describe('extractors', () => {
       expect((blockResults[0].extracted_value as Record<string, unknown>).script).toBe('install');
       expect((blockResults[1].extracted_value as Record<string, unknown>).script).toBe('test');
     });
+
+    it('splits chained commands on && in code blocks', () => {
+      const doc = makeDoc('```bash\nnpm run build && npm run test\n```');
+      const results = extractCommands(doc);
+      const blockResults = results.filter((r) => r.pattern_name === 'code_block_command');
+      expect(blockResults).toHaveLength(2);
+      expect((blockResults[0].extracted_value as Record<string, unknown>).script).toBe('build');
+      expect((blockResults[1].extracted_value as Record<string, unknown>).script).toBe('test');
+    });
+
+    it('splits chained inline commands on &&', () => {
+      const doc = makeDoc('Run `npm run typecheck && npm run test` to verify.');
+      const results = extractCommands(doc);
+      const inlineResults = results.filter((r) => r.pattern_name === 'run_pattern_command');
+      expect(inlineResults).toHaveLength(2);
+      expect((inlineResults[0].extracted_value as Record<string, unknown>).script).toBe('typecheck');
+      expect((inlineResults[1].extracted_value as Record<string, unknown>).script).toBe('test');
+    });
   });
 
   // === B.3 Dependency Versions ===

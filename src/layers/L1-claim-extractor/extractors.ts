@@ -180,15 +180,16 @@ export function extractCommands(doc: PreProcessedDoc): RawExtraction[] {
       let match;
       while ((match = regex.exec(line)) !== null) {
         const command = match[1].trim();
-        const { runner, script } = detectRunner(command);
-
-        results.push({
-          claim_text: line.trim(),
-          claim_type: 'command',
-          extracted_value: { type: 'command', runner, script },
-          line_number: doc.original_line_map[i],
-          pattern_name: pattern.name,
-        });
+        for (const part of splitChainedCommands(command)) {
+          const { runner, script } = detectRunner(part);
+          results.push({
+            claim_text: line.trim(),
+            claim_type: 'command',
+            extracted_value: { type: 'command', runner, script },
+            line_number: doc.original_line_map[i],
+            pattern_name: pattern.name,
+          });
+        }
       }
     }
   }
@@ -211,20 +212,32 @@ function parseCommandBlock(blockContent: string): Array<{ full: string; runner: 
       const promptMatch = trimmed.match(/^[$>]\s*(.*)/);
       if (!promptMatch) continue;
       const cmd = stripInlineComment(promptMatch[1].trim());
-      if (cmd) {
-        const { runner, script } = detectRunner(cmd);
-        commands.push({ full: cmd, runner, script });
+      if (!cmd) continue;
+      for (const part of splitChainedCommands(cmd)) {
+        const { runner, script } = detectRunner(part);
+        commands.push({ full: part, runner, script });
       }
     } else {
       if (trimmed.startsWith('#')) continue;
       const cmd = stripInlineComment(trimmed);
       if (!cmd) continue;
-      const { runner, script } = detectRunner(cmd);
-      commands.push({ full: cmd, runner, script });
+      for (const part of splitChainedCommands(cmd)) {
+        const { runner, script } = detectRunner(part);
+        commands.push({ full: part, runner, script });
+      }
     }
   }
 
   return commands;
+}
+
+/**
+ * Split chained commands on && and || operators.
+ * e.g., "npm run typecheck && npm run test" → ["npm run typecheck", "npm run test"]
+ */
+function splitChainedCommands(command: string): string[] {
+  const parts = command.split(/\s*(?:&&|\|\|)\s*/);
+  return parts.map((p) => p.trim()).filter(Boolean);
 }
 
 /**

@@ -7,6 +7,11 @@ import { makeResult } from './result-helpers';
  * Tier 1: Verify command claims.
  * TDD-3 Appendix A.2.
  */
+// Runners whose scripts can be verified against manifest files
+const VERIFIABLE_RUNNERS = new Set([
+  'npm', 'npx', 'yarn', 'pnpm', 'bun', 'pip', 'pip3', 'poetry', 'cargo',
+]);
+
 export async function verifyCommand(
   claim: Claim,
   index: CodebaseIndexService,
@@ -14,6 +19,10 @@ export async function verifyCommand(
   const runner = claim.extracted_value.runner as string | undefined;
   const script = claim.extracted_value.script as string;
   if (!script) return null;
+
+  // Skip verification for non-package-manager runners (docker, make, kubectl, etc.)
+  // These commands can't be verified against manifest files
+  if (runner && !VERIFIABLE_RUNNERS.has(runner)) return null;
 
   // Step 1: Exact check
   const exists = await index.scriptExists(claim.repo_id, script);

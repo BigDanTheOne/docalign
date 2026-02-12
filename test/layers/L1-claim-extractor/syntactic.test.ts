@@ -156,12 +156,21 @@ describe('discoverDocFiles', () => {
     expect(files).toContain('subdir/CLAUDE.md');
   });
 
-  it('discovers shallow .md files via heuristic', () => {
+  it('discovers root-level .md files via heuristic', () => {
     const files = discoverDocFiles(['INSTALL.md', 'guides/setup.md', 'src/deep/nested.md']);
     expect(files).toContain('INSTALL.md');
-    expect(files).toContain('guides/setup.md');
-    // deep nesting should still be found if <= 3 levels
-    expect(files).toContain('src/deep/nested.md');
+    // Subdirectory .md files only matched via DOC_PATTERNS (docs/, doc/, wiki/, etc.)
+    expect(files).not.toContain('guides/setup.md');
+    expect(files).not.toContain('src/deep/nested.md');
+  });
+
+  it('discovers .md files in doc-pattern directories', () => {
+    const files = discoverDocFiles(['docs/setup.md', 'doc/api.md', 'wiki/home.md', 'guides/setup.md']);
+    expect(files).toContain('docs/setup.md');
+    expect(files).toContain('doc/api.md');
+    expect(files).toContain('wiki/home.md');
+    // guides/ is not in DOC_PATTERNS
+    expect(files).not.toContain('guides/setup.md');
   });
 
   it('excludes node_modules', () => {

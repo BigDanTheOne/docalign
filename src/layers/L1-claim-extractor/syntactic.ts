@@ -110,6 +110,17 @@ const DOC_EXCLUDE = [
   /^node_modules\//,
   /^vendor\//,
   /^\.git\//,
+  /^dist\//,
+  /^build\//,
+  /^\.next\//,
+  /^test\//,
+  /^tests\//,
+  /^__tests__\//,
+  /^spec\//,
+  /^specs\//,
+  /^fixtures\//,
+  /^_planning\//,
+  /^\..*\//,     // hidden directories
   /(?:^|\/)CHANGELOG\.md$/i,
   /(?:^|\/)LICENSE\.md$/i,
 ];
@@ -117,10 +128,12 @@ const DOC_EXCLUDE = [
 export function discoverDocFiles(fileTree: string[]): string[] {
   const patternMatches = fileTree.filter((f) => DOC_PATTERNS.some((p) => p.test(f)));
 
-  // Heuristic: .md files at root + first 2 directory levels
+  // Heuristic: .md files at root only
+  // Subdirectory .md files are only included if they match DOC_PATTERNS above
+  // (e.g., docs/, doc/, wiki/, adr/, api/ directories)
   const heuristicMatches = fileTree.filter((f) => {
-    if (!f.endsWith('.md')) return false;
-    return f.split('/').length <= 3;
+    if (!f.endsWith('.md') && !f.endsWith('.mdx')) return false;
+    return !f.includes('/'); // root-level only
   });
 
   const all = new Set([...patternMatches, ...heuristicMatches]);

@@ -24,6 +24,23 @@ export async function verifyPathReference(
     });
   }
 
+  // Step 1b: Resolve relative to doc file's directory
+  // e.g., doc at "phases/foo.md" referencing "bar.md" → try "phases/bar.md"
+  if (claim.source_file && !path.includes('/')) {
+    const docDir = claim.source_file.split('/').slice(0, -1).join('/');
+    if (docDir) {
+      const resolvedPath = `${docDir}/${path}`;
+      const resolvedExists = await index.fileExists(claim.repo_id, resolvedPath);
+      if (resolvedExists) {
+        return makeResult(claim, {
+          verdict: 'verified',
+          evidence_files: [resolvedPath],
+          reasoning: `File '${path}' resolves to '${resolvedPath}' relative to doc file directory.`,
+        });
+      }
+    }
+  }
+
   // Step 2: Similar path search
   const similar = await findSimilarPaths(claim.repo_id, path, index, 5);
   if (similar.length > 0) {
