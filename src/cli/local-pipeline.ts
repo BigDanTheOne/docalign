@@ -44,11 +44,29 @@ export interface ScanResult {
  * Real implementation wires L0-L3 layers against local filesystem.
  * Mock implementation used in tests.
  */
+export interface SectionInfo {
+  heading: string;
+  level: number;
+  startLine: number; // 1-based, inclusive
+  endLine: number;   // 1-based, inclusive
+}
+
 export interface CliPipeline {
   /**
    * Check a single doc file: extract claims, map, verify Tiers 1-2.
    */
   checkFile(filePath: string, verbose?: boolean): Promise<CheckResult>;
+
+  /**
+   * Check a specific section of a doc file by heading.
+   * Returns only claims within the section's line range.
+   */
+  checkSection(filePath: string, heading: string): Promise<CheckResult & { section: SectionInfo }>;
+
+  /**
+   * List all section headings in a doc file.
+   */
+  listSections(filePath: string): string[];
 
   /**
    * Scan all doc files in the repository.
@@ -111,4 +129,51 @@ export function buildHotspots(
     }
   }
   return hotspots.sort((a, b) => b.driftedCount - a.driftedCount);
+}
+
+/**
+ * Find a section in markdown content by heading text.
+ * Searches case-insensitively and ignores leading '#' characters.
+ */
+export function findSection(content: string, heading: string): SectionInfo | null {
+  const lines = content.split('\n');
+  const headings = parseHeadings(lines);
+
+  const normalizedTarget = heading.toLowerCase().trim();
+  const targetIdx = headings.findIndex(
+    (h) => h.text.toLowerCase() === normalizedTarget,
+  );
+  if (targetIdx === -1) return null;
+
+  const target = headings[targetIdx];
+  // Section ends at the next heading of same or higher level, or end of file
+  const nextIdx = headings.findIndex(
+    (h, idx) => idx > targetIdx && h.level <= target.level,
+  );
+  const endLine = nextIdx >= 0 ? headings[nextIdx].line - 1 : lines.length;
+
+  return {
+    heading: target.text,
+    level: target.level,
+    startLine: target.line,
+    endLine: Math.max(endLine, target.line),
+  };
+}
+
+/**
+ * List all markdown headings in content.
+ */
+export function listHeadings(content: string): Array<{ text: string; level: number; line: number }> {
+  return parseHeadings(content.split('\n'));
+}
+
+function parseHeadings(lines: string[]): Array<{ text: string; level: number; line: number }> {
+  const headings: Array<{ text: string; level: number; line: number }> = [];
+  for (let i = 0; i < lines.length; i++) {
+    const match = lines[i].match(/^(#{1,6})\s+(.+)/);
+    if (match) {
+      headings.push({ text: match[2].trim(), level: match[1].length, line: i + 1 });
+    }
+  }
+  return headings;
 }

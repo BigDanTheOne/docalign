@@ -520,6 +520,12 @@ export class IndexStore {
       [repoId, filePath],
     );
   }
+
+  async readFileContent(_repoId: string, _filePath: string, _maxBytes?: number): Promise<string | null> {
+    // Server-side IndexStore does not have filesystem access.
+    // File content reading is available in CLI mode (InMemoryIndex).
+    return null;
+  }
 }
 
 // === Helper functions ===

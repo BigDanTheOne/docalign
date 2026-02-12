@@ -6,3 +6,6 @@ dist/
 !.env.example
 coverage/
 *.tsbuildinfo
+.entire/
+*.tgz
+.claude/settings.local.json

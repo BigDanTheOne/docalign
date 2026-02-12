@@ -265,6 +265,20 @@ function getClaimIdentityKey(claimType: ClaimType, extractedValue: Record<string
       return 'route:' + (extractedValue.method as string) + ':' + (extractedValue.path as string);
     case 'code_example':
       return 'code:' + (extractedValue.language ?? 'unknown');
+    case 'environment': {
+      const envVar = extractedValue.env_var as string | undefined;
+      const runtime = extractedValue.runtime as string | undefined;
+      if (envVar) return 'env:var:' + envVar;
+      if (runtime) return 'env:runtime:' + runtime;
+      return 'env:' + JSON.stringify(extractedValue);
+    }
+    case 'convention': {
+      const convention = extractedValue.convention as string | undefined;
+      const fw = extractedValue.framework as string | undefined;
+      if (convention) return 'conv:' + convention;
+      if (fw) return 'conv:fw:' + (fw as string).toLowerCase();
+      return 'conv:' + JSON.stringify(extractedValue);
+    }
     default:
       return claimType + ':' + JSON.stringify(extractedValue);
   }

@@ -1,15 +1,20 @@
 {
   "name": "docalign",
   "version": "0.1.0",
-  "private": true,
-  "description": "Documentation-reality alignment engine",
+  "description": "Documentation-reality alignment engine — detects when docs drift from code",
   "main": "dist/app.js",
   "bin": {
-    "docalign": "./dist/cli/main.js",
-    "docalign-mcp": "./dist/layers/L6-mcp/local-server.js"
+    "docalign": "dist/cli/main.js",
+    "docalign-mcp": "dist/layers/L6-mcp/local-server.js"
   },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "lint": "eslint src/ test/",
     "lint:fix": "eslint src/ test/ --fix",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -19,6 +24,24 @@
     "migrate:up": "node-pg-migrate up --migrations-dir migrations --tsconfig tsconfig.json --ignore-pattern \"_|^\\.\"",
     "migrate:down": "node-pg-migrate down --count 1 --migrations-dir migrations --tsconfig tsconfig.json --ignore-pattern \"_|^\\.\"",
     "migrate:create": "node-pg-migrate create --migrations-dir migrations --migration-file-language ts --template-file-name migrations/_template.ts"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "documentation",
+    "docs",
+    "drift",
+    "verification",
+    "linting",
+    "code-quality",
+    "cli",
+    "mcp"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BigDanTheOne/docalign.git"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",

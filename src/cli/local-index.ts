@@ -349,6 +349,19 @@ export class InMemoryIndex implements CodebaseIndexService {
     return { entities_added: 0, entities_updated: 0, entities_removed: 0, files_skipped: [] };
   }
 
+  async readFileContent(_repoId: string, filePath: string, maxBytes: number = 100 * 1024): Promise<string | null> {
+    if (!filePath || filePath.includes('..')) return null;
+    const normalized = filePath.startsWith('./') ? filePath.slice(2) : filePath;
+    const absPath = path.join(this.repoRoot, normalized);
+    try {
+      const stat = fs.statSync(absPath);
+      if (stat.size > maxBytes) return null;
+      return fs.readFileSync(absPath, 'utf-8');
+    } catch {
+      return null;
+    }
+  }
+
   // === Private helpers ===
 
   private getFileList(): string[] {

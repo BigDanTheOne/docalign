@@ -115,11 +115,32 @@ export function preProcess(content: string, format: DocFormat): PreProcessedDoc 
     originalLineMap[i] = i + frontmatterOffset + 1;
   }
 
+  // Step 7: Detect code fence blocks (``` or ~~~)
+  const codeFenceLines = new Set<number>();
+  let inFence = false;
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trimStart();
+    if (trimmed.startsWith('```') || trimmed.startsWith('~~~')) {
+      if (inFence) {
+        // Closing fence — mark it too
+        codeFenceLines.add(i);
+        inFence = false;
+      } else {
+        // Opening fence
+        codeFenceLines.add(i);
+        inFence = true;
+      }
+    } else if (inFence) {
+      codeFenceLines.add(i);
+    }
+  }
+
   return {
     cleaned_content: lines.join('\n'),
     original_line_map: originalLineMap,
     format,
     file_size_bytes: fileSizeBytes,
+    code_fence_lines: codeFenceLines,
   };
 }
 

@@ -14,10 +14,14 @@ const STYLE_EXTENSIONS = new Set(['.css', '.scss', '.less']);
 export function extractPaths(doc: PreProcessedDoc, docFile: string): RawExtraction[] {
   const results: RawExtraction[] = [];
   const lines = doc.cleaned_content.split('\n');
+  const exampleSections = buildExampleSectionLines(lines);
 
   for (const pattern of FILE_PATH_PATTERNS) {
     for (let i = 0; i < lines.length; i++) {
+      if (doc.code_fence_lines.has(i)) continue; // Skip code fence content
+      if (exampleSections.has(i)) continue; // Skip example sections
       const line = lines[i];
+      if (isIllustrativeLine(line)) continue; // Skip example/illustrative content
       const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
       let match;
       while ((match = regex.exec(line)) !== null) {
@@ -36,6 +40,74 @@ export function extractPaths(doc: PreProcessedDoc, docFile: string): RawExtracti
   }
 
   return results;
+}
+
+/**
+ * Detect lines that contain illustrative/example paths rather than real references.
+ * Catches: table rows, "e.g." context, quoted example strings, hypothetical scenarios,
+ * and lines that describe generic file patterns rather than specific file references.
+ */
+function isIllustrativeLine(line: string): boolean {
+  const trimmed = line.trim();
+  // Markdown table rows: | content | content |
+  if (/^\|.*\|.*\|/.test(trimmed)) return true;
+  // Lines with "e.g.", "for example", "such as" — path is illustrative
+  if (/\b(?:e\.g\.|for example|such as)\b/i.test(trimmed)) return true;
+  // Lines describing output format
+  if (/^(?:outputs?|produces?|returns?|shows?|displays?|prints?)\s*:/i.test(trimmed)) return true;
+  // Quoted example strings: lines starting with `- "...` (bullet with quoted example)
+  if (/^[-*]\s+"/.test(trimmed)) return true;
+  // Lines starting with a blockquote that contains a quoted string
+  if (/^>\s.*"/.test(trimmed)) return true;
+  // Hypothetical / conditional scenarios: "If X and Y ..."
+  if (/\bif\s+`[^`]+`\s+and\s+`[^`]+`/i.test(trimmed)) return true;
+  // Lines listing glob patterns (e.g., "docs/**/*.md", "*.md")
+  if (/\*\*\/\*\.\w+/.test(trimmed) || /^\d+\.\s+\b(?:identify|find|discover|locate)\b/i.test(trimmed)) return true;
+  // Lines describing where something "is configured in" (generic documentation)
+  if (/\bconfigured\s+in\s+`[^`]+`,\s+`[^`]+`/i.test(trimmed)) return true;
+  return false;
+}
+
+/**
+ * Build a set of line indices that fall under an "examples" heading/label.
+ * Lines following a heading like "**Filename examples**:" or "### Examples"
+ * until the next heading are considered illustrative.
+ */
+function buildExampleSectionLines(lines: string[]): Set<number> {
+  const exampleLines = new Set<number>();
+  let inExampleSection = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+
+    // Check if this is an "examples" heading
+    const isExampleHeading =
+      /^#+\s+.*\bexamples?\b/i.test(trimmed) ||
+      /^\*\*.*\bexamples?\b.*\*\*\s*:?\s*$/i.test(trimmed) ||
+      /^.*\bexamples?\s*:?\s*$/i.test(trimmed) && trimmed.length < 40;
+
+    if (isExampleHeading) {
+      inExampleSection = true;
+      exampleLines.add(i);
+      continue;
+    }
+
+    // End example section on next heading (any level)
+    if (inExampleSection && /^#{1,6}\s/.test(trimmed)) {
+      inExampleSection = false;
+    }
+
+    // End example section on bold label (new subsection)
+    if (inExampleSection && /^\*\*[^*]+\*\*\s*:/.test(trimmed) && !/example/i.test(trimmed)) {
+      inExampleSection = false;
+    }
+
+    if (inExampleSection) {
+      exampleLines.add(i);
+    }
+  }
+
+  return exampleLines;
 }
 
 // Known file extensions — paths without `/` must have one of these
@@ -69,6 +141,10 @@ function passesPathFilters(path: string, docFile: string): boolean {
   // This filters out config-key notation like `doc_patterns.include` or `agent.adapter`.
   if (!path.includes('/') && ext && !KNOWN_FILE_EXTENSIONS.has(ext)) return false;
 
+  // Paths ending in a purely numeric "extension" are likely model identifiers
+  // (e.g., "openai/gpt-5.2", "zai/glm-4.7") or version references, not file paths.
+  if (/\.\d+$/.test(path)) return false;
+
   return true;
 }
 
@@ -92,6 +168,24 @@ export function isValidPath(path: string): boolean {
   return true;
 }
 
+/**
+ * Detect lines describing external API routes (not routes in this codebase).
+ * Lines mentioning "its API", "their API", "external API", or "REST API" with
+ * context about talking to another service are external references.
+ */
+function isExternalApiLine(line: string): boolean {
+  const lower = line.toLowerCase();
+  // "through its REST API", "its HTTP API", "their API"
+  if (/\b(?:its|their|the\s+\w+(?:'s)?)\s+(?:rest\s+)?api\b/i.test(line)) return true;
+  // "external API", "third-party API"
+  if (/\b(?:external|third[- ]party)\s+(?:rest\s+)?api\b/i.test(line)) return true;
+  // "calls X API at", "hits the X endpoint"
+  if (/\b(?:calls?|hits?|sends?\s+to|talks?\s+to)\b.*\bapi\b/i.test(line)) return true;
+  // Lines with explicit URL hosts: "http://localhost:3000/api"
+  if (/https?:\/\/\S+\//.test(lower)) return true;
+  return false;
+}
+
 // === B.4 API Routes ===
 
 const ROUTE_PATTERNS = [
@@ -107,7 +201,10 @@ export function extractApiRoutes(doc: PreProcessedDoc): RawExtraction[] {
 
   for (const pattern of ROUTE_PATTERNS) {
     for (let i = 0; i < lines.length; i++) {
+      if (doc.code_fence_lines.has(i)) continue;
       const line = lines[i];
+      if (isIllustrativeLine(line)) continue;
+      if (isExternalApiLine(line)) continue;
       const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
       let match;
       while ((match = regex.exec(line)) !== null) {
@@ -175,7 +272,9 @@ export function extractCommands(doc: PreProcessedDoc): RawExtraction[] {
   // Inline commands
   for (const pattern of COMMAND_INLINE_PATTERNS) {
     for (let i = 0; i < lines.length; i++) {
+      if (doc.code_fence_lines.has(i)) continue;
       const line = lines[i];
+      if (isIllustrativeLine(line)) continue;
       const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
       let match;
       while ((match = regex.exec(line)) !== null) {
@@ -488,6 +587,177 @@ function extractCommandsFromBlock(content: string): string[] {
   return commands;
 }
 
+// === V2: Environment Claims ===
+
+/**
+ * Extract environment-related claims: runtime version requirements and env var documentation.
+ * Produces claims with claim_type 'environment' for Tier 2 verification (D.4 & D.5).
+ */
+
+const ENV_RUNTIME_PATTERNS = [
+  {
+    name: 'runtime_requirement',
+    regex: /\b(Node\.?js|Python|Ruby|Go|Rust|Java|Deno|Bun)\s+(?:[Vv]ersion\s+)?[v>=~^]*\s*(\d+(?:\.\d+)*\+?)/g,
+  },
+];
+
+const ENV_VAR_INSTRUCTION_PATTERNS = [
+  {
+    name: 'env_var_set_instruction',
+    regex: /(?:[Ss]et|[Cc]onfigure|[Dd]efine|[Ee]xport)\s+(?:[Tt]he\s+)?`?([A-Z][A-Z0-9_]{2,})`?/g,
+  },
+  {
+    name: 'env_var_required',
+    regex: /`?([A-Z][A-Z0-9_]{2,})`?\s+(?:[Ii]s\s+)?(?:[Rr]equired|[Nn]eeded|[Mm]ust\s+be\s+set)/g,
+  },
+  {
+    name: 'env_var_env_context',
+    regex: /(?:[Ee]nvironment\s+[Vv]ariable|[Ee]nv\s+[Vv]ar)\s+`?([A-Z][A-Z0-9_]{2,})`?/g,
+  },
+];
+
+const ENV_VAR_FALSE_POSITIVES = new Set([
+  'README', 'TODO', 'NOTE', 'API', 'URL', 'HTTP', 'HTTPS', 'JSON', 'HTML', 'CSS',
+  'GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS',
+  'TRUE', 'FALSE', 'NULL', 'UNDEFINED',
+  'MIT', 'BSD', 'ISC', 'GPL',
+  'TDD', 'MVP', 'POC', 'WIP', 'LLM',
+  'FIXME', 'HACK', 'XXX', 'TEMP',
+  'SQL', 'CLI', 'GUI', 'IDE', 'EOF',
+  'MCP', 'AST', 'ADR', 'SSO', 'HMAC', 'WASM',
+  // System / shell variables
+  'PATH', 'HOME', 'USER', 'SHELL', 'LANG', 'TERM', 'EDITOR',
+  'DISPLAY', 'TMPDIR', 'PWD', 'HOSTNAME',
+]);
+
+export function extractEnvironmentClaims(doc: PreProcessedDoc): RawExtraction[] {
+  const results: RawExtraction[] = [];
+  const lines = doc.cleaned_content.split('\n');
+
+  // Runtime version requirements
+  for (let i = 0; i < lines.length; i++) {
+    if (doc.code_fence_lines.has(i)) continue;
+    const line = lines[i];
+    for (const pattern of ENV_RUNTIME_PATTERNS) {
+      const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
+      let match;
+      while ((match = regex.exec(line)) !== null) {
+        const runtime = match[1];
+        const version = match[2];
+        results.push({
+          claim_text: line.trim(),
+          claim_type: 'environment',
+          extracted_value: { type: 'environment', runtime, version },
+          line_number: doc.original_line_map[i],
+          pattern_name: pattern.name,
+        });
+      }
+    }
+  }
+
+  // Environment variable documentation
+  for (let i = 0; i < lines.length; i++) {
+    if (doc.code_fence_lines.has(i)) continue;
+    const line = lines[i];
+    for (const pattern of ENV_VAR_INSTRUCTION_PATTERNS) {
+      const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
+      let match;
+      while ((match = regex.exec(line)) !== null) {
+        const envVar = match[1];
+        if (ENV_VAR_FALSE_POSITIVES.has(envVar)) continue;
+        results.push({
+          claim_text: line.trim(),
+          claim_type: 'environment',
+          extracted_value: { type: 'environment', env_var: envVar },
+          line_number: doc.original_line_map[i],
+          pattern_name: pattern.name,
+        });
+      }
+    }
+  }
+
+  return results;
+}
+
+// === V2: Convention Claims ===
+
+/**
+ * Extract convention claims: strict mode, framework usage.
+ * Produces claims with claim_type 'convention' for Tier 2 verification (D.1 & D.2).
+ */
+
+const STRICT_MODE_PATTERNS = [
+  {
+    name: 'strict_mode_convention',
+    regex: /\b(?:strict\s+mode|strict:\s*true|strict\s+typescript|typescript\s+strict)\b/gi,
+  },
+];
+
+const FRAMEWORK_USAGE_PATTERNS = [
+  {
+    name: 'framework_convention',
+    regex: /\b(?:built\s+with|uses?|powered\s+by|based\s+on|made\s+with)\s+`?([\w.]+)`?/gi,
+  },
+];
+
+const KNOWN_FRAMEWORKS = new Set([
+  'react', 'vue', 'angular', 'svelte', 'solid', 'preact', 'lit',
+  'next', 'nextjs', 'next.js', 'nuxt', 'nuxtjs', 'nuxt.js', 'gatsby', 'remix', 'astro',
+  'express', 'fastify', 'koa', 'hapi', 'nest', 'nestjs',
+  'django', 'flask', 'fastapi', 'rails', 'spring', 'laravel',
+  'tailwind', 'bootstrap', 'jest', 'vitest', 'mocha', 'cypress', 'playwright',
+  'prisma', 'sequelize', 'mongoose', 'typeorm', 'drizzle',
+  'webpack', 'vite', 'rollup', 'esbuild', 'turbopack', 'parcel',
+  'docker', 'kubernetes', 'terraform',
+  'typescript', 'graphql', 'redis', 'postgresql', 'mongodb', 'sqlite',
+  'electron', 'tauri', 'deno', 'bun',
+]);
+
+export function extractConventionClaims(doc: PreProcessedDoc): RawExtraction[] {
+  const results: RawExtraction[] = [];
+  const lines = doc.cleaned_content.split('\n');
+
+  for (let i = 0; i < lines.length; i++) {
+    if (doc.code_fence_lines.has(i)) continue;
+    const line = lines[i];
+
+    // Strict mode mentions
+    for (const pattern of STRICT_MODE_PATTERNS) {
+      const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
+      if (regex.test(line)) {
+        results.push({
+          claim_text: line.trim(),
+          claim_type: 'convention',
+          extracted_value: { type: 'convention', convention: 'strict_mode' },
+          line_number: doc.original_line_map[i],
+          pattern_name: pattern.name,
+        });
+        break; // One strict mode claim per line
+      }
+    }
+
+    // Framework usage mentions
+    for (const pattern of FRAMEWORK_USAGE_PATTERNS) {
+      const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
+      let match;
+      while ((match = regex.exec(line)) !== null) {
+        const framework = match[1].toLowerCase();
+        if (KNOWN_FRAMEWORKS.has(framework)) {
+          results.push({
+            claim_text: line.trim(),
+            claim_type: 'convention',
+            extracted_value: { type: 'convention', framework: match[1] },
+            line_number: doc.original_line_map[i],
+            pattern_name: pattern.name,
+          });
+        }
+      }
+    }
+  }
+
+  return results;
+}
+
 // === Appendix E: Deduplication ===
 
 export function deduplicateWithinFile(extractions: RawExtraction[]): RawExtraction[] {
@@ -516,6 +786,20 @@ export function getIdentityKey(extraction: RawExtraction): string {
       return 'route:' + (ev.method as string) + ':' + (ev.path as string);
     case 'code_example':
       return 'code:' + extraction.line_number;
+    case 'environment': {
+      const envVar = ev.env_var as string | undefined;
+      const runtime = ev.runtime as string | undefined;
+      if (envVar) return 'env:var:' + envVar;
+      if (runtime) return 'env:runtime:' + runtime;
+      return 'env:' + extraction.claim_text;
+    }
+    case 'convention': {
+      const convention = ev.convention as string | undefined;
+      const fw = ev.framework as string | undefined;
+      if (convention) return 'conv:' + convention;
+      if (fw) return 'conv:fw:' + (fw as string).toLowerCase();
+      return 'conv:' + extraction.claim_text;
+    }
     default:
       return extraction.claim_type + ':' + extraction.claim_text;
   }
@@ -555,6 +839,19 @@ export function generateKeywords(extraction: RawExtraction): string[] {
         ...symbols,
         ...commands.map((c) => c.split(' ')[0]),
       ].filter(Boolean));
+    }
+    case 'environment': {
+      const keywords: string[] = [];
+      if (ev.env_var) keywords.push(ev.env_var as string);
+      if (ev.runtime) keywords.push(ev.runtime as string);
+      if (ev.version) keywords.push(ev.version as string);
+      return keywords;
+    }
+    case 'convention': {
+      const keywords: string[] = [];
+      if (ev.convention) keywords.push(ev.convention as string);
+      if (ev.framework) keywords.push(ev.framework as string);
+      return keywords;
     }
     default:
       return [];

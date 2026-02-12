@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      - run: npm run lint
+
+      - run: npm run test
+
+  docalign-scan:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci && npm run build
+
+      - name: Run DocAlign scan
+        id: scan
+        run: |
+          set +e
+          OUTPUT=$(node dist/cli/main.js scan --json 2>&1)
+          EXIT_CODE=$?
+          set -e
+
+          echo "$OUTPUT" > /tmp/docalign-output.json
+
+          if echo "$OUTPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'health={d[\"healthPercent\"]}\nverified={d[\"verified\"]}\ndrifted={d[\"drifted\"]}')" >> "$GITHUB_OUTPUT" 2>/dev/null; then
+            echo "Parsed scan results"
+          else
+            echo "health=0" >> "$GITHUB_OUTPUT"
+            echo "verified=0" >> "$GITHUB_OUTPUT"
+            echo "drifted=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post PR Comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node action/post-comment.mjs
+
+      - name: Report results
+        run: |
+          echo "Health: ${{ steps.scan.outputs.health }}%"
+          echo "Verified: ${{ steps.scan.outputs.verified }}"
+          echo "Drifted: ${{ steps.scan.outputs.drifted }}"

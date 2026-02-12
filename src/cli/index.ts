@@ -12,6 +12,9 @@
 import { runCheck } from './commands/check';
 import { runScan } from './commands/scan';
 import { runFix } from './commands/fix';
+import { runInit } from './commands/init';
+import { runStatus } from './commands/status';
+import { runConfigure } from './commands/configure';
 import type { CliPipeline } from './local-pipeline';
 
 export interface CliArgs {
@@ -40,7 +43,7 @@ export function parseArgs(argv: string[]): CliArgs {
         // --key value (peek ahead — if next arg isn't a flag, treat as value)
         const key = arg.slice(2);
         // Known boolean flags don't consume the next arg
-        if (['verbose', 'help'].includes(key)) {
+        if (['verbose', 'help', 'json'].includes(key)) {
           flags[key] = true;
         } else {
           options[key] = args[++i];
@@ -72,28 +75,53 @@ export async function run(
   const exclude = options.exclude ? options.exclude.split(',').map((s) => s.trim()) : [];
 
   switch (command) {
+    case 'init':
+      return runInit(write);
+
     case 'check':
       return runCheck(pipeline, args[0], { verbose: !!flags.verbose }, write);
 
     case 'scan':
-      return runScan(pipeline, write, undefined, exclude);
+      return runScan(pipeline, write, undefined, exclude, !!flags.json);
 
     case 'fix':
       return runFix(pipeline, args[0], process.cwd(), write);
+
+    case 'status':
+      return runStatus(write);
+
+    case 'configure': {
+      const excludePatterns = options.exclude ? options.exclude.split(',').map((s) => s.trim()) : undefined;
+      return runConfigure({
+        exclude: excludePatterns,
+        minSeverity: options['min-severity'],
+        reset: !!flags.reset,
+      }, write);
+    }
 
     case 'help':
     case '':
       write('Usage: docalign <command> [options]');
       write('');
       write('Commands:');
+      write('  init            Set up DocAlign for Claude Code (MCP + skill)');
       write('  check <file>    Check a single documentation file');
       write('  scan            Scan entire repository');
       write('  fix [file]      Apply fixes from prior scan');
+      write('  status          Show configuration and integration status');
+      write('  configure       Create or update .docalign.yml');
+      write('  mcp             Start MCP server (used by Claude Code)');
       write('');
       write('Options:');
       write('  --verbose               Show additional detail (check command)');
       write('  --exclude=FILE[,FILE]   Exclude files from scan (comma-separated)');
+      write('  --json                  Output scan results as JSON');
+      write('  --min-severity=LEVEL    Set minimum severity (configure command)');
+      write('  --reset                 Reset config to defaults (configure command)');
       write('  --help                  Show this help message');
+      write('');
+      write('Environment:');
+      write('  ANTHROPIC_API_KEY       Enable LLM verification (Tier 3) and fix generation');
       return 0;
 
     default:

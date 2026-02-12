@@ -1,13 +1,8 @@
-#!/usr/bin/env node
 /**
- * DocAlign Local MCP Server — runs entirely in-memory against a local repo.
- * No database required. Designed for use with Cursor, Claude Code, etc.
+ * `docalign mcp` — Start the MCP server for Claude Code / Cursor.
  *
- * Usage:
- *   node dist/layers/L6-mcp/local-server.js --repo /path/to/repo
- *
- * Or via the docalign CLI:
- *   docalign mcp --repo /path/to/repo
+ * Delegates to the local-server in L6-mcp. This wrapper allows
+ * `npx docalign mcp --repo .` to work as a single entry point.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -15,47 +10,26 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import path from 'path';
 import fs from 'fs';
-import { LocalPipeline } from '../../cli/real-pipeline';
-import { filterUncertain, countVerdicts, buildHotspots } from '../../cli/local-pipeline';
+import { LocalPipeline } from '../real-pipeline';
+import { filterUncertain, countVerdicts, buildHotspots } from '../local-pipeline';
 
 function log(msg: string): void {
   process.stderr.write(`[docalign-mcp] ${msg}\n`);
 }
 
-function parseArgs(argv: string[]): { repoPath: string; verbose: boolean } {
+function parseMcpArgs(argv: string[]): { repoPath: string } {
   let repoPath = '';
-  let verbose = false;
-
   for (let i = 0; i < argv.length; i++) {
-    switch (argv[i]) {
-      case '--repo':
-        repoPath = argv[++i] ?? '';
-        break;
-      case '--verbose':
-        verbose = true;
-        break;
-      case '--version':
-        process.stderr.write('docalign-mcp (local) v0.1.0\n');
-        process.exit(0);
-        break;
-      case '--help':
-        process.stderr.write(
-          'Usage: docalign-mcp --repo <path> [--verbose]\n' +
-          '\nLocal MCP server for documentation verification.\n' +
-          'No database required — runs entirely in-memory.\n',
-        );
-        process.exit(0);
-        break;
+    if (argv[i] === '--repo') {
+      repoPath = argv[++i] ?? '';
     }
   }
-
-  return { repoPath, verbose };
+  return { repoPath };
 }
 
-async function main(): Promise<void> {
-  const args = parseArgs(process.argv.slice(2));
+export async function startMcpServer(argv: string[]): Promise<void> {
+  const args = parseMcpArgs(argv);
 
-  // Default to cwd if no --repo specified
   const repoPath = args.repoPath
     ? path.resolve(args.repoPath)
     : process.cwd();
@@ -69,10 +43,8 @@ async function main(): Promise<void> {
 
   const pipeline = new LocalPipeline(repoPath);
 
-  // Pre-warm the index
   log('Building codebase index...');
   const warmupStart = Date.now();
-  // Run a quick scan to initialize the index
   await pipeline.scanRepo();
   log(`Index built in ${((Date.now() - warmupStart) / 1000).toFixed(1)}s`);
 
@@ -84,7 +56,7 @@ async function main(): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const s = server as any;
 
-  // Tool 1: check_doc — Check a specific doc file for drift
+  // Tool 1: check_doc
   s.tool(
     'check_doc',
     'Check a documentation file for drift against the codebase. Returns verification results for each claim found.',
@@ -100,7 +72,6 @@ async function main(): Promise<void> {
         const findings = visible
           .filter((r) => r.verdict === 'drifted')
           .map((r) => ({
-            line: r.claim_id ? undefined : undefined, // Line info is on the claim
             claim_text: result.claims.find((c) => c.id === r.claim_id)?.claim_text ?? '',
             claim_type: result.claims.find((c) => c.id === r.claim_id)?.claim_type ?? '',
             severity: r.severity,
@@ -134,7 +105,7 @@ async function main(): Promise<void> {
     },
   );
 
-  // Tool 2: check_section — Check a specific section of a doc file
+  // Tool 2: check_section
   s.tool(
     'check_section',
     'Check a specific section of a documentation file by heading. Returns verification results for claims within that section only.',
@@ -187,7 +158,7 @@ async function main(): Promise<void> {
     },
   );
 
-  // Tool 3: get_doc_health — Repository health overview
+  // Tool 3: get_doc_health
   s.tool(
     'get_doc_health',
     'Get documentation health score for the repository. Shows overall verification coverage and top drift hotspots.',
@@ -240,7 +211,7 @@ async function main(): Promise<void> {
     },
   );
 
-  // Tool 3: list_drift — List all drifted documentation claims
+  // Tool 3: list_drift
   s.tool(
     'list_drift',
     'List all documentation files with drift, ordered by severity. Shows which docs need updating.',
@@ -282,7 +253,7 @@ async function main(): Promise<void> {
     },
   );
 
-  // Tool 4: get_docs_for_file — Reverse lookup: which docs reference a code file
+  // Tool 4: get_docs_for_file
   s.tool(
     'get_docs_for_file',
     'Find all documentation claims that reference a specific code file. Useful when modifying code to find docs that may need updating.',
@@ -346,8 +317,3 @@ async function main(): Promise<void> {
   await server.connect(transport);
   log('MCP server connected via stdio. Ready for requests.');
 }
-
-main().catch((err) => {
-  process.stderr.write(`Fatal: ${err}\n`);
-  process.exit(1);
-});

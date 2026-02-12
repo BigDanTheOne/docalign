@@ -42,6 +42,8 @@ export interface CodebaseIndexService {
     changedFiles: FileChange[],
     fetchContent: (filePath: string) => Promise<string | null>,
   ): Promise<IndexUpdateResult>;
+  /** Read raw file content. Returns null if file doesn't exist or is too large. */
+  readFileContent(repoId: string, filePath: string, maxBytes?: number): Promise<string | null>;
 }
 
 /**

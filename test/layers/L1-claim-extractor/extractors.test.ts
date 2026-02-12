@@ -20,8 +20,8 @@ function makeDoc(content: string): PreProcessedDoc {
     cleaned_content: content,
     original_line_map: lineMap,
     format: 'markdown',
-    frontmatter: null,
-    heading_tree: [],
+    file_size_bytes: content.length,
+    code_fence_lines: new Set<number>(),
   };
 }
 
@@ -823,6 +823,110 @@ describe('extractors', () => {
         pattern_name: 'x',
       });
       expect(keywords).toHaveLength(0);
+    });
+  });
+
+  // === False Positive Filters (Dogfood Tuning) ===
+  describe('false positive filters', () => {
+    function makeDocWithFences(content: string): PreProcessedDoc {
+      const lines = content.split('\n');
+      const codeFenceLines = new Set<number>();
+      let inFence = false;
+      for (let i = 0; i < lines.length; i++) {
+        const trimmed = lines[i].trimStart();
+        if (trimmed.startsWith('```') || trimmed.startsWith('~~~')) {
+          codeFenceLines.add(i);
+          inFence = !inFence;
+        } else if (inFence) {
+          codeFenceLines.add(i);
+        }
+      }
+      return {
+        cleaned_content: content,
+        original_line_map: lines.map((_, i) => i + 1),
+        format: 'markdown',
+        file_size_bytes: content.length,
+        code_fence_lines: codeFenceLines,
+      };
+    }
+
+    it('skips paths inside code fence blocks', () => {
+      const doc = makeDocWithFences([
+        'Real path: `src/index.ts`',
+        '```',
+        'Fenced path: `src/fake.ts`',
+        '```',
+        'Another real path: `src/real.ts`',
+      ].join('\n'));
+      const results = extractPaths(doc, 'test.md');
+      const paths = results.map((r) => (r.extracted_value as { path: string }).path);
+      expect(paths).toContain('src/index.ts');
+      expect(paths).toContain('src/real.ts');
+      expect(paths).not.toContain('src/fake.ts');
+    });
+
+    it('skips paths in markdown table rows', () => {
+      const doc = makeDoc('| File | Description |\n| `src/config.ts` | Config loader |');
+      const results = extractPaths(doc, 'test.md');
+      expect(results).toHaveLength(0);
+    });
+
+    it('skips paths in quoted example bullets', () => {
+      const doc = makeDoc('- "Configuration is loaded from `config/default.yaml`"');
+      const results = extractPaths(doc, 'test.md');
+      expect(results).toHaveLength(0);
+    });
+
+    it('skips paths with purely numeric extensions (model IDs)', () => {
+      const doc = makeDoc('Use `openai/gpt-5.2` or `zai/glm-4.7` as model.');
+      const results = extractPaths(doc, 'test.md');
+      expect(results).toHaveLength(0);
+    });
+
+    it('skips API routes inside code fences', () => {
+      const doc = makeDocWithFences([
+        'Real route: GET /api/users',
+        '```',
+        'Example: POST /api/fake',
+        '```',
+      ].join('\n'));
+      const results = extractApiRoutes(doc);
+      expect(results).toHaveLength(1);
+      expect((results[0].extracted_value as { path: string }).path).toBe('/api/users');
+    });
+
+    it('skips API routes on external service lines', () => {
+      const doc = makeDoc('OpenClaw talks to it through its REST API (`GET /api/v1/ping`).');
+      const results = extractApiRoutes(doc);
+      expect(results).toHaveLength(0);
+    });
+
+    it('skips inline commands in quoted example bullets', () => {
+      const doc = makeDoc('- "Run `pnpm test:unit` for unit tests"');
+      const results = extractCommands(doc);
+      // Should not extract pnpm test:unit from an illustrative quoted string
+      const scripts = results.map((r) => (r.extracted_value as { script: string }).script);
+      expect(scripts).not.toContain('test:unit');
+    });
+
+    it('keeps paths outside example sections', () => {
+      const doc = makeDoc([
+        '## Installation',
+        'Edit `src/config.ts` to configure.',
+        '',
+        '**Filename examples**:',
+        '- `2026-01-16-vendor-pitch.md`',
+        '- `2026-01-16-api-design.md`',
+        '',
+        '## Usage',
+        'See `src/main.ts` for details.',
+      ].join('\n'));
+      const results = extractPaths(doc, 'test.md');
+      const paths = results.map((r) => (r.extracted_value as { path: string }).path);
+      expect(paths).toContain('src/config.ts');
+      expect(paths).toContain('src/main.ts');
+      expect(paths).not.toContain('2026-01-16-vendor-pitch.md');
+      expect(paths).not.toContain('2026-01-16-api-design.md');
     });
   });
 });

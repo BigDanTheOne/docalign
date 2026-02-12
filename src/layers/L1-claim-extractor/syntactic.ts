@@ -6,6 +6,8 @@ import {
   extractCommands,
   extractDependencyVersions,
   extractCodeExamples,
+  extractEnvironmentClaims,
+  extractConventionClaims,
   deduplicateWithinFile,
   isValidPath,
 } from './extractors';
@@ -20,6 +22,8 @@ const DEFAULT_CLAIM_TYPES: Set<ClaimType> = new Set([
   'dependency_version',
   'api_route',
   'code_example',
+  'environment',
+  'convention',
 ]);
 
 /**
@@ -68,6 +72,12 @@ export async function extractSyntactic(
   }
   if (enabledTypes.has('code_example')) {
     rawExtractions.push(...extractCodeExamples(preprocessed));
+  }
+  if (enabledTypes.has('environment')) {
+    rawExtractions.push(...extractEnvironmentClaims(preprocessed));
+  }
+  if (enabledTypes.has('convention')) {
+    rawExtractions.push(...extractConventionClaims(preprocessed));
   }
 
   // Step 6: Path validation filter

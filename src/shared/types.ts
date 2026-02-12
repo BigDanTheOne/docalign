@@ -182,6 +182,8 @@ export interface PreProcessedDoc {
   original_line_map: number[];
   format: 'markdown' | 'mdx' | 'rst' | 'plaintext';
   file_size_bytes: number;
+  /** Set of cleaned-content line indices (0-based) that are inside code fence blocks. */
+  code_fence_lines: Set<number>;
 }
 
 export interface RawExtraction {

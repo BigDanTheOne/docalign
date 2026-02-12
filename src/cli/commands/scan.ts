@@ -18,11 +18,12 @@ export async function runScan(
     }
   },
   exclude: string[] = [],
+  json = false,
 ): Promise<number> {
   try {
-    write(`DocAlign: Scanning repository...`);
+    if (!json) write(`DocAlign: Scanning repository...`);
 
-    const showProgress = process.stdout.isTTY ?? false;
+    const showProgress = !json && (process.stdout.isTTY ?? false);
     const result = await pipeline.scanRepo((current, total) => {
       if (showProgress) {
         clearLine();
@@ -31,10 +32,14 @@ export async function runScan(
     }, exclude);
 
     // Clear progress bar
-    clearLine();
+    if (showProgress) clearLine();
 
     if (result.files.length === 0) {
-      write('  No documentation files found in this repository.');
+      if (json) {
+        write(JSON.stringify({ healthPercent: 100, verified: 0, drifted: 0, totalClaims: 0, findings: [], hotspots: [] }));
+      } else {
+        write('  No documentation files found in this repository.');
+      }
       return 0;
     }
 
@@ -51,21 +56,62 @@ export async function runScan(
 
     const totalScored = totalVerified + totalDrifted;
     const hotspots = buildHotspots(filteredFiles);
+    const healthPercent = totalScored > 0 ? Math.round((totalVerified / totalScored) * 100) : 100;
 
-    const output = formatScanResults({
-      verified: totalVerified,
-      drifted: totalDrifted,
-      healthScore: totalScored > 0 ? (totalVerified / totalScored) * 100 : 100,
-      totalScored,
-      hotspots,
-    });
+    if (json) {
+      // Build findings array for JSON output
+      const findings: Array<{
+        file: string;
+        line: number;
+        claimText: string;
+        actual: string;
+        severity: string;
+        evidence?: string;
+      }> = [];
 
-    write(output);
+      for (const fileResult of filteredFiles) {
+        for (const vr of fileResult.results) {
+          if (vr.verdict !== 'drifted') continue;
+          const claim = fileResult.claims.find((c) => c.id === vr.claim_id);
+          if (!claim) continue;
+          findings.push({
+            file: fileResult.file,
+            line: claim.line_number,
+            claimText: claim.claim_text,
+            actual: vr.specific_mismatch ?? vr.reasoning ?? 'Documentation does not match code.',
+            severity: vr.severity ?? 'medium',
+            ...(vr.evidence_files.length > 0 ? { evidence: vr.evidence_files.join(', ') } : {}),
+          });
+        }
+      }
+
+      write(JSON.stringify({
+        healthPercent,
+        verified: totalVerified,
+        drifted: totalDrifted,
+        totalClaims: result.totalClaims,
+        findings,
+        hotspots: hotspots.map((h) => ({ file: h.file, drifted: h.driftedCount })),
+      }));
+    } else {
+      const output = formatScanResults({
+        verified: totalVerified,
+        drifted: totalDrifted,
+        healthScore: totalScored > 0 ? (totalVerified / totalScored) * 100 : 100,
+        totalScored,
+        hotspots,
+      });
+      write(output);
+    }
 
     return totalDrifted > 0 ? 1 : 0;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    write(`Error: ${message}`);
+    if (json) {
+      write(JSON.stringify({ error: message }));
+    } else {
+      write(`Error: ${message}`);
+    }
     return 2;
   }
 }

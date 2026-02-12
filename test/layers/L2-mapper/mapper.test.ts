@@ -29,6 +29,7 @@ function makeMockIndex(overrides: Partial<CodebaseIndexService> = {}): CodebaseI
     getAvailableScripts: async () => [],
     searchSemantic: async () => [],
     updateFromDiff: async () => ({ entities_added: 0, entities_updated: 0, entities_removed: 0, files_skipped: [] }),
+    readFileContent: async () => null,
     ...overrides,
   };
 }
