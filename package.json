@@ -1,0 +1,46 @@
+{
+  "name": "docalign",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Documentation-reality alignment engine",
+  "main": "dist/app.js",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/ test/",
+    "lint:fix": "eslint src/ test/ --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "migrate:up": "node-pg-migrate up --migrations-dir migrations --tsconfig tsconfig.json --ignore-pattern \"_|^\\.\"",
+    "migrate:down": "node-pg-migrate down --count 1 --migrations-dir migrations --tsconfig tsconfig.json --ignore-pattern \"_|^\\.\"",
+    "migrate:create": "node-pg-migrate create --migrations-dir migrations --migration-file-language ts --template-file-name migrations/_template.ts"
+  },
+  "dependencies": {
+    "@octokit/auth-app": "^6.1.0",
+    "@octokit/rest": "^20.1.0",
+    "bullmq": "^5.25.0",
+    "express": "^4.21.0",
+    "helmet": "^7.2.0",
+    "ioredis": "^5.4.0",
+    "jsonwebtoken": "^9.0.0",
+    "node-pg-migrate": "^7.7.0",
+    "pg": "^8.13.0",
+    "pino": "^8.21.0",
+    "pino-http": "^9.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^20.17.0",
+    "@types/pg": "^8.11.0",
+    "eslint": "^9.13.0",
+    "prettier": "^3.3.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.11.0",
+    "vitest": "^2.1.0"
+  }
+}
