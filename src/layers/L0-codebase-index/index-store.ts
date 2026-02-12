@@ -1,11 +1,16 @@
-import type { Pool } from 'pg';
+import type { Pool, PoolClient } from 'pg';
 import type {
   CodeEntity,
   DependencyVersion,
   RouteEntity,
   ScriptInfo,
   CodeEntityRow,
+  FileChange,
+  IndexUpdateResult,
+  ParsedEntity,
 } from '../../shared/types';
+import { parseFile, detectLanguage, isSupportedCodeFile, isManifestFile } from './ast-parser';
+import { parseManifest } from './manifest-parser';
 
 /**
  * L0 Codebase Index Store.
@@ -305,6 +310,216 @@ export class IndexStore {
       [repoId, filePath],
     );
   }
+
+  // === 4.12 updateFromDiff ===
+
+  async updateFromDiff(
+    repoId: string,
+    changedFiles: FileChange[],
+    fetchContent: (filePath: string) => Promise<string | null>,
+  ): Promise<IndexUpdateResult> {
+    const result: IndexUpdateResult = {
+      entities_added: 0,
+      entities_updated: 0,
+      entities_removed: 0,
+      files_skipped: [],
+    };
+
+    if (changedFiles.length === 0) return result;
+
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // 1. Update file tree
+      for (const file of changedFiles) {
+        if (file.status === 'added') {
+          await client.query(
+            `INSERT INTO repo_files (repo_id, path) VALUES ($1, $2)
+             ON CONFLICT (repo_id, path) DO NOTHING`,
+            [repoId, file.filename],
+          );
+        } else if (file.status === 'removed') {
+          await client.query(
+            'DELETE FROM repo_files WHERE repo_id = $1 AND path = $2',
+            [repoId, file.filename],
+          );
+        } else if (file.status === 'renamed' && file.previous_filename) {
+          await client.query(
+            'UPDATE repo_files SET path = $3 WHERE repo_id = $1 AND path = $2',
+            [repoId, file.previous_filename, file.filename],
+          );
+        }
+      }
+
+      // 2. Process renamed code files
+      for (const file of changedFiles) {
+        if (file.status === 'renamed' && file.previous_filename && isSupportedCodeFile(file.filename)) {
+          await client.query(
+            'UPDATE code_entities SET file_path = $3 WHERE repo_id = $1 AND file_path = $2',
+            [repoId, file.previous_filename, file.filename],
+          );
+        }
+      }
+
+      // 3. Process removed code files
+      for (const file of changedFiles) {
+        if (file.status === 'removed' && isSupportedCodeFile(file.filename)) {
+          const deleteResult = await client.query(
+            'DELETE FROM code_entities WHERE repo_id = $1 AND file_path = $2',
+            [repoId, file.filename],
+          );
+          result.entities_removed += deleteResult.rowCount ?? 0;
+        }
+      }
+
+      // 4. Process added/modified/renamed code files
+      for (const file of changedFiles) {
+        if (file.status === 'removed') continue;
+        if (!isSupportedCodeFile(file.filename)) {
+          if (!isManifestFile(file.filename)) {
+            result.files_skipped.push(file.filename);
+          }
+          continue;
+        }
+
+        const content = await fetchContent(file.filename);
+        if (content === null) {
+          result.files_skipped.push(file.filename);
+          continue;
+        }
+
+        // Skip large files
+        if (content.length > 1_000_000) {
+          result.files_skipped.push(file.filename);
+          continue;
+        }
+
+        const language = detectLanguage(file.filename);
+        if (!language) {
+          result.files_skipped.push(file.filename);
+          continue;
+        }
+
+        const parseResult = await parseFile(file.filename, content);
+        if (!parseResult) {
+          result.files_skipped.push(file.filename);
+          continue;
+        }
+
+        if (parseResult.has_errors) {
+          // Remove stale entities for files with parse errors
+          const deleteResult = await client.query(
+            'DELETE FROM code_entities WHERE repo_id = $1 AND file_path = $2',
+            [repoId, file.filename],
+          );
+          result.entities_removed += deleteResult.rowCount ?? 0;
+          result.files_skipped.push(file.filename);
+          continue;
+        }
+
+        // Get existing entities
+        const existingResult = await client.query(
+          'SELECT * FROM code_entities WHERE repo_id = $1 AND file_path = $2',
+          [repoId, file.filename],
+        );
+        const existing = existingResult.rows.map(rowToCodeEntity);
+
+        // Compute diff
+        const diff = computeEntityDiff(existing, parseResult.entities);
+
+        // Apply added
+        for (const entity of diff.added) {
+          await client.query(
+            `INSERT INTO code_entities (repo_id, file_path, line_number, end_line_number, entity_type, name, signature, raw_code)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [repoId, file.filename, entity.line_number, entity.end_line_number, entity.entity_type, entity.name, entity.signature, entity.raw_code],
+          );
+          result.entities_added++;
+        }
+
+        // Apply updated
+        for (const update of diff.updated) {
+          const embeddingClause = update.signature_changed ? ', embedding = NULL' : '';
+          await client.query(
+            `UPDATE code_entities SET
+              name = $2, signature = $3, raw_code = $4,
+              line_number = $5, end_line_number = $6,
+              updated_at = NOW()${embeddingClause}
+             WHERE id = $1`,
+            [update.old_id, update.new_entity.name, update.new_entity.signature, update.new_entity.raw_code, update.new_entity.line_number, update.new_entity.end_line_number],
+          );
+          result.entities_updated++;
+        }
+
+        // Apply removed
+        for (const entityId of diff.removed) {
+          await client.query('DELETE FROM code_entities WHERE id = $1', [entityId]);
+          result.entities_removed++;
+        }
+      }
+
+      // 5. Process manifest files
+      for (const file of changedFiles) {
+        if (!isManifestFile(file.filename)) continue;
+
+        if (file.status === 'removed') {
+          await this.deleteManifestInTx(client, repoId, file.filename);
+          continue;
+        }
+
+        const content = await fetchContent(file.filename);
+        if (!content) continue;
+
+        const manifest = parseManifest(file.filename, content);
+        if (!manifest) continue;
+
+        await this.storeManifestInTx(
+          client,
+          repoId,
+          manifest.file_path,
+          manifest.dependencies,
+          manifest.dev_dependencies,
+          manifest.scripts,
+          manifest.source,
+        );
+      }
+
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    return result;
+  }
+
+  private async storeManifestInTx(
+    client: PoolClient,
+    repoId: string,
+    filePath: string,
+    dependencies: Record<string, string>,
+    devDependencies: Record<string, string>,
+    scripts: Record<string, string>,
+    source: 'lockfile' | 'manifest',
+  ): Promise<void> {
+    await client.query(
+      `INSERT INTO repo_manifests (repo_id, file_path, dependencies, dev_dependencies, scripts, source)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (repo_id, file_path) DO UPDATE SET
+         dependencies = $3, dev_dependencies = $4, scripts = $5, source = $6, updated_at = NOW()`,
+      [repoId, filePath, JSON.stringify(dependencies), JSON.stringify(devDependencies), JSON.stringify(scripts), source],
+    );
+  }
+
+  private async deleteManifestInTx(client: PoolClient, repoId: string, filePath: string): Promise<void> {
+    await client.query(
+      'DELETE FROM repo_manifests WHERE repo_id = $1 AND file_path = $2',
+      [repoId, filePath],
+    );
+  }
 }
 
 // === Helper functions ===
@@ -432,4 +647,64 @@ function findPackageVersion(deps: Record<string, string>, packageName: string): 
     if (name.toLowerCase() === lowerName) return version;
   }
   return null;
+}
+
+// === Appendix A: Entity Diff ===
+
+interface EntityDiff {
+  added: ParsedEntity[];
+  updated: Array<{ old_id: string; new_entity: ParsedEntity; signature_changed: boolean }>;
+  removed: string[];
+}
+
+function getEntityKey(name: string, entityType: string, signature: string): string {
+  const paramCount = countParams(signature);
+  return `${name}:${entityType}:${paramCount}`;
+}
+
+function countParams(signature: string): number {
+  const match = signature.match(/\(([^)]*)\)/);
+  if (!match || !match[1].trim()) return 0;
+  return match[1].split(',').length;
+}
+
+export function computeEntityDiff(existing: CodeEntity[], parsed: ParsedEntity[]): EntityDiff {
+  const diff: EntityDiff = { added: [], updated: [], removed: [] };
+
+  const existingMap = new Map<string, CodeEntity>();
+  for (const e of existing) {
+    const key = getEntityKey(e.name, e.entity_type, e.signature);
+    existingMap.set(key, e);
+  }
+
+  const parsedSet = new Set<string>();
+  for (const p of parsed) {
+    const key = getEntityKey(p.name, p.entity_type, p.signature);
+    parsedSet.add(key);
+
+    const existingEntity = existingMap.get(key);
+    if (existingEntity) {
+      const signatureChanged = existingEntity.signature !== p.signature;
+      const codeChanged = existingEntity.raw_code !== p.raw_code;
+      const lineChanged = existingEntity.line_number !== p.line_number;
+
+      if (signatureChanged || codeChanged || lineChanged) {
+        diff.updated.push({
+          old_id: existingEntity.id,
+          new_entity: p,
+          signature_changed: signatureChanged,
+        });
+      }
+    } else {
+      diff.added.push(p);
+    }
+  }
+
+  for (const [key, entity] of existingMap) {
+    if (!parsedSet.has(key)) {
+      diff.removed.push(entity.id);
+    }
+  }
+
+  return diff;
 }
