@@ -208,7 +208,7 @@ describe('IndexStore.updateFromDiff', () => {
       return null;
     };
 
-    const result = await store.updateFromDiff(repoId, changes, fetchContent);
+    await store.updateFromDiff(repoId, changes, fetchContent);
 
     // Entity should be at new path
     const entities = await store.getEntityByFile(repoId, 'src/new-name.ts');

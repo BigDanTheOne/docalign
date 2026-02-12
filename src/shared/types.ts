@@ -493,3 +493,122 @@ export interface DocAlignConfig {
     max_agent_files_per_claim?: number;
   };
 }
+
+// === L2 Mapper Types (TDD-2 Section 2, phase4-api-contracts.md Section 12) ===
+
+export interface ClaimMapping {
+  id: string;
+  claim_id: string;
+  repo_id: string;
+  code_file: string;
+  code_entity_id: string | null;
+  confidence: number;
+  co_change_boost: number;
+  mapping_method: MappingMethod;
+  created_at: Date;
+  last_validated_at: Date;
+}
+
+export interface ClaimMappingRow {
+  id: string;
+  claim_id: string;
+  repo_id: string;
+  code_file: string;
+  code_entity_id: string | null;
+  confidence: number;
+  co_change_boost: number;
+  mapping_method: MappingMethod;
+  created_at: Date;
+  last_validated_at: Date;
+}
+
+// === L3 Verifier Types (TDD-3 Section 2, phase4-api-contracts.md Section 12) ===
+
+export interface VerificationResult {
+  id: string;
+  claim_id: string;
+  repo_id: string;
+  scan_run_id: string | null;
+  verdict: Verdict;
+  confidence: number;
+  tier: number;
+  severity: Severity | null;
+  reasoning: string | null;
+  specific_mismatch: string | null;
+  suggested_fix: string | null;
+  evidence_files: string[];
+  token_cost: number | null;
+  duration_ms: number | null;
+  post_check_result: PostCheckOutcome | null;
+  verification_path: VerificationPath | null;
+  created_at: Date;
+}
+
+export interface VerificationResultRow {
+  id: string;
+  claim_id: string;
+  repo_id: string;
+  scan_run_id: string | null;
+  verdict: Verdict;
+  confidence: number;
+  tier: number;
+  severity: Severity | null;
+  reasoning: string | null;
+  specific_mismatch: string | null;
+  suggested_fix: string | null;
+  evidence_files: string[];
+  token_cost: number | null;
+  duration_ms: number | null;
+  post_check_result: PostCheckOutcome | null;
+  verification_path: VerificationPath | null;
+  created_at: Date;
+}
+
+export type RoutingReason =
+  | 'no_mapping'
+  | 'multi_file'
+  | 'file_only_mapping'
+  | 'evidence_too_large'
+  | 'single_entity_mapped'
+  | 'multi_entity_small';
+
+export interface RoutingDecision {
+  claim_id: string;
+  path: VerificationPath;
+  reason: RoutingReason;
+  entity_token_estimate: number | null;
+}
+
+export interface FormattedEvidence {
+  formatted_evidence: string;
+  metadata: {
+    path: VerificationPath;
+    file_path: string;
+    entity_name: string;
+    entity_lines: [number, number];
+    entity_token_estimate: number;
+    imports_token_estimate: number;
+    total_token_estimate: number;
+  };
+}
+
+// === L7 Learning Service Interface (TDD-2 Section 2.1) ===
+
+export interface SuppressionRule {
+  id: string;
+  repo_id: string;
+  scope: SuppressionScope;
+  claim_id: string | null;
+  source_file: string | null;
+  claim_type: ClaimType | null;
+  pattern: string | null;
+  reason: string | null;
+  created_by: string;
+  created_at: Date;
+  expires_at: Date | null;
+}
+
+export interface LearningService {
+  getCoChangeBoost(repoId: string, codeFile: string, docFile: string): Promise<number>;
+  isClaimSuppressed(repoId: string, claimId: string): Promise<boolean>;
+}

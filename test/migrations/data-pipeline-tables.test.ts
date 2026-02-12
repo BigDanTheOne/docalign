@@ -137,7 +137,7 @@ describe('data-pipeline migrations', () => {
     });
 
     it('has claim_type check constraint', async () => {
-      const result = await pool.query(`
+      const _result = await pool.query(`
         SELECT constraint_name
         FROM information_schema.check_constraints
         WHERE constraint_name LIKE '%claims%claim_type%'
