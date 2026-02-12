@@ -6,6 +6,7 @@ import { createHealthRoute } from './routes/health';
 import { createWebhookRoute } from './routes/webhook';
 import { createTaskRoutes } from './routes/tasks';
 import { createDismissRoute } from './routes/dismiss';
+import { createFixRoute, type FixRouteDeps } from './routes/fix';
 import { createAuthMiddleware } from './middleware/auth';
 import { errorHandler } from './middleware/error-handler';
 import { loadConfig } from './config/defaults';
@@ -24,6 +25,7 @@ export interface AppDependencies {
   db: DatabaseClient;
   config: ServerConfig;
   storage: StorageAdapter;
+  fixDeps?: Omit<FixRouteDeps, 'db' | 'apiSecret'>;
 }
 
 export function createApp(deps: AppDependencies): Application {
@@ -55,6 +57,17 @@ export function createApp(deps: AppDependencies): Application {
     '/api/dismiss',
     createDismissRoute({ db: deps.db, apiSecret: deps.config.docalign_api_secret }),
   );
+
+  // Fix endpoint (HMAC token in query/body, no Bearer auth)
+  // Needs urlencoded parsing for POST form data
+  if (deps.fixDeps) {
+    const fixRouter = createFixRoute({
+      db: deps.db,
+      apiSecret: deps.config.docalign_api_secret,
+      ...deps.fixDeps,
+    });
+    app.use('/api/fix', express.urlencoded({ extended: false }), fixRouter);
+  }
 
   // JSON body parsing for authenticated API routes
   app.use('/api', express.json({ limit: '1mb' }));
