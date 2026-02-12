@@ -91,6 +91,29 @@ describe('extractors', () => {
       expect(results).toHaveLength(0);
     });
 
+    it('rejects config-key notation without slashes', () => {
+      const doc = makeDoc('Set `doc_patterns.include` and `agent.adapter` in config.');
+      const results = extractPaths(doc, 'README.md');
+      expect(results).toHaveLength(0);
+    });
+
+    it('accepts paths without slashes if extension is known', () => {
+      const doc = makeDoc('See `tsconfig.json` and `Makefile.ts` for config.');
+      const results = extractPaths(doc, 'README.md');
+      const paths = results.map((r) => (r.extracted_value as Record<string, unknown>).path);
+      expect(paths).toContain('tsconfig.json');
+      expect(paths).toContain('Makefile.ts');
+    });
+
+    it('accepts paths with slashes regardless of extension', () => {
+      const doc = makeDoc('Check `config/doc_patterns.include` for the pattern.');
+      const results = extractPaths(doc, 'README.md');
+      expect(results).toHaveLength(1);
+      expect((results[0].extracted_value as Record<string, unknown>).path).toBe(
+        'config/doc_patterns.include',
+      );
+    });
+
     it('handles nested paths with hyphens and underscores', () => {
       const doc = makeDoc('Check `src/auth/user-auth_handler.ts`.');
       const results = extractPaths(doc, 'README.md');
@@ -286,6 +309,38 @@ describe('extractors', () => {
       const doc = makeDoc('This is just regular text with no commands.');
       const results = extractCommands(doc);
       expect(results).toHaveLength(0);
+    });
+
+    it('skips untagged code blocks (no language hint)', () => {
+      const doc = makeDoc('```\n├── src/\n│   ├── app.ts\n└── test/\n```');
+      const results = extractCommands(doc);
+      const blockResults = results.filter((r) => r.pattern_name === 'code_block_command');
+      expect(blockResults).toHaveLength(0);
+    });
+
+    it('skips ASCII art/tree structure in tagged code blocks', () => {
+      const doc = makeDoc('```bash\nnpm install\n├── src/\n│   └── index.ts\n```');
+      const results = extractCommands(doc);
+      const blockResults = results.filter((r) => r.pattern_name === 'code_block_command');
+      expect(blockResults).toHaveLength(1);
+      expect((blockResults[0].extracted_value as Record<string, unknown>).runner).toBe('npm');
+    });
+
+    it('skips box-drawing diagram lines in code blocks', () => {
+      const doc = makeDoc('```bash\nnpm test\n+-------+------+\n| Layer |\n+-------+------+\n```');
+      const results = extractCommands(doc);
+      const blockResults = results.filter((r) => r.pattern_name === 'code_block_command');
+      expect(blockResults).toHaveLength(1);
+      expect((blockResults[0].extracted_value as Record<string, unknown>).script).toBe('test');
+    });
+
+    it('strips inline comments from commands', () => {
+      const doc = makeDoc('```bash\nnpm run build          # TypeScript compilation\nnpm run test           # Vitest\n```');
+      const results = extractCommands(doc);
+      const blockResults = results.filter((r) => r.pattern_name === 'code_block_command');
+      expect(blockResults).toHaveLength(2);
+      expect((blockResults[0].extracted_value as Record<string, unknown>).script).toBe('run build');
+      expect((blockResults[1].extracted_value as Record<string, unknown>).script).toBe('run test');
     });
   });
 

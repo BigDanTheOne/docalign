@@ -38,6 +38,24 @@ export function extractPaths(doc: PreProcessedDoc, docFile: string): RawExtracti
   return results;
 }
 
+// Known file extensions — paths without `/` must have one of these
+const KNOWN_FILE_EXTENSIONS = new Set([
+  // Code
+  '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.py', '.rb', '.go', '.rs',
+  '.java', '.c', '.cpp', '.h', '.hpp', '.cs', '.php', '.swift', '.kt', '.scala',
+  '.r', '.jl', '.lua', '.pl', '.sh', '.bash', '.zsh', '.bat', '.cmd', '.ps1',
+  // Docs
+  '.md', '.mdx', '.rst', '.txt', '.html', '.htm', '.adoc', '.tex', '.pdf',
+  // Config
+  '.json', '.yaml', '.yml', '.toml', '.xml', '.ini', '.env', '.cfg', '.conf',
+  '.properties', '.lock', '.sum', '.mod',
+  // Build/infra
+  '.sql', '.graphql', '.gql', '.proto', '.wasm', '.wat', '.log', '.csv',
+  // Special dot-files
+  '.gitignore', '.gitattributes', '.editorconfig', '.eslintrc', '.prettierrc',
+  '.dockerignore', '.nvmrc', '.cursorrules',
+]);
+
 function passesPathFilters(path: string, docFile: string): boolean {
   if (path.includes('://')) return false;
   const ext = getExtension(path);
@@ -46,6 +64,11 @@ function passesPathFilters(path: string, docFile: string): boolean {
   if (path.startsWith('#')) return false;
   if (path === docFile) return false;
   if (!isValidPath(path)) return false;
+
+  // If path has no directory separator, require a known file extension.
+  // This filters out config-key notation like `doc_patterns.include` or `agent.adapter`.
+  if (!path.includes('/') && ext && !KNOWN_FILE_EXTENSIONS.has(ext)) return false;
+
   return true;
 }
 
@@ -112,7 +135,7 @@ const KNOWN_RUNNERS = new Set([
   'npm', 'npx', 'yarn', 'pnpm', 'pip', 'cargo', 'go', 'make', 'docker', 'kubectl',
 ]);
 
-const COMMAND_BLOCK_REGEX = /```(?:bash|sh|shell|zsh|console)?\n([\s\S]*?)```/g;
+const COMMAND_BLOCK_REGEX = /```(?:bash|sh|shell|zsh|console)\n([\s\S]*?)```/g;
 
 const COMMAND_INLINE_PATTERNS = [
   {
@@ -181,23 +204,54 @@ function parseCommandBlock(blockContent: string): Array<{ full: string; runner: 
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
+    // Skip lines that look like ASCII art/diagrams
+    if (isAsciiArt(trimmed)) continue;
 
     if (hasPrompt) {
       const promptMatch = trimmed.match(/^[$>]\s*(.*)/);
       if (!promptMatch) continue;
-      const cmd = promptMatch[1].trim();
+      const cmd = stripInlineComment(promptMatch[1].trim());
       if (cmd) {
         const { runner, script } = detectRunner(cmd);
         commands.push({ full: cmd, runner, script });
       }
     } else {
       if (trimmed.startsWith('#')) continue;
-      const { runner, script } = detectRunner(trimmed);
-      commands.push({ full: trimmed, runner, script });
+      const cmd = stripInlineComment(trimmed);
+      if (!cmd) continue;
+      const { runner, script } = detectRunner(cmd);
+      commands.push({ full: cmd, runner, script });
     }
   }
 
   return commands;
+}
+
+/**
+ * Strip trailing shell-style inline comments (` # comment`).
+ * Only strips when `#` is preceded by whitespace to avoid
+ * stripping `#` in URLs, anchors, or mid-token positions.
+ */
+function stripInlineComment(line: string): string {
+  const idx = line.indexOf(' #');
+  if (idx === -1) return line;
+  return line.slice(0, idx).trimEnd();
+}
+
+/**
+ * Detect lines that are ASCII art/diagrams rather than commands.
+ * Matches tree-drawing characters, box-drawing, and diagram lines.
+ */
+function isAsciiArt(line: string): boolean {
+  // Tree structure characters (├, └, │, ─)
+  if (/[├└│─┌┐┘┬┴┼]/.test(line)) return true;
+  // Box-drawing with +-- or === or |
+  if (/^\s*[+|][-=+|]+/.test(line)) return true;
+  // Table rows: | content | content |
+  if (/^\s*\|.*\|\s*$/.test(line)) return true;
+  // Lines that are purely arrows/pipes/spaces
+  if (/^\s*[v^|<>]+\s*$/.test(line)) return true;
+  return false;
 }
 
 function detectRunner(command: string): { runner: string; script: string } {
