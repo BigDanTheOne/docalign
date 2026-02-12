@@ -448,10 +448,8 @@ describe('createMapper (pipeline)', () => {
   });
 
   it('co-change boost is applied and capped at 1.0', async () => {
-    const learning = {
-      getCoChangeBoost: async () => 0.5,
-      isClaimSuppressed: async () => false,
-    };
+    const learning = new LearningServiceStub();
+    learning.getCoChangeBoost = async () => 0.5;
     const index = makeMockIndex({ fileExists: async () => true });
     const mapper = createMapper(pool, index, learning);
 

@@ -592,23 +592,95 @@ export interface FormattedEvidence {
   };
 }
 
-// === L7 Learning Service Interface (TDD-2 Section 2.1) ===
+// === L7 Learning Service Types (phase4-api-contracts.md Section 9) ===
+
+export interface FeedbackRecord {
+  id: string;
+  repo_id: string;
+  claim_id: string;
+  verification_result_id: string | null;
+  feedback_type: FeedbackType;
+  quick_pick_reason: QuickPickReason | null;
+  free_text: string | null;
+  github_user: string | null;
+  pr_number: number | null;
+  created_at: Date;
+}
 
 export interface SuppressionRule {
   id: string;
   repo_id: string;
   scope: SuppressionScope;
-  claim_id: string | null;
-  source_file: string | null;
-  claim_type: ClaimType | null;
-  pattern: string | null;
-  reason: string | null;
-  created_by: string;
-  created_at: Date;
+  target_claim_id: string | null;
+  target_file: string | null;
+  target_claim_type: ClaimType | null;
+  target_pattern: string | null;
+  reason: string;
+  source: 'quick_pick' | 'count_based' | 'agent_interpreted';
   expires_at: Date | null;
+  revoked: boolean;
+  created_at: Date;
 }
 
+export interface CoChangeRecord {
+  id: string;
+  repo_id: string;
+  code_file: string;
+  doc_file: string;
+  commit_sha: string;
+  committed_at: Date;
+  created_at: Date;
+}
+
+// === L7 Database Row Types (phase4-api-contracts.md Section 12) ===
+
+export interface FeedbackRow {
+  id: string;
+  repo_id: string;
+  claim_id: string;
+  verification_result_id: string | null;
+  feedback_type: FeedbackType;
+  quick_pick_reason: QuickPickReason | null;
+  free_text: string | null;
+  github_user: string | null;
+  pr_number: number | null;
+  created_at: Date;
+}
+
+export interface CoChangeRow {
+  id: string;
+  repo_id: string;
+  code_file: string;
+  doc_file: string;
+  commit_sha: string;
+  committed_at: Date;
+  created_at: Date;
+}
+
+export interface SuppressionRuleRow {
+  id: string;
+  repo_id: string;
+  scope: SuppressionScope;
+  target_claim_id: string | null;
+  target_file: string | null;
+  target_claim_type: ClaimType | null;
+  target_pattern: string | null;
+  reason: string;
+  source: string;
+  expires_at: Date | null;
+  revoked: boolean;
+  created_at: Date;
+}
+
+// === L7 Learning Service Interface (phase4-api-contracts.md Section 9.2) ===
+
 export interface LearningService {
+  recordFeedback(feedback: Omit<FeedbackRecord, 'id' | 'created_at'>): Promise<FeedbackRecord>;
+  processQuickPick(claimId: string, reason: QuickPickReason, repoId: string): Promise<SuppressionRule | null>;
+  checkCountBasedExclusion(claimId: string): Promise<boolean>;
+  isClaimSuppressed(claim: Claim): Promise<boolean>;
+  getActiveRules(repoId: string): Promise<SuppressionRule[]>;
+  recordCoChanges(repoId: string, codeFiles: string[], docFiles: string[], commitSha: string): Promise<void>;
   getCoChangeBoost(repoId: string, codeFile: string, docFile: string): Promise<number>;
-  isClaimSuppressed(repoId: string, claimId: string): Promise<boolean>;
+  getEffectiveConfidence(result: VerificationResult): number;
 }
