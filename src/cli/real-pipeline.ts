@@ -57,7 +57,7 @@ import {
   type SemanticClaimFile,
   type SemanticClaimRecord,
 } from './semantic-store';
-import { checkClaimStaleness, verifyWithEvidence } from './staleness-checker';
+import { checkClaimStaleness, checkAssertionStaleness, verifyWithEvidence } from './staleness-checker';
 import { isClaudeAvailable } from './claude-bridge';
 import {
   buildDocSections,
@@ -390,6 +390,15 @@ export class LocalPipeline implements CliPipeline {
           result.claims,
           sectionsToExtract.map((s) => s.heading),
         );
+
+        // Prune assertions that fail their own check — don't trust Claude blindly
+        for (const claim of updated.claims) {
+          if (!claim.last_verification && claim.evidence_assertions.length > 0) {
+            claim.evidence_assertions = claim.evidence_assertions.filter(
+              (a) => !checkAssertionStaleness(a, this.repoRoot),
+            );
+          }
+        }
 
         // Run initial evidence verification for newly extracted claims
         // Claude just explored the codebase, so we can verify immediately

@@ -233,7 +233,7 @@ async function checkEntityStaleness(
   return true; // Entity not found anywhere → stale
 }
 
-function checkAssertionStaleness(
+export function checkAssertionStaleness(
   assertion: { pattern: string; scope: string; expect: 'exists' | 'absent'; description: string },
   repoRoot: string,
 ): boolean {
