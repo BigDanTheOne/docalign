@@ -43,7 +43,7 @@ export function parseArgs(argv: string[]): CliArgs {
         // --key value (peek ahead — if next arg isn't a flag, treat as value)
         const key = arg.slice(2);
         // Known boolean flags don't consume the next arg
-        if (['verbose', 'help', 'json'].includes(key)) {
+        if (['verbose', 'help', 'json', 'dry-run', 'force'].includes(key)) {
           flags[key] = true;
         } else {
           options[key] = args[++i];
@@ -107,6 +107,7 @@ export async function run(
       write('  init            Set up DocAlign for Claude Code (MCP + skill)');
       write('  check <file>    Check a single documentation file');
       write('  scan            Scan entire repository');
+      write('  extract [file]  Extract semantic claims using Claude CLI');
       write('  fix [file]      Apply fixes from prior scan');
       write('  status          Show configuration and integration status');
       write('  configure       Create or update .docalign.yml');
@@ -116,6 +117,8 @@ export async function run(
       write('  --verbose               Show additional detail (check command)');
       write('  --exclude=FILE[,FILE]   Exclude files from scan (comma-separated)');
       write('  --json                  Output scan results as JSON');
+      write('  --dry-run               Show what would be extracted (extract command)');
+      write('  --force                 Re-extract all sections (extract command)');
       write('  --min-severity=LEVEL    Set minimum severity (configure command)');
       write('  --reset                 Reset config to defaults (configure command)');
       write('  --help                  Show this help message');

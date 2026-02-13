@@ -36,7 +36,7 @@ describe('runInit', () => {
     expect(settings.permissions.allow).toContain('mcp__docalign__*');
   });
 
-  it('creates SKILL.md with all 8 tools documented', async () => {
+  it('creates SKILL.md with all 10 tools documented', async () => {
     const { runInit } = await import('../../../src/cli/commands/init');
 
     await runInit(() => {});
@@ -53,6 +53,8 @@ describe('runInit', () => {
     expect(skillContent).toContain('get_docs');
     expect(skillContent).toContain('fix_doc');
     expect(skillContent).toContain('report_drift');
+    expect(skillContent).toContain('deep_check');
+    expect(skillContent).toContain('register_claims');
   });
 
   it('adds PostToolUse hook for git commit', async () => {
@@ -142,5 +144,16 @@ describe('runInit', () => {
     expect(content).toContain('Workflow 7: Search and Verify');
     expect(content).toContain('Workflow 6: Post-Implementation Check');
     expect(content).toContain('Workflow 8: Report and Track Drift');
+    expect(content).toContain('Workflow 9: Deep Documentation Audit');
+  });
+
+  it('init output mentions docalign extract', async () => {
+    const { runInit } = await import('../../../src/cli/commands/init');
+
+    const output: string[] = [];
+    await runInit((msg) => output.push(msg));
+
+    const joined = output.join('\n');
+    expect(joined).toContain('docalign extract');
   });
 });

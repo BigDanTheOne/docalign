@@ -48,9 +48,32 @@ import { buildFixPrompt } from './prompts/fix';
 import { PVerifyOutputSchema } from './prompts/schemas';
 import { PFixOutputSchema } from './prompts/schemas';
 
+// Semantic claim support
+import {
+  loadClaimsForFile,
+  saveClaimsForFile,
+  findChangedSections,
+  upsertClaims,
+  type SemanticClaimFile,
+  type SemanticClaimRecord,
+} from './semantic-store';
+import { checkClaimStaleness, verifyWithEvidence } from './staleness-checker';
+import { isClaudeAvailable } from './claude-bridge';
+import {
+  buildDocSections,
+  extractSemanticClaims,
+} from '../layers/L1-claim-extractor/semantic-extractor';
+
 const MAX_FILE_SIZE = 100 * 1024; // 100KB
 const DEFAULT_VERIFY_MODEL = 'claude-sonnet-4-5-20250929';
 const DEFAULT_FIX_MODEL = 'claude-sonnet-4-5-20250929';
+
+export interface ExtractSemanticResult {
+  totalFiles: number;
+  totalExtracted: number;
+  totalSkipped: number;
+  errors: Array<{ file: string; message: string }>;
+}
 
 export class LocalPipeline implements CliPipeline {
   private index: InMemoryIndex;
@@ -58,6 +81,7 @@ export class LocalPipeline implements CliPipeline {
   private knownPackages = new Set<string>();
   private fixCache: DocFix[] = [];
   private llmClient: LLMClient | null = null;
+  private semanticStoreCache = new Map<string, SemanticClaimFile | null>();
 
   constructor(private repoRoot: string, llmApiKey?: string) {
     this.index = new InMemoryIndex(repoRoot);
@@ -70,6 +94,11 @@ export class LocalPipeline implements CliPipeline {
   /** Whether LLM-based verification (Tier 3) is available. */
   get hasLLM(): boolean {
     return this.llmClient !== null;
+  }
+
+  /** Repo root accessor for extract command. */
+  getRepoRoot(): string {
+    return this.repoRoot;
   }
 
   private async ensureInitialized(): Promise<void> {
@@ -89,7 +118,12 @@ export class LocalPipeline implements CliPipeline {
     }
 
     const content = fs.readFileSync(absPath, 'utf-8');
-    const claims = this.extractClaimsInMemory(filePath, content);
+    const syntacticClaims = this.extractClaimsInMemory(filePath, content);
+
+    // Load stored semantic claims
+    const semanticClaims = this.loadSemanticClaimsAsClaims(filePath);
+    const claims = [...syntacticClaims, ...semanticClaims];
+
     const results: VerificationResult[] = [];
 
     for (const claim of claims) {
@@ -206,7 +240,10 @@ export class LocalPipeline implements CliPipeline {
         continue; // Skip unreadable files
       }
 
-      const claims = this.extractClaimsInMemory(docFile, content);
+      const syntacticClaims = this.extractClaimsInMemory(docFile, content);
+      const semanticClaims = this.loadSemanticClaimsAsClaims(docFile);
+      const claims = [...syntacticClaims, ...semanticClaims];
+
       const results: VerificationResult[] = [];
 
       for (const claim of claims) {
@@ -252,6 +289,133 @@ export class LocalPipeline implements CliPipeline {
 
   async markFixesApplied(_fixIds: string[]): Promise<void> {
     // No-op for local CLI
+  }
+
+  /**
+   * Extract semantic claims from doc files using Claude CLI.
+   * One `claude -p` call per file with changed sections.
+   */
+  async extractSemantic(
+    onProgress?: (current: number, total: number, file: string, status: string) => void,
+    options?: { force?: boolean; files?: string[] },
+  ): Promise<ExtractSemanticResult> {
+    if (!isClaudeAvailable()) {
+      return {
+        totalFiles: 0,
+        totalExtracted: 0,
+        totalSkipped: 0,
+        errors: [{ file: '', message: 'Claude CLI not found. Install: npm install -g @anthropic-ai/claude-code' }],
+      };
+    }
+
+    await this.ensureInitialized();
+
+    const fileTree = await this.index.getFileTree('local');
+    let docFiles = options?.files ?? discoverDocFiles(fileTree);
+
+    // If specific files provided, validate they exist
+    if (options?.files) {
+      docFiles = docFiles.filter((f) => {
+        const absPath = path.join(this.repoRoot, f);
+        return fs.existsSync(absPath);
+      });
+    }
+
+    let totalExtracted = 0;
+    let totalSkipped = 0;
+    const errors: Array<{ file: string; message: string }> = [];
+
+    for (let i = 0; i < docFiles.length; i++) {
+      const docFile = docFiles[i];
+      if (onProgress) onProgress(i + 1, docFiles.length, docFile, 'analyzing');
+
+      let content: string;
+      try {
+        content = fs.readFileSync(path.join(this.repoRoot, docFile), 'utf-8');
+      } catch {
+        totalSkipped++;
+        continue;
+      }
+
+      if (content.length === 0 || content.length > MAX_FILE_SIZE) {
+        totalSkipped++;
+        continue;
+      }
+
+      const allSections = buildDocSections(docFile, content);
+      const stored = this.getCachedSemanticStore(docFile);
+
+      // Determine which sections need re-extraction
+      let sectionsToExtract = allSections;
+      if (!options?.force) {
+        const changed = findChangedSections(
+          stored,
+          allSections.map((s) => ({ heading: s.heading, contentHash: s.contentHash })),
+        );
+        if (changed.length === 0) {
+          totalSkipped++;
+          if (onProgress) onProgress(i + 1, docFiles.length, docFile, 'skipped');
+          continue;
+        }
+        sectionsToExtract = allSections.filter((s) =>
+          changed.some((c) => c.toLowerCase() === s.heading.toLowerCase()),
+        );
+      }
+
+      if (onProgress) onProgress(i + 1, docFiles.length, docFile, 'extracting');
+
+      const result = await extractSemanticClaims(
+        docFile,
+        sectionsToExtract,
+        this.repoRoot,
+      );
+
+      if (result.errors.length > 0) {
+        for (const err of result.errors) {
+          errors.push({ file: err.file, message: err.error.message });
+        }
+      }
+
+      if (result.claims.length > 0 || sectionsToExtract.length > 0) {
+        // Upsert into store
+        const currentData = stored ?? {
+          version: 1 as const,
+          source_file: docFile,
+          last_extracted_at: new Date().toISOString(),
+          claims: [],
+        };
+
+        const updated = upsertClaims(
+          currentData,
+          result.claims,
+          sectionsToExtract.map((s) => s.heading),
+        );
+
+        // Run initial evidence verification for newly extracted claims
+        // Claude just explored the codebase, so we can verify immediately
+        for (const claim of updated.claims) {
+          if (!claim.last_verification) {
+            const evidenceResult = await verifyWithEvidence(claim, this.index, this.repoRoot);
+            claim.last_verification = evidenceResult.verification;
+            for (const entity of claim.evidence_entities) {
+              const key = `${entity.symbol}:${entity.file}`;
+              const newHash = evidenceResult.entityContentHashes.get(key);
+              if (newHash) {
+                entity.content_hash = newHash;
+              }
+            }
+          }
+        }
+
+        saveClaimsForFile(this.repoRoot, docFile, updated);
+        this.semanticStoreCache.set(docFile, updated);
+        totalExtracted += result.claims.length;
+      }
+
+      if (onProgress) onProgress(i + 1, docFiles.length, docFile, 'done');
+    }
+
+    return { totalFiles: docFiles.length, totalExtracted, totalSkipped, errors };
   }
 
   // === Private helpers ===
@@ -309,6 +473,24 @@ export class LocalPipeline implements CliPipeline {
    */
   private async verifyClaim(claim: Claim): Promise<VerificationResult | null> {
     const startTime = Date.now();
+
+    // TIER 4: Semantic claims (cached verdict from staleness check)
+    if (claim.testability === 'semantic') {
+      const result = await this.verifySemanticClaim(claim);
+      if (result) {
+        result.duration_ms = Date.now() - startTime;
+        return result;
+      }
+      // No cached verdict — fall through to LLM if available
+      if (this.llmClient) {
+        const llmResult = await this.verifyWithLLM(claim);
+        if (llmResult) {
+          llmResult.duration_ms = Date.now() - startTime;
+          return llmResult;
+        }
+      }
+      return null;
+    }
 
     // TIER 1: Syntactic verification
     if (claim.testability === 'syntactic') {
@@ -419,6 +601,123 @@ export class LocalPipeline implements CliPipeline {
       token_cost: llmResult.tokens.input + llmResult.tokens.output,
       duration_ms: 0,
       verification_path: 1,
+      post_check_result: null,
+      created_at: new Date(),
+    };
+  }
+
+  /**
+   * Load semantic claims for a file, with caching.
+   */
+  private getCachedSemanticStore(docFile: string): SemanticClaimFile | null {
+    if (this.semanticStoreCache.has(docFile)) {
+      return this.semanticStoreCache.get(docFile) ?? null;
+    }
+    const data = loadClaimsForFile(this.repoRoot, docFile);
+    this.semanticStoreCache.set(docFile, data);
+    return data;
+  }
+
+  /**
+   * Load stored semantic claims for a doc file and convert to Claim objects.
+   */
+  private loadSemanticClaimsAsClaims(docFile: string): Claim[] {
+    const data = this.getCachedSemanticStore(docFile);
+    if (!data) return [];
+    return data.claims.map((sc) => this.semanticClaimToRegularClaim(sc));
+  }
+
+  /**
+   * Convert a SemanticClaimRecord to the standard Claim type.
+   */
+  private semanticClaimToRegularClaim(sc: SemanticClaimRecord): Claim {
+    return {
+      id: sc.id,
+      repo_id: 'local',
+      source_file: sc.source_file,
+      line_number: sc.line_number,
+      claim_text: sc.claim_text,
+      claim_type: sc.claim_type,
+      testability: 'semantic',
+      extracted_value: { keywords: sc.keywords },
+      keywords: sc.keywords,
+      extraction_confidence: 0.8,
+      extraction_method: 'llm',
+      verification_status: sc.last_verification?.verdict ?? 'pending',
+      last_verified_at: sc.last_verification ? new Date(sc.last_verification.verified_at) : null,
+      embedding: null,
+      last_verification_result_id: null,
+      parent_claim_id: null,
+      created_at: new Date(sc.extracted_at),
+      updated_at: new Date(sc.extracted_at),
+    };
+  }
+
+  /**
+   * Verify a semantic claim using evidence checks (assertions + entities).
+   *
+   * Flow:
+   * 1. If cached verdict exists and evidence is fresh → return cached
+   * 2. Otherwise, run evidence-based verification (deterministic, no LLM)
+   * 3. Persist the result back to the semantic store
+   */
+  private async verifySemanticClaim(claim: Claim): Promise<VerificationResult | null> {
+    const data = this.getCachedSemanticStore(claim.source_file);
+    if (!data) return null;
+
+    const semClaim = data.claims.find((c) => c.id === claim.id);
+    if (!semClaim) return null;
+
+    const staleness = await checkClaimStaleness(semClaim, this.index, this.repoRoot);
+
+    if (staleness === 'fresh' && semClaim.last_verification) {
+      // Return cached verification
+      return this.semanticVerificationToResult(claim, semClaim);
+    }
+
+    // Stale or no cached verification — run evidence-based verification
+    const evidenceResult = await verifyWithEvidence(semClaim, this.index, this.repoRoot);
+
+    // Update the stored claim with new verification + entity content hashes
+    semClaim.last_verification = evidenceResult.verification;
+    for (const entity of semClaim.evidence_entities) {
+      const key = `${entity.symbol}:${entity.file}`;
+      const newHash = evidenceResult.entityContentHashes.get(key);
+      if (newHash) {
+        entity.content_hash = newHash;
+      }
+    }
+
+    // Persist back to store
+    saveClaimsForFile(this.repoRoot, claim.source_file, data);
+    // Update cache
+    this.semanticStoreCache.set(claim.source_file, data);
+
+    return this.semanticVerificationToResult(claim, semClaim);
+  }
+
+  /** Convert a SemanticClaimRecord with verification to a VerificationResult. */
+  private semanticVerificationToResult(claim: Claim, semClaim: SemanticClaimRecord): VerificationResult | null {
+    if (!semClaim.last_verification) return null;
+
+    return {
+      id: randomUUID(),
+      claim_id: claim.id,
+      repo_id: 'local',
+      scan_run_id: 'cli',
+      verdict: semClaim.last_verification.verdict,
+      confidence: semClaim.last_verification.confidence,
+      tier: 4, // Semantic evidence tier
+      severity: semClaim.last_verification.verdict === 'drifted' ? 'medium' : null,
+      reasoning: semClaim.last_verification.reasoning,
+      specific_mismatch: semClaim.last_verification.verdict === 'drifted' ? semClaim.last_verification.reasoning : null,
+      suggested_fix: null,
+      evidence_files: [
+        ...semClaim.evidence_entities.map((e) => e.file),
+      ],
+      token_cost: null,
+      duration_ms: 0,
+      verification_path: null,
       post_check_result: null,
       created_at: new Date(),
     };

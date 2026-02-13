@@ -9,10 +9,11 @@
  *   mcp   — Start MCP server (has its own pipeline lifecycle)
  */
 
-import { run } from './index';
+import { run, parseArgs } from './index';
 import { LocalPipeline } from './real-pipeline';
 import { runInit } from './commands/init';
 import { startMcpServer } from './commands/mcp';
+import { runExtract } from './commands/extract';
 
 async function main(): Promise<void> {
   // Detect command before creating pipeline (some commands don't need one)
@@ -30,6 +31,16 @@ async function main(): Promise<void> {
 
   const repoRoot = process.cwd();
   const pipeline = new LocalPipeline(repoRoot);
+
+  if (rawCommand === 'extract') {
+    const { args, flags } = parseArgs(process.argv);
+    const exitCode = await runExtract(pipeline, {
+      dryRun: !!flags['dry-run'],
+      force: !!flags.force,
+      files: args.length > 0 ? args : undefined,
+    });
+    process.exit(exitCode);
+  }
 
   const exitCode = await run(pipeline);
   process.exit(exitCode);

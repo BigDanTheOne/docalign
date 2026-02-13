@@ -20,7 +20,7 @@ description: >
   "doc drift", or after refactors and API changes. Requires docalign MCP server.
 metadata:
   author: DocAlign
-  version: 0.2.0
+  version: 0.3.0
   mcp-server: docalign
 ---
 
@@ -52,6 +52,8 @@ When the user asks to check docs, scan for drift, or verify documentation.
 | \`get_docs\` | Search docs by topic with multi-signal ranking |
 | \`fix_doc\` | Generate fix suggestions for drifted claims |
 | \`report_drift\` | Report a doc inaccuracy for tracking |
+| \`deep_check\` | Deep audit: syntactic + semantic claims + coverage |
+| \`register_claims\` | Persist semantic claims from agent analysis |
 
 ## Workflows
 
@@ -123,6 +125,22 @@ When the agent discovers documentation that doesn't match code but can't fix it 
 1. Call \`report_drift\` with the doc file, inaccurate text, and actual behavior
 2. Include evidence files if known
 3. The report is stored locally in \`.docalign/reports.json\` for later review
+
+### Workflow 9: Deep Documentation Audit
+When the user asks for a thorough doc audit or wants semantic claim tracking:
+
+1. Call \`deep_check\` with the file path
+2. Review the results:
+   - **syntactic**: Regex-extracted claims (paths, commands, etc.) and their verdicts
+   - **semantic**: LLM-extracted claims (behavior, architecture, config) and verifications
+   - **unchecked_sections**: Sections with zero claims of any kind
+   - **coverage**: Percentage of sections that have at least one claim
+3. For unchecked sections, analyze the content and identify verifiable claims
+4. Present found claims to the user: "I found N new claims. Should I register them?"
+5. If approved, call \`register_claims\` with the claim details
+6. If semantic claims are missing, suggest running \`docalign extract\`
+
+**Important**: Always ask user confirmation before calling \`register_claims\`.
 
 ## Interpreting Results
 
@@ -255,6 +273,8 @@ export async function runInit(
   write('Done. Restart Claude Code — DocAlign is ready.');
   write('');
   write('Try asking Claude: "Check my docs for drift"');
+  write('');
+  write('Tip: Run `docalign extract` to enable semantic claim tracking.');
 
   return 0;
 }

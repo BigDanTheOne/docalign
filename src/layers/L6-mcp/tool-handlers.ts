@@ -7,9 +7,19 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CliPipeline, ScanResult } from '../../cli/local-pipeline';
-import { filterUncertain, countVerdicts, buildHotspots } from '../../cli/local-pipeline';
+import { filterUncertain, countVerdicts, buildHotspots, listHeadings, findSection } from '../../cli/local-pipeline';
 import { DocSearchIndex } from './doc-search';
 import { appendReport } from './drift-reports';
+import {
+  loadClaimsForFile,
+  saveClaimsForFile,
+  hashContent,
+  generateClaimId,
+  type SemanticClaimFile,
+  type SemanticClaimRecord,
+} from '../../cli/semantic-store';
+import fs from 'fs';
+import path from 'path';
 
 /**
  * Register all local MCP tools on the given server.
@@ -416,6 +426,292 @@ export function registerLocalTools(
               acknowledged: true,
               report_id: report.id,
               message: `Drift report stored. File: ${doc_file}`,
+            }, null, 2),
+          }],
+        };
+      } catch (err) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
+          }],
+          isError: true,
+        };
+      }
+    },
+  );
+  // Tool 9: deep_check — Deep documentation audit with semantic claims
+  s.tool(
+    'deep_check',
+    'Deep documentation audit. Returns syntactic claims + semantic claims + unchecked sections + coverage metrics. Use for thorough doc verification.',
+    {
+      file: z.string().min(1).describe('Path to the documentation file (relative to repo root)'),
+    },
+    async ({ file }: { file: string }) => {
+      try {
+        // Syntactic check
+        const result = await pipeline.checkFile(file, true);
+        const visible = filterUncertain(result.results);
+        const counts = countVerdicts(visible);
+
+        const syntacticFindings = visible.map((r) => {
+          const claim = result.claims.find((c) => c.id === r.claim_id);
+          return {
+            claim_text: claim?.claim_text ?? '',
+            claim_type: claim?.claim_type ?? '',
+            line: claim?.line_number,
+            verdict: r.verdict,
+            severity: r.severity,
+            reasoning: r.reasoning,
+          };
+        });
+
+        // Semantic claims from store
+        const semanticData = loadClaimsForFile(repoRoot, file);
+        const semanticClaims = semanticData?.claims ?? [];
+        const semanticFindings = semanticClaims.map((sc) => ({
+          id: sc.id,
+          claim_text: sc.claim_text,
+          claim_type: sc.claim_type,
+          line: sc.line_number,
+          section: sc.section_heading,
+          keywords: sc.keywords,
+          verification: sc.last_verification ? {
+            verdict: sc.last_verification.verdict,
+            confidence: sc.last_verification.confidence,
+            reasoning: sc.last_verification.reasoning,
+            verified_at: sc.last_verification.verified_at,
+          } : null,
+        }));
+
+        // Unchecked sections
+        const absPath = path.join(repoRoot, file);
+        let uncheckedSections: Array<{
+          heading: string;
+          line_range: string;
+          content_preview: string;
+        }> = [];
+
+        if (fs.existsSync(absPath)) {
+          const content = fs.readFileSync(absPath, 'utf-8');
+          const headings = listHeadings(content);
+          const lines = content.split('\n');
+
+          // Build set of checked sections (have at least one claim)
+          const checkedSections = new Set<string>();
+          for (const claim of result.claims) {
+            for (const h of headings) {
+              const section = findSection(content, h.text);
+              if (section && claim.line_number >= section.startLine && claim.line_number <= section.endLine) {
+                checkedSections.add(h.text.toLowerCase());
+              }
+            }
+          }
+          for (const sc of semanticClaims) {
+            checkedSections.add(sc.section_heading.toLowerCase());
+          }
+
+          uncheckedSections = headings
+            .filter((h) => !checkedSections.has(h.text.toLowerCase()))
+            .map((h) => {
+              const section = findSection(content, h.text);
+              const startLine = section?.startLine ?? h.line;
+              const endLine = section?.endLine ?? h.line;
+              const sectionContent = lines.slice(startLine - 1, endLine).join('\n');
+              return {
+                heading: h.text,
+                line_range: `${startLine}-${endLine}`,
+                content_preview: sectionContent.slice(0, 300),
+              };
+            });
+        }
+
+        // Coverage
+        const allHeadingCount = fs.existsSync(absPath)
+          ? listHeadings(fs.readFileSync(absPath, 'utf-8')).length || 1
+          : 1;
+        const checkedCount = allHeadingCount - uncheckedSections.length;
+        const coveragePct = Math.round((checkedCount / allHeadingCount) * 100);
+
+        // Warnings
+        const warnings: string[] = [];
+        if (semanticClaims.length === 0) {
+          warnings.push('No semantic claims stored. Run `docalign extract` first.');
+        }
+
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              file,
+              syntactic: {
+                total_claims: result.claims.filter((c) => c.extraction_method !== 'llm').length,
+                verified: counts.verified,
+                drifted: counts.drifted,
+                findings: syntacticFindings.filter((f) => f.verdict === 'drifted'),
+              },
+              semantic: {
+                total_claims: semanticClaims.length,
+                findings: semanticFindings,
+              },
+              unchecked_sections: uncheckedSections,
+              coverage: {
+                total_sections: allHeadingCount,
+                checked_sections: checkedCount,
+                coverage_pct: coveragePct,
+              },
+              warnings,
+            }, null, 2),
+          }],
+        };
+      } catch (err) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
+          }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  // Tool 10: register_claims — Persist semantic claims from agent analysis
+  s.tool(
+    'register_claims',
+    'Register semantic claims discovered during analysis. Persists them to .docalign/semantic/ for future verification.',
+    {
+      claims: z.array(z.object({
+        source_file: z.string().min(1),
+        line_number: z.number().int().positive(),
+        claim_text: z.string().min(1),
+        claim_type: z.enum(['behavior', 'architecture', 'config']),
+        keywords: z.array(z.string()),
+        evidence_entities: z.array(z.object({
+          symbol: z.string(),
+          file: z.string(),
+        })).optional().default([]),
+        evidence_assertions: z.array(z.object({
+          pattern: z.string(),
+          scope: z.string(),
+          expect: z.enum(['exists', 'absent']),
+          description: z.string(),
+        })).optional().default([]),
+        verification: z.object({
+          verdict: z.enum(['verified', 'drifted', 'uncertain']),
+          confidence: z.number().min(0).max(1),
+          reasoning: z.string(),
+        }).optional(),
+      })).min(1).max(100),
+    },
+    async ({ claims }: {
+      claims: Array<{
+        source_file: string;
+        line_number: number;
+        claim_text: string;
+        claim_type: 'behavior' | 'architecture' | 'config';
+        keywords: string[];
+        evidence_entities?: Array<{ symbol: string; file: string }>;
+        evidence_assertions?: Array<{ pattern: string; scope: string; expect: 'exists' | 'absent'; description: string }>;
+        verification?: { verdict: 'verified' | 'drifted' | 'uncertain'; confidence: number; reasoning: string };
+      }>;
+    }) => {
+      try {
+        // Group claims by source file
+        const byFile = new Map<string, typeof claims>();
+        for (const c of claims) {
+          const existing = byFile.get(c.source_file) ?? [];
+          existing.push(c);
+          byFile.set(c.source_file, existing);
+        }
+
+        const allIds: string[] = [];
+
+        for (const [sourceFile, fileClaims] of byFile) {
+          const absPath = path.join(repoRoot, sourceFile);
+          if (fs.existsSync(absPath)) {
+            const content = fs.readFileSync(absPath, 'utf-8');
+            const headingsList = listHeadings(content);
+            const lines = content.split('\n');
+
+            // For each claim, find its section
+            const newRecords: SemanticClaimRecord[] = fileClaims.map((c) => {
+              // Find section for this line
+              let foundHeading = '(document)';
+              let foundHash = hashContent(content);
+
+              for (let i = headingsList.length - 1; i >= 0; i--) {
+                if (headingsList[i].line <= c.line_number) {
+                  foundHeading = headingsList[i].text;
+                  const section = findSection(content, headingsList[i].text);
+                  if (section) {
+                    const sectionContent = lines.slice(section.startLine - 1, section.endLine).join('\n');
+                    foundHash = hashContent(sectionContent);
+                  }
+                  break;
+                }
+              }
+
+              const id = generateClaimId(sourceFile, c.claim_text);
+              allIds.push(id);
+
+              return {
+                id,
+                source_file: sourceFile,
+                line_number: c.line_number,
+                claim_text: c.claim_text,
+                claim_type: c.claim_type,
+                keywords: c.keywords,
+                section_content_hash: foundHash,
+                section_heading: foundHeading,
+                extracted_at: new Date().toISOString(),
+                evidence_entities: (c.evidence_entities ?? []).map((e) => ({
+                  ...e,
+                  content_hash: '',
+                })),
+                evidence_assertions: c.evidence_assertions ?? [],
+                last_verification: c.verification ? {
+                  verdict: c.verification.verdict,
+                  confidence: c.verification.confidence,
+                  reasoning: c.verification.reasoning,
+                  verified_at: new Date().toISOString(),
+                } : null,
+              };
+            });
+
+            // Load or create file data
+            const existing = loadClaimsForFile(repoRoot, sourceFile) ?? {
+              version: 1 as const,
+              source_file: sourceFile,
+              last_extracted_at: new Date().toISOString(),
+              claims: [],
+            };
+
+            // Merge — don't remove claims from non-mentioned sections
+            const claimMap = new Map<string, SemanticClaimRecord>();
+            for (const c of existing.claims) {
+              claimMap.set(c.id, c);
+            }
+            for (const c of newRecords) {
+              claimMap.set(c.id, c);
+            }
+
+            const updated: SemanticClaimFile = {
+              ...existing,
+              last_extracted_at: new Date().toISOString(),
+              claims: Array.from(claimMap.values()),
+            };
+
+            saveClaimsForFile(repoRoot, sourceFile, updated);
+          }
+        }
+
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              registered: claims.length,
+              claim_ids: allIds,
             }, null, 2),
           }],
         };

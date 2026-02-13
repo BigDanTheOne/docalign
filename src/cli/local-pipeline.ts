@@ -167,7 +167,7 @@ export function listHeadings(content: string): Array<{ text: string; level: numb
   return parseHeadings(content.split('\n'));
 }
 
-function parseHeadings(lines: string[]): Array<{ text: string; level: number; line: number }> {
+export function parseHeadings(lines: string[]): Array<{ text: string; level: number; line: number }> {
   const headings: Array<{ text: string; level: number; line: number }> = [];
   for (let i = 0; i < lines.length; i++) {
     const match = lines[i].match(/^(#{1,6})\s+(.+)/);
