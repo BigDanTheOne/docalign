@@ -58,7 +58,8 @@ import {
   type SemanticClaimRecord,
 } from './semantic-store';
 import { checkClaimStaleness, checkAssertionStaleness, verifyWithEvidence } from './staleness-checker';
-import { isClaudeAvailable } from './claude-bridge';
+import { z } from 'zod';
+import { isClaudeAvailable, invokeClaudeStructured } from './claude-bridge';
 import {
   buildDocSections,
   extractSemanticClaims,
@@ -391,13 +392,11 @@ export class LocalPipeline implements CliPipeline {
           sectionsToExtract.map((s) => s.heading),
         );
 
-        // Prune assertions that fail their own check — don't trust Claude blindly
-        for (const claim of updated.claims) {
-          if (!claim.last_verification && claim.evidence_assertions.length > 0) {
-            claim.evidence_assertions = claim.evidence_assertions.filter(
-              (a) => !checkAssertionStaleness(a, this.repoRoot),
-            );
-          }
+        // Test assertions and let Claude correct failures
+        const failedAssertions = this.findFailedAssertions(updated.claims);
+        if (failedAssertions.length > 0) {
+          if (onProgress) onProgress(i + 1, docFiles.length, docFile, 'correcting');
+          await this.correctFailedAssertions(updated.claims, failedAssertions);
         }
 
         // Run initial evidence verification for newly extracted claims
@@ -425,6 +424,116 @@ export class LocalPipeline implements CliPipeline {
     }
 
     return { totalFiles: docFiles.length, totalExtracted, totalSkipped, errors };
+  }
+
+  // === Assertion correction ===
+
+  /**
+   * Find assertions that fail their own check (pattern doesn't match scope).
+   * Returns list of { claimId, assertion, reason } for each failure.
+   */
+  private findFailedAssertions(
+    claims: SemanticClaimRecord[],
+  ): Array<{ claimId: string; claimText: string; assertion: SemanticClaimRecord['evidence_assertions'][0]; reason: string }> {
+    const failures: Array<{ claimId: string; claimText: string; assertion: SemanticClaimRecord['evidence_assertions'][0]; reason: string }> = [];
+    for (const claim of claims) {
+      if (claim.last_verification) continue; // Already verified, skip
+      for (const assertion of claim.evidence_assertions) {
+        const failed = checkAssertionStaleness(assertion, this.repoRoot);
+        if (failed) {
+          const action = assertion.expect === 'exists' ? 'not found' : 'unexpectedly found';
+          failures.push({
+            claimId: claim.id,
+            claimText: claim.claim_text,
+            assertion,
+            reason: `Pattern "${assertion.pattern}" ${action} in ${assertion.scope}`,
+          });
+        }
+      }
+    }
+    return failures;
+  }
+
+  /**
+   * Send failed assertions back to Claude for correction.
+   * Claude gets tools to re-read the code and produce correct patterns.
+   */
+  private async correctFailedAssertions(
+    claims: SemanticClaimRecord[],
+    failures: Array<{ claimId: string; claimText: string; assertion: SemanticClaimRecord['evidence_assertions'][0]; reason: string }>,
+  ): Promise<void> {
+    const failureList = failures.map((f, i) =>
+      `${i + 1}. Claim: "${f.claimText}"
+   Assertion: pattern="${f.assertion.pattern}" scope="${f.assertion.scope}" expect="${f.assertion.expect}"
+   Failed: ${f.reason}`,
+    ).join('\n\n');
+
+    const prompt = `You previously extracted documentation claims with evidence assertions. Some assertions failed verification — the patterns don't match the actual code.
+
+For each failed assertion below, use Grep to find the correct pattern in the scope file, then return corrected assertions.
+
+## Failed assertions
+
+${failureList}
+
+## Instructions
+
+1. For each failed assertion, Grep the scope file to find what pattern ACTUALLY matches
+2. If the claim is genuinely drifted (the code really doesn't support it), keep expect: "exists" with a pattern describing what SHOULD exist
+3. Return ONLY the corrected assertions, keyed by their index number
+
+Return JSON:
+{
+  "corrections": [
+    { "index": 1, "pattern": "corrected_pattern", "scope": "file.ts", "expect": "exists", "description": "updated description" }
+  ]
+}
+
+If an assertion is correct and the code genuinely doesn't match (real drift), return it unchanged.`;
+
+    const CorrectionSchema = z.object({
+      corrections: z.array(z.object({
+        index: z.number(),
+        pattern: z.string(),
+        scope: z.string(),
+        expect: z.enum(['exists', 'absent']),
+        description: z.string(),
+      })),
+    });
+
+    const result = await invokeClaudeStructured(prompt, CorrectionSchema, {
+      allowedTools: ['Grep', 'Read', 'Glob'],
+      appendSystemPrompt: 'You fix grep patterns to match actual code. Verify each correction with Grep before returning. Return valid JSON.',
+      cwd: this.repoRoot,
+      preprocess: (data: unknown) => {
+        // Normalize bare array
+        if (Array.isArray(data)) return { corrections: data };
+        return data;
+      },
+    });
+
+    if (!result.ok) return; // Correction failed — proceed with original assertions
+
+    // Apply corrections back to claims
+    for (const correction of result.data.corrections) {
+      const failure = failures[correction.index - 1];
+      if (!failure) continue;
+
+      const claim = claims.find((c) => c.id === failure.claimId);
+      if (!claim) continue;
+
+      const assertionIdx = claim.evidence_assertions.findIndex(
+        (a) => a.pattern === failure.assertion.pattern && a.scope === failure.assertion.scope,
+      );
+      if (assertionIdx === -1) continue;
+
+      claim.evidence_assertions[assertionIdx] = {
+        pattern: correction.pattern,
+        scope: correction.scope,
+        expect: correction.expect,
+        description: correction.description,
+      };
+    }
   }
 
   // === Private helpers ===
