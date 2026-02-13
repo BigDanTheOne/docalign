@@ -1,0 +1,23 @@
+when I install docalign with npm install -g docalign npx docalign init, I get the following error:
+claude --dangerously-skip-permissions
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Settings Error
+
+ /Users/kotkot/Discovery/docalign/.claude/settings.local.json
+  └ hooks
+    └ PostToolUse
+      └ 0
+        └ hooks: Expected array, but received undefined
+
+ Hooks use a new format with matchers. Example: {"PostToolUse": [{"matcher": {"tools": ["BashTool"]}, "hooks": [{"type": "command", "command": "echo Done"}]}]}
+ Learn more: https://code.claude.com/docs/en/hooks
+
+
+ Files with errors are skipped entirely, not just the invalid settings.
+
+ ❯ 1. Exit and fix manually
+The docalign init command generated hooks in the old format. The new format
+  requires:
+
+  - matcher to be an object (e.g., {"tools": ["Bash"]}) instead of a plain string
+  - Each entry must have a hooks array with the command objects

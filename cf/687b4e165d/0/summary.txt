@@ -1,0 +1,18 @@
+Fixed. Here's what was wrong and what changed:
+
+**Problem:** `docalign init` generated hooks in the old Claude Code format:
+```json
+{ "matcher": "Bash", "pattern": "git commit", "command": "echo ..." }
+```
+
+**Fix:** Updated to the new hooks format that Claude Code expects:
+```json
+{ "matcher": "Bash", "hooks": [{ "type": "command", "command": "..." }] }
+```
+
+**Changes:**
+- `src/cli/commands/init.ts` — Updated the `HookEntry` interface and hook generation to use `{ matcher, hooks: [{ type, command }] }` instead of `{ matcher, pattern, command }`. Since the new format doesn't support a `pattern` field for input filtering, the git-commit check is done inside the hook command itself via `grep`.
+- `test/cli/commands/init.test.ts` — Updated all 4 hook-related tests to assert the new structure.
+- `.claude/settings.local.json` — Fixed the existing broken file in this repo.
+
+All 7 tests pass and the build succeeds. You can re-run `npx docalign init` (or just restart Claude Code) and the error should be gone.
