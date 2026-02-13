@@ -1,0 +1,13 @@
+Interesting result. The correction path is implemented but wasn't triggered — Claude got all assertions right this time (the "verify with Grep" prompt is working).
+
+But there's a subtler issue with claim 4. Look at the mismatch:
+
+- **Claim text**: `MCP server command: npx, args: ["docalign-mcp"]` (from the README)
+- **Assertion checks**: `args: \['docalign', 'mcp', '--repo', '\.'\]` → passes (code has this)
+- **Verdict**: verified
+
+The assertions verify that the code exists and is correct. But they don't catch that the **doc text** disagrees with the code. The README says `"docalign-mcp"` (one arg), the code uses `"docalign", "mcp"` (two args). That's real drift, but the assertions pass because they check code patterns, not doc accuracy.
+
+This is a limitation of the assertion model itself — assertions answer "does this code exist?" not "does the doc correctly describe this code?" That second question requires semantic comparison, which is what we'd need the LLM to judge during extraction.
+
+For now though: the correction flow works, the assertion quality is high, and the entity grep fallback is in place. Want me to push this, or do you want to address the semantic gap first?

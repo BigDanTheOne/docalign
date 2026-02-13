@@ -1,0 +1,1 @@
+No, no, no. This is a bad thing. Dropping is not a solution. It's losing important context. Instead of dropping, can we proceed the session with a new response to Claude in which we will tell Claude what has not passed verification?
