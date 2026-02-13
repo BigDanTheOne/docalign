@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "511456a420de",
+  "strategy": "auto-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/cli/real-pipeline.ts",
+    "src/cli/staleness-checker.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/51/1456a420de/0/metadata.json",
+      "transcript": "/51/1456a420de/0/full.jsonl",
+      "context": "",
+      "content_hash": "/51/1456a420de/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 15,
+    "cache_creation_tokens": 7270,
+    "cache_read_tokens": 1370981,
+    "output_tokens": 523,
+    "api_call_count": 13
+  }
+}
