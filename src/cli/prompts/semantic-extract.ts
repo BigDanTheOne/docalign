@@ -65,8 +65,9 @@ If the answer is no to either question, skip it.
 1. **Find the implementation**: Use Glob/Grep to locate the relevant source file(s)
 2. **Read the actual code**: Use Read to see the exact implementation
 3. **Write assertions based on what you actually see** — not what you imagine the code looks like
+4. **Verify each assertion**: Use Grep to test your pattern against the scope file BEFORE including it. If \`expect: "exists"\` but Grep finds nothing — your pattern is wrong, fix it. If \`expect: "absent"\` but Grep finds matches — fix it. Only include assertions that pass.
 
-**DO NOT GUESS code patterns.** Every assertion must be derived from code you actually read.
+**DO NOT GUESS code patterns.** Every assertion must be derived from code you actually read AND verified with Grep.
 
 ### evidence_entities
 Specific symbols you found in the code that implement the claimed behavior. Only include symbols you actually located via the tools.

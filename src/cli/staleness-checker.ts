@@ -166,21 +166,34 @@ async function checkEntityExists(
   index: CodebaseIndexService,
   repoRoot: string,
 ): Promise<{ found: boolean; contentHash: string | null }> {
+  // Try L0 index first (AST-level symbols)
   const entities = await index.findSymbol('local', entity.symbol);
-  if (entities.length === 0) return { found: false, contentHash: null };
-
   const match = entities.find((e) => e.file_path === entity.file);
-  if (!match) return { found: false, contentHash: null };
 
+  if (match) {
+    try {
+      const absPath = path.join(repoRoot, entity.file);
+      const content = fs.readFileSync(absPath, 'utf-8');
+      const lines = content.split('\n');
+      const entityLines = lines.slice(match.line_number - 1, match.end_line_number).join('\n');
+      return { found: true, contentHash: hashContent(entityLines) };
+    } catch {
+      return { found: false, contentHash: null };
+    }
+  }
+
+  // Fallback: grep the file for the symbol name (catches properties, local vars, etc.)
   try {
     const absPath = path.join(repoRoot, entity.file);
     const content = fs.readFileSync(absPath, 'utf-8');
-    const lines = content.split('\n');
-    const entityLines = lines.slice(match.line_number - 1, match.end_line_number).join('\n');
-    return { found: true, contentHash: hashContent(entityLines) };
+    if (content.includes(entity.symbol)) {
+      return { found: true, contentHash: hashContent(content) };
+    }
   } catch {
-    return { found: false, contentHash: null };
+    // File doesn't exist or can't be read
   }
+
+  return { found: false, contentHash: null };
 }
 
 async function checkEntityStaleness(
@@ -188,25 +201,36 @@ async function checkEntityStaleness(
   index: CodebaseIndexService,
   repoRoot: string,
 ): Promise<boolean> {
-  // Look up current entity
+  // Try L0 index first (AST-level symbols)
   const entities = await index.findSymbol('local', entity.symbol);
-  if (entities.length === 0) return true; // Entity deleted/renamed
-
-  // Find entity in the expected file
   const match = entities.find((e) => e.file_path === entity.file);
-  if (!match) return true; // Entity moved to different file
 
-  // Hash current content
+  if (match) {
+    try {
+      const absPath = path.join(repoRoot, entity.file);
+      const content = fs.readFileSync(absPath, 'utf-8');
+      const lines = content.split('\n');
+      const entityLines = lines.slice(match.line_number - 1, match.end_line_number).join('\n');
+      const currentHash = hashContent(entityLines);
+      return currentHash !== entity.content_hash;
+    } catch {
+      return true;
+    }
+  }
+
+  // Fallback: grep the file for the symbol name
   try {
     const absPath = path.join(repoRoot, entity.file);
     const content = fs.readFileSync(absPath, 'utf-8');
-    const lines = content.split('\n');
-    const entityLines = lines.slice(match.line_number - 1, match.end_line_number).join('\n');
-    const currentHash = hashContent(entityLines);
-    return currentHash !== entity.content_hash;
+    if (content.includes(entity.symbol)) {
+      const currentHash = hashContent(content);
+      return currentHash !== entity.content_hash;
+    }
   } catch {
-    return true; // Can't read file → stale
+    // File doesn't exist or can't be read
   }
+
+  return true; // Entity not found anywhere → stale
 }
 
 function checkAssertionStaleness(
