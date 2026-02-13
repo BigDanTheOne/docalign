@@ -2,7 +2,7 @@
  * `docalign init` — Set up DocAlign for Claude Code in the current project.
  *
  * Writes:
- *   .claude/settings.local.json  — MCP server config
+ *   .claude/settings.local.json  — MCP server config + hooks
  *   .claude/skills/docalign/SKILL.md — Workflow skill
  *
  * Zero-dependency: does not need LocalPipeline or any scanning.
@@ -20,7 +20,7 @@ description: >
   "doc drift", or after refactors and API changes. Requires docalign MCP server.
 metadata:
   author: DocAlign
-  version: 0.1.0
+  version: 0.2.0
   mcp-server: docalign
 ---
 
@@ -39,6 +39,19 @@ references the changed files and may now be stale.
 
 ### On demand
 When the user asks to check docs, scan for drift, or verify documentation.
+
+## Available Tools
+
+| Tool | Purpose |
+|------|---------|
+| \`check_doc\` | Check a documentation file for drift |
+| \`check_section\` | Check a specific section of a doc file |
+| \`get_doc_health\` | Get repo-wide documentation health score |
+| \`list_drift\` | List all docs with drift, ordered by severity |
+| \`get_docs_for_file\` | Find docs that reference a code file |
+| \`get_docs\` | Search docs by topic with multi-signal ranking |
+| \`fix_doc\` | Generate fix suggestions for drifted claims |
+| \`report_drift\` | Report a doc inaccuracy for tracking |
 
 ## Workflows
 
@@ -87,6 +100,30 @@ When user asks "what's stale?" or "list drift":
 2. Report each file with drift and its drifted claim count
 3. Suggest checking the worst offenders first
 
+### Workflow 6: Post-Implementation Check
+After committing code changes (triggered by the post-commit hook):
+
+1. Call \`get_doc_health\` to see if overall score dropped
+2. If it dropped, call \`list_drift\` to find newly drifted docs
+3. For each drifted doc, call \`fix_doc\` to get fix suggestions
+4. Propose the fixes to the user
+
+### Workflow 7: Search and Verify
+When user asks about a topic ("how does auth work?", "what are the API endpoints?"):
+
+1. Call \`get_docs\` with the topic as query
+2. Check \`verification_status\` of returned sections
+3. If verified — share the content confidently
+4. If drifted — warn the user and suggest running \`fix_doc\`
+5. If unchecked — note that the docs haven't been verified yet
+
+### Workflow 8: Report and Track Drift
+When the agent discovers documentation that doesn't match code but can't fix it now:
+
+1. Call \`report_drift\` with the doc file, inaccurate text, and actual behavior
+2. Include evidence files if known
+3. The report is stored locally in \`.docalign/reports.json\` for later review
+
 ## Interpreting Results
 
 ### Verdicts
@@ -127,6 +164,14 @@ interface SettingsJson {
     command: string;
     args: string[];
   }>;
+  hooks?: {
+    PostToolUse?: Array<{
+      matcher: string;
+      pattern: string;
+      command: string;
+    }>;
+    [key: string]: unknown;
+  };
   [key: string]: unknown;
 }
 
@@ -176,8 +221,24 @@ export async function runInit(
     args: ['docalign', 'mcp', '--repo', '.'],
   };
 
+  // Add post-commit hook
+  if (!settings.hooks) settings.hooks = {};
+  if (!settings.hooks.PostToolUse) settings.hooks.PostToolUse = [];
+
+  const hookCommand = 'echo "[DocAlign] Code committed. Consider running get_doc_health or check_doc to verify documentation is still accurate."';
+  const existingHook = settings.hooks.PostToolUse.find(
+    (h) => h.matcher === 'Bash' && h.pattern === 'git commit',
+  );
+  if (!existingHook) {
+    settings.hooks.PostToolUse.push({
+      matcher: 'Bash',
+      pattern: 'git commit',
+      command: hookCommand,
+    });
+  }
+
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
-  write('  \u2713 .claude/settings.local.json (MCP server config)');
+  write('  \u2713 .claude/settings.local.json (MCP server + hooks)');
 
   // 3. Write skill
   const skillDir = path.join(claudeDir, 'skills', 'docalign');

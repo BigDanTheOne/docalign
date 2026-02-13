@@ -1,6 +1,6 @@
 {
   "name": "docalign",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Documentation-reality alignment engine — detects when docs drift from code",
   "main": "dist/app.js",
   "bin": {
@@ -53,6 +53,7 @@
     "helmet": "^7.2.0",
     "ioredis": "^5.4.0",
     "jsonwebtoken": "^9.0.0",
+    "minisearch": "^7.2.0",
     "node-pg-migrate": "^7.7.0",
     "pg": "^8.13.0",
     "pino": "^8.21.0",

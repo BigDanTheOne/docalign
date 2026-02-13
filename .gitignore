@@ -9,3 +9,4 @@ coverage/
 .entire/
 *.tgz
 .claude/settings.local.json
+.docalign/
