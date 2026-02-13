@@ -69,20 +69,22 @@ describe('runInit', () => {
 
     const hook = settings.hooks.PostToolUse[0];
     expect(hook.matcher).toBe('Bash');
-    expect(hook.pattern).toBe('git commit');
-    expect(hook.command).toContain('DocAlign');
+    expect(hook.hooks).toBeDefined();
+    expect(hook.hooks).toHaveLength(1);
+    expect(hook.hooks[0].type).toBe('command');
+    expect(hook.hooks[0].command).toContain('DocAlign');
   });
 
   it('preserves existing hooks when merging', async () => {
     const { runInit } = await import('../../../src/cli/commands/init');
 
-    // Pre-create settings with existing hooks
+    // Pre-create settings with existing hooks (new format)
     const claudeDir = path.join(tmpDir, '.claude');
     fs.mkdirSync(claudeDir, { recursive: true });
     const existingSettings = {
       hooks: {
         PostToolUse: [
-          { matcher: 'Bash', pattern: 'npm test', command: 'echo "tests done"' },
+          { matcher: 'Bash', hooks: [{ type: 'command', command: 'echo "tests done"' }] },
         ],
       },
     };
@@ -98,8 +100,8 @@ describe('runInit', () => {
 
     // Both hooks should be present
     expect(settings.hooks.PostToolUse).toHaveLength(2);
-    expect(settings.hooks.PostToolUse[0].pattern).toBe('npm test');
-    expect(settings.hooks.PostToolUse[1].pattern).toBe('git commit');
+    expect(settings.hooks.PostToolUse[0].hooks[0].command).toBe('echo "tests done"');
+    expect(settings.hooks.PostToolUse[1].hooks[0].command).toContain('DocAlign');
   });
 
   it('does not duplicate hook on re-run', async () => {
@@ -112,10 +114,10 @@ describe('runInit', () => {
     const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
 
     // Should not have duplicate hooks
-    const commitHooks = settings.hooks.PostToolUse.filter(
-      (h: { pattern: string }) => h.pattern === 'git commit',
+    const docalignHooks = settings.hooks.PostToolUse.filter(
+      (h: { hooks?: Array<{ command: string }> }) => h.hooks?.some((hk) => hk.command.includes('DocAlign')),
     );
-    expect(commitHooks).toHaveLength(1);
+    expect(docalignHooks).toHaveLength(1);
   });
 
   it('returns error code 2 when not a git repo', async () => {

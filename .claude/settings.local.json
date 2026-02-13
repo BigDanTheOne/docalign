@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__docalign__*"
+    ]
+  },
+  "mcpServers": {
+    "docalign": {
+      "command": "npx",
+      "args": [
+        "docalign",
+        "mcp",
+        "--repo",
+        "."
+      ]
+    }
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'INPUT=$(cat); if echo \"$INPUT\" | grep -q \"git commit\"; then echo \"[DocAlign] Code committed. Consider running get_doc_health or check_doc to verify documentation is still accurate.\"; fi'"
+          }
+        ]
+      }
+    ]
+  }
+}

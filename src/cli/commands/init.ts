@@ -155,6 +155,14 @@ The MCP server runs via \`npx docalign mcp --repo .\` — make sure the
 project directory is a git repository (has a .git folder).
 `;
 
+interface HookEntry {
+  matcher: string;
+  hooks: Array<{
+    type: string;
+    command: string;
+  }>;
+}
+
 interface SettingsJson {
   permissions?: {
     allow?: string[];
@@ -165,11 +173,7 @@ interface SettingsJson {
     args: string[];
   }>;
   hooks?: {
-    PostToolUse?: Array<{
-      matcher: string;
-      pattern: string;
-      command: string;
-    }>;
+    PostToolUse?: HookEntry[];
     [key: string]: unknown;
   };
   [key: string]: unknown;
@@ -221,19 +225,18 @@ export async function runInit(
     args: ['docalign', 'mcp', '--repo', '.'],
   };
 
-  // Add post-commit hook
+  // Add post-commit hook (new hooks format with matcher + hooks array)
   if (!settings.hooks) settings.hooks = {};
   if (!settings.hooks.PostToolUse) settings.hooks.PostToolUse = [];
 
-  const hookCommand = 'echo "[DocAlign] Code committed. Consider running get_doc_health or check_doc to verify documentation is still accurate."';
+  const hookCommand = 'bash -c \'INPUT=$(cat); if echo "$INPUT" | grep -q "git commit"; then echo "[DocAlign] Code committed. Consider running get_doc_health or check_doc to verify documentation is still accurate."; fi\'';
   const existingHook = settings.hooks.PostToolUse.find(
-    (h) => h.matcher === 'Bash' && h.pattern === 'git commit',
+    (h) => h.matcher === 'Bash' && h.hooks?.some((hk) => hk.command.includes('DocAlign')),
   );
   if (!existingHook) {
     settings.hooks.PostToolUse.push({
       matcher: 'Bash',
-      pattern: 'git commit',
-      command: hookCommand,
+      hooks: [{ type: 'command', command: hookCommand }],
     });
   }
 
