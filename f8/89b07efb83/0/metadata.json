@@ -1,0 +1,24 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "f889b07efb83",
+  "session_id": "a62e0458-bb12-437e-88dd-de953921ae64",
+  "strategy": "auto-commit",
+  "created_at": "2026-02-13T18:29:12.101718Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/cli/prompts/semantic-extract.ts",
+    "src/cli/staleness-checker.ts"
+  ],
+  "agent": "Claude Code",
+  "transcript_identifier_at_start": "934a8a25-f258-4987-a1c3-4d3878a4ac3e",
+  "checkpoint_transcript_start": 4697,
+  "transcript_lines_at_start": 4697,
+  "token_usage": {
+    "input_tokens": 20,
+    "cache_creation_tokens": 27519,
+    "cache_read_tokens": 1560821,
+    "output_tokens": 1998,
+    "api_call_count": 18
+  }
+}

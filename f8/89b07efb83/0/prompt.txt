@@ -1,0 +1,1 @@
+I think You're overcomplicating this, I think. Passes with loop is overkill. I believe we should just provide a Claude attack tool to verify his findings, and this will work.
