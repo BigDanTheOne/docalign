@@ -1,0 +1,23 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "01465c9b8628",
+  "session_id": "7cb54db1-2bf8-4a64-a016-c7571636212d",
+  "strategy": "auto-commit",
+  "created_at": "2026-02-15T15:07:42.115176Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "_planning/context/competitors/deterministic-gap-analysis.md"
+  ],
+  "agent": "Claude Code",
+  "transcript_identifier_at_start": "db1bf9b4-c871-44e7-a309-160d301b2330",
+  "checkpoint_transcript_start": 120,
+  "transcript_lines_at_start": 120,
+  "token_usage": {
+    "input_tokens": 4,
+    "cache_creation_tokens": 15499,
+    "cache_read_tokens": 265564,
+    "output_tokens": 9,
+    "api_call_count": 2
+  }
+}

@@ -1,0 +1,26 @@
+The gap analysis is at `_planning/context/competitors/deterministic-gap-analysis.md`.
+
+## Summary
+
+We're actually strong where it matters most — **claim verification against code** (paths, commands, versions, routes, code examples). No competitor matches our L1→L2→L3 pipeline for prose documentation. But we're missing basic hygiene checks that make us look incomplete:
+
+### P0 — Add now (low effort, table-stakes):
+1. **Dead link detection** — HTTP check on URLs in docs. Every doc tool has this. We don't.
+2. **Anchor/heading validation** — `[text](file.md#section)` where `#section` doesn't exist. Low effort, zero false positives.
+3. **Missing documentation detection** — "this exported function has zero docs mentioning it." We already have the data in L0 + L2 reverse index. It's one SQL query away.
+
+### P1 — Add now (medium effort, high differentiation):
+4. **Deprecation awareness** — Flag when docs reference `@deprecated` code. Extend L0 entity extraction.
+5. **Env var / config verification** — "README says set `DATABASE_URL`" → search code for `process.env.DATABASE_URL`. Nobody does this. Index env var reads as a special entity type in L0.
+6. **PR-scoped scanning** — Verify the default PR flow only checks claims mapped to changed files (reverse index). Noise reduction #1.
+7. **Fuzzy suggestions for ALL claim types** — When a dependency/symbol/route isn't found, suggest closest match via Levenshtein. Turns bare "drifted" into actionable "did you mean X?"
+
+### P2 — v1.5:
+8. **Simplified snippet staleness** — Match code blocks to source entities, compare content. Lighter than Swimm's patented approach.
+9. **Cross-document consistency** — Flag when two docs make contradictory claims about the same entity.
+
+### Key techniques to inherit:
+- **Swimm:** Context-aware Levenshtein (40%/90% thresholds), iterative commit processing
+- **oasdiff:** ERR/WARN/INFO severity classification for all checks
+- **DocSync:** `--staged` pre-commit hook mode for fast local feedback
+- **API Extractor:** Generate a committed report file that makes drift visible in code review
