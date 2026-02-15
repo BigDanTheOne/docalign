@@ -1,0 +1,320 @@
+# Session Context
+
+**Session ID:** 7cb54db1-2bf8-4a64-a016-c7571636212d
+
+**Commit Message:** <task-notification>
+<task-id>a041d30</task-id>
+<status>completed</status
+
+## Prompt
+
+<task-notification>
+<task-id>a041d30</task-id>
+<status>completed</status>
+<summary>Agent "Research Swimm auto-sync mechanics" completed</summary>
+<result>Now I have enough data. Let me compile the comprehensive analysis.
+
+---
+
+# Swimm.io: Deep Technical Analysis of Documentation Drift Detection
+
+## 1. THE DETECTION ALGORITHM (Patent-Verified Mechanics)
+
+Swimm's auto-sync is built on two granted US patents (US11132193B1 and US11847444B2), assigned to S.T. Swimm Tech Ltd. The patent filings reveal the actual algorithm far more precisely than any marketing material.
+
+### Core Detection Flow
+
+The system operates on **documentation objects** stored separately from source code (in `.swm/*.sw.md` files). Each documentation object contains:
+- A **copy** of the marked code segment (the snippet at time of documentation)
+- A **checksum/hash** of the source file version
+- **File name and file path** to the original source
+- **Line numbers** identifying the segment location
+- A **reference to the VCS version** (commit)
+
+When a PR is opened, Swimm compares the stored snippet copy against the current version of the same code region in the new commit.
+
+### The Diff Strategy: Patch Application Method
+
+This is the key insight from the patent: **Swimm does NOT use a custom diff algorithm for the primary detection**. Instead, it uses VCS-native patch methods:
+
+1. It generates a "documentation patch" (a removal instruction) from the stored snippet
+2. It **applies this patch to the new version of the file** (effectively tries to `git apply` the reverse of the snippet)
+3. If the patch **applies successfully** = the code is unchanged = "no change"
+4. If the patch **fails** = differences exist = proceed to classification
+
+This is elegant because it leverages Git's own battle-tested matching, including its fuzzy offset handling for line shifts.
+
+### Change Classification System (5 Categories in Patent 1, 6 in Patent 2)
+
+Once a difference is detected, the algorithm classifies it:
+
+| Classification | Auto-syncable? | Description |
+|---|---|---|
+| **No change** | N/A (already synced) | Segment identical |
+| **Change to lint-characters** | Yes | Whitespace, insignificant punctuation |
+| **Change to an inner block** | Yes | Middle lines changed, first/last lines unchanged |
+| **Updatable single line change** | Yes | Token differences below threshold on one line |
+| **Change to context** | Yes (Patent 2) | Surrounding context changed but tokens preserved |
+| **Non-updatable change** | No -- marked "outdated" | Substantial modifications |
+
+The three-way user-facing classification maps to these:
+- **Up to date** = "no change"
+- **Out of sync** (auto-fixable) = lint-characters, inner block, updatable single line, context change
+- **Outdated** (manual review) = non-updatable change
+
+### Iterative Processing (Key Insight)
+
+When multiple intermediate commits exist between the documented version and HEAD, **the algorithm processes them sequentially through each intermediate version** rather than comparing directly to HEAD. This dramatically increases the probability of achieving "updatable" classifications, because each individual step tends to be smaller than the cumulative diff.
+
+### Line-Level Analysis
+
+The algorithm analyzes documentation-line changes and source-line changes **separately**, then combines classifications. The patent explicitly states this produces "greater accuracy than monolithic comparison." It uses the **Myers diff algorithm** for computing source line changes.
+
+## 2. SMART TOKEN MECHANICS (Patent 2: US11847444B2)
+
+### Token Definition and Storage
+
+A Smart Token is defined as a "software program identifier comprising a sequence of characters according to a syntax of a programming language." In the sw.md format, tokens are represented as:
+
+```
+<SwmToken path="src/core/alloc_func.cpp" pos="20:8:8" line-data="[[noreturn]] void MallocError(size_t size)">`MallocError`</SwmToken>
+```
+
+The metadata stored per token:
+- **path**: File path where the token lives
+- **pos**: Line number and character position (format: `line:startCol:endCol`)
+- **line-data**: The full line content at time of documentation (serves as context anchor)
+- The rendered token name (between backticks)
+
+### Rename Detection Strategy
+
+The patent reveals a specific approach using **context similarity scoring**:
+
+1. Extract **context tokens** -- tokens immediately preceding and following the marked token
+2. When the marked token changes, find candidate "updated tokens" in the new version
+3. Compute **Levenshtein distance** between the old context and new context
+4. Apply threshold-based decisions:
+   - **Similarity >= 90%**: Classified as "no change" (token effectively the same in context)
+   - **Similarity < 40%**: Classified as "non-updatable" (too much changed to be confident)
+   - **Between 40-90%**: Candidate for auto-sync with the new token value
+
+For simple 1:1 renames (e.g., `foo` -> `foobar`), the algorithm detects that the context is identical and the only change is the token itself, making this trivially auto-syncable.
+
+### Cross-File Move Detection
+
+The patent handles file renames by:
+1. Computing **similarity scores for file pairs** (comparing removed files against added files)
+2. Files with high similarity are treated as renames
+3. The documentation object's file path reference is updated accordingly
+
+This uses the same approach as `git diff --find-renames`, which computes content similarity between deleted and added files.
+
+### Smart Paths
+
+In addition to tokens, Swimm tracks file paths with `<SwmPath>` tags:
+
+```
+<SwmPath>[src/core/alloc_func.cpp](src/core/alloc_func.cpp)</SwmPath>
+```
+
+These are similarly tracked and auto-updated when files are renamed or moved.
+
+## 3. THE sw.md FORMAT (Actual Structure from Live Repos)
+
+From examining actual `.sw.md` files in Swimm's public repositories, the format is:
+
+**YAML Frontmatter:**
+```yaml
+---
+title: Core Components Overview
+---
+```
+
+**Code Snippets** (`<SwmSnippet>` tags):
+```
+<SwmSnippet path="/src/core/alloc_func.cpp" line="20">
+---
+Description of this snippet.
+```c++
+[[noreturn]] void MallocError(size_t size)
+{
+    FatalError("Out of memory. Cannot allocate {} bytes", size);
+}
+```
+---
+</SwmSnippet>
+```
+
+Each snippet stores:
+- `path`: Relative path to the file
+- `line`: Starting line number at time of documentation
+- The actual code content (verbatim copy)
+
+**Smart Tokens** (`<SwmToken>` tags) inline in prose:
+```
+<SwmToken path="src/core/alloc_func.cpp" pos="20:8:8" line-data="[[noreturn]] void MallocError(size_t size)">`MallocError`</SwmToken>
+```
+
+**Document Metadata** (`<SwmMeta>` at end of file):
+```
+<SwmMeta version="3.0.0" repo-id="Z2l0aHViJTNBJTNBT3BlblRURC..." repo-name="OpenTTD-copilot-demo">
+<sup>Powered by Swimm</sup>
+</SwmMeta>
+```
+
+The repo-id is a Base64-encoded string (decodes to a GitHub URL pattern like `github%3A%3AOpenTTD-copilot-demo%3A%3Aswimmio`).
+
+**Key observation**: The format is **language-agnostic** at the format level. Smart tokens encode the full line content (`line-data`) as context, which means the detection algorithm does not need to parse the programming language -- it matches syntactically against the raw text.
+
+## 4. PR INTEGRATION FLOW
+
+### Step-by-Step (Reconstructed from Documentation + GitHub Action Source)
+
+1. **PR event triggers** the Swimm GitHub App (webhook on `pull_request` events)
+2. Swimm's backend receives the webhook
+3. It fetches the repo content, specifically the `.swm/` directory and all referenced source files
+4. **Requires full git history** (`fetch-depth: 0` in GitHub Actions) because the algorithm needs to walk intermediate commits
+5. For each `.sw.md` file:
+   - Parse all `<SwmSnippet>` and `<SwmToken>` references
+   - For each reference, locate the file at the specified path in the new commit
+   - Apply the patch-based detection algorithm
+   - Classify each change
+6. Aggregate results into three buckets: up-to-date, out-of-sync (auto-fixable), outdated (needs manual review)
+7. **Create a GitHub Check Run** ("Swimm Verify") with pass/fail status
+8. **Post a PR comment** with:
+   - List of affected documents
+   - For auto-syncable changes: an "Approve Auto-sync" button that triggers a commit
+   - For outdated docs: a "Review draft in app" link that opens Swimm's web editor with the PR changes pre-loaded
+
+### Permissions Required
+
+| Permission | Purpose |
+|---|---|
+| Checks (read/write) | Create and update Swimm Verify check |
+| Contents (read/write) | Read code, commit auto-sync fixes to `.swm/` |
+| Issues (read/write) | Post PR comments |
+| Pull Requests (read/write) | Annotate PRs |
+
+### Auto-sync Commit Flow
+
+When a developer clicks "Approve Auto-sync":
+1. Swimm generates updated `.sw.md` files with new snippet content, line numbers, and token values
+2. It commits these changes directly to the PR branch
+3. The Swimm Verify check is re-run and should now pass
+
+There is also a setting for **automatic approval** where auto-sync changes are committed without human intervention.
+
+### Noise Reduction
+
+A recent fix ensures that when the "Configure Swimm Verify check" setting is enabled, Swimm **only flags documents affected by changes in the specific PR**, rather than flagging all stale docs in the repo. This was explicitly added to reduce developer friction.
+
+## 5. PATENT PORTFOLIO SUMMARY
+
+| Patent | Filed | Title | Key Innovation |
+|---|---|---|---|
+| **US11132193B1** | Dec 2020 | Automatically Updating Documentation | Patch-based detection, 5-class change classification, iterative processing through intermediate versions |
+| **US11847444B2** | Sep 2021 | (Continuation) | Token-level tracking in prose, context similarity scoring with Levenshtein distance, 40%/90% thresholds |
+| **EP4272073B1** | Dec 2021 | (European filing) | International protection of same tech |
+| **US20240160441A1** | Nov 2023 | (Application) | Likely covers newer AI-powered generation features |
+
+The patents are specifically about the **synchronization algorithm**, not about the documentation format or the CI integration. The core patented claims are:
+1. Storing copies of code segments in documentation objects
+2. Detecting changes via VCS patch application
+3. Classifying changes into updatable vs non-updatable categories
+4. Iteratively processing intermediate versions to increase auto-sync success rate
+5. Token-level tracking with context similarity scoring using Levenshtein distance and thresholds
+
+## 6. WHAT THEY'VE TRIED AND ABANDONED
+
+**AI Text Auto-completion** (Removed in v1.59.0, Oct 2025): Swimm added AI-powered text auto-completion for documentation writing and later explicitly removed it, deprecating the feature and removing all related UI. This suggests either low adoption, quality issues, or a strategic decision that AI-generated prose was not the right approach.
+
+**Product Pivot**: Swimm has pivoted from "documentation tool" to "Application Understanding Platform" (their current homepage tagline). The changelog from 2025 shows heavy investment in:
+- Enterprise infrastructure (SCIM, Entra SSO, airgap On-Prem deployments)
+- Admin analytics and usage dashboards
+- Mainframe modernization positioning
+
+This suggests they found the documentation-tool market too narrow and are repositioning toward broader code intelligence / knowledge management for enterprises, likely driven by the Gartner Cool Vendor recognition in 2024.
+
+**Old JSON Format**: Before August 2021, Swimm used `.swm` files in raw JSON format. They abandoned this for `.sw.md` (markdown with embedded XML-like tags) because JSON was unreadable, hard to review in PRs, and fragile.
+
+## 7. PERFORMANCE CHARACTERISTICS
+
+Swimm is deliberately vague about performance. What is known:
+- They claim to scale to "thousands of developers and tens of millions of lines of code"
+- Pricing is based on lines of code (suggesting analysis scales with codebase size)
+- The algorithm **requires full git history** (`fetch-depth: 0`), which is the primary scaling bottleneck for CI
+- No published latency numbers for the verification check
+- The iterative processing through intermediate commits means analysis time is proportional to the number of commits since documentation was last verified
+
+**Architectural implication**: The requirement for full git history and iterative commit processing means their algorithm is inherently O(commits * snippets) at minimum. For high-velocity repos with many documented snippets, this could become expensive.
+
+## 8. IMPLICATIONS FOR DOCALIGN
+
+### What Swimm Does Well (Inherit)
+1. **Patch-based detection is clever** -- leveraging Git's own machinery rather than building custom diff
+2. **Language-agnostic by design** -- storing raw text, not AST representations
+3. **Three-tier classification** reduces noise by auto-fixing trivial changes
+4. **Full git history** enables iterative processing through intermediate commits
+
+### What Swimm Does Poorly (Improve Upon)
+1. **Requires Swimm-authored docs** -- only works with `.sw.md` files created in Swimm's editor. Cannot analyze existing README.md, API docs, or wiki content
+2. **Snippet-coupled, not claim-coupled** -- tracks whether verbatim code snippets match, not whether *claims about behavior* are still true. If docs say "this function returns a list" and the function signature changes to return a set, Swimm only catches this if the exact code snippet was embedded
+3. **No semantic understanding** -- the 40%/90% thresholds on Levenshtein distance are purely syntactic. A semantically significant one-character change (e.g., `>` to `>=`) would score as highly similar and might be auto-synced without flagging
+4. **Closed ecosystem** -- cannot serve verified docs to AI coding agents; no MCP integration
+5. **Heavy authoring burden** -- developers must create Swimm docs with embedded snippets and tokens. This is the adoption bottleneck
+6. **No verification of correctness** -- Swimm verifies that snippets are *current* (syntactically match), not that documentation *claims* are *correct*
+
+### Key Differentiation Opportunities for DocAlign
+- **Analyze existing docs** (README, inline comments, API docs) without requiring a proprietary format
+- **Claim-level verification** rather than snippet-level matching
+- **Semantic drift detection** using code understanding, not just text diffing
+- **MCP integration** to serve verified documentation context to AI coding agents
+- **Lower authoring friction** by analyzing docs developers already write
+
+Sources:
+- [How does Swimm's Auto-sync feature work?](https://swimm.io/blog/how-does-swimm-s-auto-sync-feature-work)
+- [Swimm's sw.md Markdown format](https://swimm.io/blog/docs-as-code-understanding-swimm-sw-md-markdown-format)
+- [US11132193B1 - Automatically updating documentation (Patent)](https://patents.google.com/patent/US11132193B1/en)
+- [US11847444B2 - Documentation token tracking (Patent)](https://patents.google.com/patent/US11847444B2/en)
+- [Swimm's GitHub App](https://docs.swimm.io/continuous-integration/github-app/)
+- [Keep docs updated with Auto-sync](https://docs.swimm.io/features/keep-docs-updated-with-auto-sync/)
+- [Patents Assigned to S.T. Swimm Tech Ltd](https://patents.justia.com/assignee/s-t-swimm-tech-ltd)
+- [Swimm Verify GitHub Action](https://github.com/swimmio/swimm-verify-action)
+- [Swimm Changelog](https://docs.swimm.io/changelog/)
+- [Swimm GitHub organization](https://github.com/swimmio)
+- [swimmio/OpenTTD-copilot-demo (live sw.md files)](https://github.com/swimmio/OpenTTD-copilot-demo)
+- [Swimm Enterprise Documentation Platform](https://swimm.io/enterprise-documentation-platform)</result>
+<usage>total_tokens: 78291
+tool_uses: 50
+duration_ms: 639721</usage>
+</task-notification>
+Full transcript available at: /private/tmp/claude-501/-Users-kotkot-Discovery-docalign/tasks/a041d30.output
+
+## Summary
+
+Done. The full tactical report is at `_planning/context/competitors/doc-alignment-landscape.md`.
+
+## Key Takeaways
+
+**The gap is real and wide.** Nobody does claim-level semantic verification of arbitrary prose docs against code. The field breaks into 5 tiers:
+
+### What exists today:
+1. **Swimm** — Tracks syntactic tokens/snippets via patented patch-based algorithm. Conservative, language-agnostic, but requires proprietary doc format and cannot detect semantic drift (behavior change behind stable interfaces)
+2. **DeepDocs / Mintlify / GitHub Agentic Workflows** — AI agents that *propose doc updates* but don't *verify claims*. Update engines, not verification engines
+3. **API spec validators** (Dredd, Schemathesis, Prism, Optic, Pact) — Mature, structural, but only for OpenAPI/GraphQL specs. Can't handle prose
+4. **Doctest-style** (Rust doctests, Python doctest, Doc Detective) — Execute code examples. High precision but only covers executable claims, not prose
+5. **Git heuristics** (danger-js, Code Maat, timestamp checks) — Useful signals but not detectors
+
+### What DocAlign should inherit:
+- Swimm's **three-tier classification** and **conservative fallback** UX
+- Optic's **"forwards-only governance"** (don't overwhelm with historical debt)
+- Schemathesis's **auto-generated verification from specs** (our L1 claim extraction)
+- Academic finding: **simple verification prompts beat complex chain-of-thought** (over-correction bias kills accuracy)
+- **Two-stage retrieval** (embeddings for candidates, LLM for verification) — already our L2→L3 pipeline
+
+### Critical research finding:
+The LLM verification paper shows Claude achieves 78% accuracy with simple direct prompts but drops to 67% with chain-of-thought. GPT-4o drops from 52% to 11%. **P-VERIFY must use direct judgment prompts, not bundled judge+explain+fix.**
+
+## Key Actions
+
+- - **Write**: /Users/kotkot/Discovery/docalign/_planning/context/competitors/doc-alignment-landscape.md

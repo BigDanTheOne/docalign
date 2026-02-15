@@ -1,0 +1,22 @@
+Done. The full tactical report is at `_planning/context/competitors/doc-alignment-landscape.md`.
+
+## Key Takeaways
+
+**The gap is real and wide.** Nobody does claim-level semantic verification of arbitrary prose docs against code. The field breaks into 5 tiers:
+
+### What exists today:
+1. **Swimm** — Tracks syntactic tokens/snippets via patented patch-based algorithm. Conservative, language-agnostic, but requires proprietary doc format and cannot detect semantic drift (behavior change behind stable interfaces)
+2. **DeepDocs / Mintlify / GitHub Agentic Workflows** — AI agents that *propose doc updates* but don't *verify claims*. Update engines, not verification engines
+3. **API spec validators** (Dredd, Schemathesis, Prism, Optic, Pact) — Mature, structural, but only for OpenAPI/GraphQL specs. Can't handle prose
+4. **Doctest-style** (Rust doctests, Python doctest, Doc Detective) — Execute code examples. High precision but only covers executable claims, not prose
+5. **Git heuristics** (danger-js, Code Maat, timestamp checks) — Useful signals but not detectors
+
+### What DocAlign should inherit:
+- Swimm's **three-tier classification** and **conservative fallback** UX
+- Optic's **"forwards-only governance"** (don't overwhelm with historical debt)
+- Schemathesis's **auto-generated verification from specs** (our L1 claim extraction)
+- Academic finding: **simple verification prompts beat complex chain-of-thought** (over-correction bias kills accuracy)
+- **Two-stage retrieval** (embeddings for candidates, LLM for verification) — already our L2→L3 pipeline
+
+### Critical research finding:
+The LLM verification paper shows Claude achieves 78% accuracy with simple direct prompts but drops to 67% with chain-of-thought. GPT-4o drops from 52% to 11%. **P-VERIFY must use direct judgment prompts, not bundled judge+explain+fix.**
