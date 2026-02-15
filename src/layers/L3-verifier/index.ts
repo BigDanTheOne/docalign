@@ -13,6 +13,7 @@ import { verifyApiRoute } from './tier1-api-route';
 import { verifyDependencyVersion } from './tier1-dependency-version';
 import { verifyCommand } from './tier1-command';
 import { verifyCodeExample } from './tier1-code-example';
+import { verifyUrlReference } from './tier1-url-reference';
 import { verifyTier2 } from './tier2-patterns';
 import { routeClaim } from './routing';
 import { buildPath1Evidence } from './evidence-builder';
@@ -24,6 +25,7 @@ export { verifyApiRoute } from './tier1-api-route';
 export { verifyDependencyVersion } from './tier1-dependency-version';
 export { verifyCommand } from './tier1-command';
 export { verifyCodeExample } from './tier1-code-example';
+export { verifyUrlReference } from './tier1-url-reference';
 export { verifyTier2 } from './tier2-patterns';
 export { routeClaim, DEFAULT_VERIFIER_CONFIG } from './routing';
 export type { VerifierConfig } from './routing';
@@ -80,6 +82,9 @@ export function createVerifier(
           case 'code_example':
             result = await verifyCodeExample(claim, index);
             break;
+          case 'url_reference':
+            result = await verifyUrlReference(claim, index);
+            break;
         }
 
         if (result) {
@@ -94,8 +99,9 @@ export function createVerifier(
       }
 
       // === TIER 2: Pattern Verification ===
-      if (claim.claim_type === 'convention' || claim.claim_type === 'environment') {
-        const result = await verifyTier2(claim, index);
+      if (claim.claim_type === 'convention' || claim.claim_type === 'environment' || claim.claim_type === 'config'
+        || claim.claim_type === 'dependency_version') {
+        const result = await verifyTier2(claim, index, _mappings);
         if (result) {
           result.duration_ms = Date.now() - startTime;
           result.tier = 2;

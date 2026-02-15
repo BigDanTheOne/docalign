@@ -51,7 +51,14 @@ export async function verifyCommand(
   // Skip built-in subcommands (e.g. "npm install", "pip install", "cargo build").
   // These are not user-defined scripts and should not be verified against manifests.
   const subcommand = script.split(/\s+/)[0].toLowerCase();
-  if (runner && isBuiltinSubcommand(runner, subcommand)) return null;
+  if (runner && isBuiltinSubcommand(runner, subcommand)) {
+    // Task 13: For install commands, validate the package name against manifest
+    if (isInstallCommand(runner, subcommand)) {
+      const installResult = await verifyInstallPackageName(claim, index, runner, script);
+      if (installResult) return installResult;
+    }
+    return null;
+  }
 
   // Step 1: Exact check
   const exists = await index.scriptExists(claim.repo_id, script);
@@ -126,6 +133,57 @@ function isBuiltinSubcommand(runner: string, subcommand: string): boolean {
     default:
       return false;
   }
+}
+
+function isInstallCommand(runner: string, subcommand: string): boolean {
+  if (['npm', 'yarn', 'pnpm', 'bun'].includes(runner)) {
+    return ['install', 'i', 'add'].includes(subcommand);
+  }
+  if (['pip', 'pip3'].includes(runner)) return subcommand === 'install';
+  if (runner === 'cargo') return subcommand === 'add';
+  return false;
+}
+
+async function verifyInstallPackageName(
+  claim: Claim,
+  index: CodebaseIndexService,
+  runner: string,
+  script: string,
+): Promise<VerificationResult | null> {
+  // Extract the package being installed
+  const parts = script.split(/\s+/);
+  // Skip flags and the subcommand itself
+  const pkgArgs = parts.slice(1).filter((p) => !p.startsWith('-'));
+  if (pkgArgs.length === 0) return null;
+
+  const installedPkg = pkgArgs[0];
+  if (!installedPkg) return null;
+
+  // Get manifest metadata to check if package name matches
+  const manifest = await index.getManifestMetadata(claim.repo_id);
+  if (!manifest?.name) return null;
+
+  // For "npm install <this-package>" style commands (install self),
+  // check if the documented name matches the manifest name
+  const manifestName = manifest.name;
+  // Normalize: strip scope for comparison
+  const normalizeForCompare = (name: string) => name.replace(/^@[^/]+\//, '').toLowerCase();
+
+  if (normalizeForCompare(installedPkg) === normalizeForCompare(manifestName)) {
+    // Names match (possibly with different scoping)
+    if (installedPkg !== manifestName) {
+      return makeResult(claim, {
+        verdict: 'drifted',
+        severity: 'medium' as Severity,
+        evidence_files: [getManifestFile(runner)],
+        reasoning: `Install command references '${installedPkg}' but package name is '${manifestName}'.`,
+        suggested_fix: claim.claim_text.replace(installedPkg, manifestName),
+        specific_mismatch: `Package name mismatch: documented '${installedPkg}', actual '${manifestName}'.`,
+      });
+    }
+  }
+
+  return null; // Can't verify — package could be an external dependency
 }
 
 function getManifestFile(runner?: string): string {

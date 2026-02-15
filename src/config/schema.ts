@@ -11,6 +11,7 @@ const claimTypeEnum = z.enum([
   'config',
   'convention',
   'environment',
+  'url_reference',
 ]);
 
 const severityEnum = z.enum(['high', 'medium', 'low']);
@@ -52,6 +53,7 @@ export const docAlignConfigSchema = z
         config: z.boolean().optional(),
         convention: z.boolean().optional(),
         environment: z.boolean().optional(),
+        url_reference: z.boolean().optional(),
       })
       .optional(),
 
@@ -115,6 +117,22 @@ export const docAlignConfigSchema = z
         semantic_threshold: z.number().min(0).max(1).optional(),
         path1_max_evidence_tokens: z.number().int().min(100).max(100000).optional(),
         max_agent_files_per_claim: z.number().int().min(1).max(50).optional(),
+      })
+      .optional(),
+
+    url_check: z
+      .object({
+        enabled: z.boolean().optional(),
+        timeout_ms: z.number().int().min(1000).max(30000).optional(),
+        max_per_domain: z.number().int().min(1).max(50).optional(),
+        exclude_domains: z.array(z.string().min(1)).max(100).optional(),
+      })
+      .optional(),
+
+    coverage: z
+      .object({
+        enabled: z.boolean().optional(),
+        min_entity_importance: z.enum(['exported', 'public', 'all']).optional(),
       })
       .optional(),
   })

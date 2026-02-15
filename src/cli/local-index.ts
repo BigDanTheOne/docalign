@@ -26,6 +26,7 @@ import {
   isManifestFile,
 } from '../layers/L0-codebase-index';
 import { parseManifest } from '../layers/L0-codebase-index/manifest-parser';
+import { parseMarkdownHeadings } from '../layers/L0-codebase-index/index-store';
 
 // === Path helpers (replicated from index-store.ts) ===
 
@@ -347,6 +348,23 @@ export class InMemoryIndex implements CodebaseIndexService {
   ): Promise<IndexUpdateResult> {
     // Not needed for CLI — single scan, no incremental updates
     return { entities_added: 0, entities_updated: 0, entities_removed: 0, files_skipped: [] };
+  }
+
+  async getManifestMetadata(_repoId: string): Promise<ParsedManifest | null> {
+    // Return the first manifest source (package.json, pyproject.toml, etc.)
+    for (const m of this.manifests) {
+      if (m.source === 'manifest') return m;
+    }
+    return null;
+  }
+
+  async getHeadings(
+    _repoId: string,
+    filePath: string,
+  ): Promise<Array<{ text: string; level: number; slug: string }>> {
+    const content = await this.readFileContent('local', filePath);
+    if (!content) return [];
+    return parseMarkdownHeadings(content);
   }
 
   async readFileContent(_repoId: string, filePath: string, maxBytes: number = 100 * 1024): Promise<string | null> {

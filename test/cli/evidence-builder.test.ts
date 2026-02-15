@@ -69,6 +69,8 @@ function mockIndex(entities: CodeEntity[] = [], fileContent?: string): CodebaseI
       files_skipped: [],
     }),
     readFileContent: vi.fn().mockResolvedValue(fileContent ?? null),
+    getManifestMetadata: vi.fn().mockResolvedValue(null),
+    getHeadings: vi.fn().mockResolvedValue([]),
   };
 }
 

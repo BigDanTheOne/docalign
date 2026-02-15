@@ -8,6 +8,10 @@ import {
   extractCodeExamples,
   extractEnvironmentClaims,
   extractConventionClaims,
+  extractUrlReferences,
+  extractConfigClaims,
+  extractProseSignatures,
+  extractTableClaims,
   deduplicateWithinFile,
   isValidPath,
 } from './extractors';
@@ -24,6 +28,8 @@ const DEFAULT_CLAIM_TYPES: Set<ClaimType> = new Set([
   'code_example',
   'environment',
   'convention',
+  'url_reference',
+  'config',
 ]);
 
 /**
@@ -79,6 +85,17 @@ export async function extractSyntactic(
   if (enabledTypes.has('convention')) {
     rawExtractions.push(...extractConventionClaims(preprocessed));
   }
+  if (enabledTypes.has('url_reference')) {
+    rawExtractions.push(...extractUrlReferences(preprocessed));
+  }
+  if (enabledTypes.has('config')) {
+    rawExtractions.push(...extractConfigClaims(preprocessed));
+  }
+  if (enabledTypes.has('code_example')) {
+    rawExtractions.push(...extractProseSignatures(preprocessed));
+  }
+  // Table claims can produce any type — always run
+  rawExtractions.push(...extractTableClaims(preprocessed, docFile, knownPackages ?? new Set()));
 
   // Step 6: Path validation filter
   const filtered = rawExtractions.filter((e) => {

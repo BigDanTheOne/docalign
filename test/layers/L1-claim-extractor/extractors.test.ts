@@ -61,16 +61,22 @@ describe('extractors', () => {
       expect(results).toHaveLength(0);
     });
 
-    it('rejects image extensions', () => {
+    it('extracts image paths with asset_type', () => {
       const doc = makeDoc('See `logo.png` and `icon.svg` and `photo.jpg`.');
       const results = extractPaths(doc, 'README.md');
-      expect(results).toHaveLength(0);
+      expect(results.length).toBeGreaterThan(0);
+      for (const r of results) {
+        expect((r.extracted_value as Record<string, unknown>).asset_type).toBe('image');
+      }
     });
 
-    it('rejects style extensions', () => {
+    it('extracts style paths with asset_type', () => {
       const doc = makeDoc('See `styles.css` and `theme.scss` and `base.less`.');
       const results = extractPaths(doc, 'README.md');
-      expect(results).toHaveLength(0);
+      expect(results.length).toBeGreaterThan(0);
+      for (const r of results) {
+        expect((r.extracted_value as Record<string, unknown>).asset_type).toBe('style');
+      }
     });
 
     it('rejects self-references', () => {

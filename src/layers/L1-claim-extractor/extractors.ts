@@ -4,9 +4,12 @@ import type { PreProcessedDoc, RawExtraction } from '../../shared/types';
 
 const FILE_PATH_PATTERNS = [
   { name: 'backtick_path', regex: /`([a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+)`/g },
-  { name: 'markdown_link_path', regex: /\[.*?\]\(\.?\/?([a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+)\)/g },
+  { name: 'markdown_link_path', regex: /\[.*?\]\(\.?\/?([a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+)(?:#([a-zA-Z0-9_-]+))?\)/g },
   { name: 'text_ref_path', regex: /(?:see|in|at|from|file)\s+[`"]?([a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+)/gi },
 ];
+
+// Matches bare anchor links: [text](#heading-slug)
+const ANCHOR_LINK_PATTERN = /\[.*?\]\(#([a-zA-Z0-9_-]+)\)/g;
 
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico']);
 const STYLE_EXTENSIONS = new Set(['.css', '.scss', '.less']);
@@ -18,24 +21,49 @@ export function extractPaths(doc: PreProcessedDoc, docFile: string): RawExtracti
 
   for (const pattern of FILE_PATH_PATTERNS) {
     for (let i = 0; i < lines.length; i++) {
-      if (doc.code_fence_lines.has(i)) continue; // Skip code fence content
-      if (exampleSections.has(i)) continue; // Skip example sections
+      if (doc.code_fence_lines.has(i)) continue;
+      if (exampleSections.has(i)) continue;
       const line = lines[i];
-      if (isIllustrativeLine(line)) continue; // Skip example/illustrative content
+      if (isIllustrativeLine(line)) continue;
       const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
       let match;
       while ((match = regex.exec(line)) !== null) {
-        const path = match[1];
-        if (!passesPathFilters(path, docFile)) continue;
+        const filePath = match[1];
+        if (!passesPathFilters(filePath, docFile)) continue;
+
+        const ev: Record<string, unknown> = { type: 'path_reference', path: filePath };
+        // Capture anchor fragment from markdown links (Task 6)
+        if (match[2]) ev.anchor = match[2];
+        // Tag asset type for images/styles (Task 4)
+        const assetType = getAssetType(filePath);
+        if (assetType) ev.asset_type = assetType;
 
         results.push({
           claim_text: line.trim(),
           claim_type: 'path_reference',
-          extracted_value: { type: 'path_reference', path },
+          extracted_value: ev,
           line_number: doc.original_line_map[i],
           pattern_name: pattern.name,
         });
       }
+    }
+  }
+
+  // Bare anchor links: [text](#heading-slug) — self-references
+  for (let i = 0; i < lines.length; i++) {
+    if (doc.code_fence_lines.has(i)) continue;
+    if (exampleSections.has(i)) continue;
+    const line = lines[i];
+    const regex = new RegExp(ANCHOR_LINK_PATTERN.source, ANCHOR_LINK_PATTERN.flags);
+    let match;
+    while ((match = regex.exec(line)) !== null) {
+      results.push({
+        claim_text: line.trim(),
+        claim_type: 'path_reference',
+        extracted_value: { type: 'path_reference', path: '<self>', anchor: match[1] },
+        line_number: doc.original_line_map[i],
+        pattern_name: 'anchor_self_reference',
+      });
     }
   }
 
@@ -130,22 +158,30 @@ const KNOWN_FILE_EXTENSIONS = new Set([
 
 function passesPathFilters(path: string, docFile: string): boolean {
   if (path.includes('://')) return false;
-  const ext = getExtension(path);
-  if (IMAGE_EXTENSIONS.has(ext)) return false;
-  if (STYLE_EXTENSIONS.has(ext)) return false;
   if (path.startsWith('#')) return false;
   if (path === docFile) return false;
   if (!isValidPath(path)) return false;
 
+  const ext = getExtension(path);
+
   // If path has no directory separator, require a known file extension.
   // This filters out config-key notation like `doc_patterns.include` or `agent.adapter`.
-  if (!path.includes('/') && ext && !KNOWN_FILE_EXTENSIONS.has(ext)) return false;
+  if (!path.includes('/') && ext && !KNOWN_FILE_EXTENSIONS.has(ext)
+    && !IMAGE_EXTENSIONS.has(ext) && !STYLE_EXTENSIONS.has(ext)) return false;
 
   // Paths ending in a purely numeric "extension" are likely model identifiers
   // (e.g., "openai/gpt-5.2", "zai/glm-4.7") or version references, not file paths.
   if (/\.\d+$/.test(path)) return false;
 
   return true;
+}
+
+/** Get the asset type for a path, if it's an image or style asset. */
+function getAssetType(filePath: string): string | undefined {
+  const ext = getExtension(filePath);
+  if (IMAGE_EXTENSIONS.has(ext)) return 'image';
+  if (STYLE_EXTENSIONS.has(ext)) return 'style';
+  return undefined;
 }
 
 function getExtension(path: string): string {
@@ -758,6 +794,348 @@ export function extractConventionClaims(doc: PreProcessedDoc): RawExtraction[] {
   return results;
 }
 
+// === B.8 URL References ===
+
+const PLACEHOLDER_DOMAINS = new Set([
+  'example.com', 'example.org', 'example.net',
+  'localhost', '127.0.0.1', '0.0.0.0', '::1',
+  'your-domain.com', 'yourdomain.com', 'your-site.com',
+  'placeholder.com', 'test.com',
+]);
+
+const URL_PATTERN = /https?:\/\/[^\s)>\]"']+/g;
+
+export function extractUrlReferences(doc: PreProcessedDoc): RawExtraction[] {
+  const results: RawExtraction[] = [];
+  const lines = doc.cleaned_content.split('\n');
+
+  for (let i = 0; i < lines.length; i++) {
+    if (doc.code_fence_lines.has(i)) continue;
+    const line = lines[i];
+    const regex = new RegExp(URL_PATTERN.source, URL_PATTERN.flags);
+    let match;
+    while ((match = regex.exec(line)) !== null) {
+      // Strip trailing punctuation
+      let url = match[0].replace(/[.,;:!?)]+$/, '');
+      // Strip trailing markdown artifacts
+      url = url.replace(/\)+$/, '');
+
+      try {
+        const parsed = new URL(url);
+        if (PLACEHOLDER_DOMAINS.has(parsed.hostname)) continue;
+        // Skip localhost with ports
+        if (parsed.hostname === 'localhost' || /^127\./.test(parsed.hostname)) continue;
+      } catch {
+        continue; // Invalid URL
+      }
+
+      results.push({
+        claim_text: line.trim(),
+        claim_type: 'url_reference',
+        extracted_value: { type: 'url_reference', url },
+        line_number: doc.original_line_map[i],
+        pattern_name: 'url_reference',
+      });
+    }
+  }
+
+  return results;
+}
+
+// === B.9 Config Claims (defaults, ports, limits) ===
+
+const DEFAULT_VALUE_PATTERNS = [
+  { name: 'defaults_to', regex: /`([a-zA-Z_]\w*)`\s+defaults?\s+to\s+`?(\S+?)`?(?:\s|$|[.,])/gi },
+  { name: 'default_is', regex: /`([a-zA-Z_]\w*)`.*\bdefault\s+(?:is|are|value(?:s)?)\s+`?(\S+?)`?(?:\s|$|[.,])/gi },
+  { name: 'if_not_set', regex: /if\s+not\s+(?:specified|set|provided),?\s+`?([a-zA-Z_]\w*)`?\s+(?:is|defaults?\s+to|=)\s+`?(\S+?)`?/gi },
+];
+
+const PORT_PATTERNS = [
+  { name: 'port_assignment', regex: /(?:port|PORT)\s*[:=]?\s*(\d{2,5})\b/g },
+  { name: 'runs_on_port', regex: /(?:runs?|listen(?:s|ing)?|start(?:s|ed)?)\s+(?:on\s+)?port\s+(\d+)/gi },
+  { name: 'localhost_port', regex: /localhost:(\d{2,5})\b/g },
+];
+
+const LIMIT_PATTERNS = [
+  { name: 'maximum_limit', regex: /\bmax(?:imum)?\s+(?:of\s+)?(\d+)\s+(\w+)/gi },
+  { name: 'limited_to', regex: /\blimit(?:ed)?\s+to\s+(\d+)\s+(\w+)/gi },
+  { name: 'timeout_value', regex: /\btimeout\s+(?:of\s+)?(\d+)\s*(?:ms|seconds?|s|minutes?|m)\b/gi },
+  { name: 'retry_count', regex: /\bretr(?:y|ies)\s+(\d+)\s+times?\b/gi },
+  { name: 'rate_limit', regex: /\brate\s+limit\s+(?:of\s+)?(\d+)/gi },
+];
+
+export function extractConfigClaims(doc: PreProcessedDoc): RawExtraction[] {
+  const results: RawExtraction[] = [];
+  const lines = doc.cleaned_content.split('\n');
+
+  for (let i = 0; i < lines.length; i++) {
+    if (doc.code_fence_lines.has(i)) continue;
+    const line = lines[i];
+    if (isIllustrativeLine(line)) continue;
+
+    // Default values
+    for (const pattern of DEFAULT_VALUE_PATTERNS) {
+      const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
+      let match;
+      while ((match = regex.exec(line)) !== null) {
+        results.push({
+          claim_text: line.trim(),
+          claim_type: 'config',
+          extracted_value: { type: 'config', config_kind: 'default_value', key: match[1], value: match[2] },
+          line_number: doc.original_line_map[i],
+          pattern_name: pattern.name,
+        });
+      }
+    }
+
+    // Ports
+    for (const pattern of PORT_PATTERNS) {
+      const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
+      let match;
+      while ((match = regex.exec(line)) !== null) {
+        const port = parseInt(match[1], 10);
+        if (port < 1 || port > 65535) continue;
+        results.push({
+          claim_text: line.trim(),
+          claim_type: 'config',
+          extracted_value: { type: 'config', config_kind: 'port', value: String(port) },
+          line_number: doc.original_line_map[i],
+          pattern_name: pattern.name,
+        });
+      }
+    }
+
+    // Limits/thresholds
+    for (const pattern of LIMIT_PATTERNS) {
+      const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
+      let match;
+      while ((match = regex.exec(line)) !== null) {
+        const value = match[1];
+        const context = match[2] || '';
+        results.push({
+          claim_text: line.trim(),
+          claim_type: 'config',
+          extracted_value: { type: 'config', config_kind: 'limit', key: context, value },
+          line_number: doc.original_line_map[i],
+          pattern_name: pattern.name,
+        });
+      }
+    }
+  }
+
+  return results;
+}
+
+// === B.10 Prose Function Signatures ===
+
+const PROSE_CALL_PATTERN = /`([a-zA-Z_]\w*)\(([^)]*)\)`/g;
+const PROSE_RETURNS_PATTERN = /`([a-zA-Z_]\w*)`\s+returns?\s+(?:a\s+)?([\w<>\[\]|]+)/gi;
+const PROSE_PARAMS_COUNT_PATTERN = /`([a-zA-Z_]\w*)`\s+(?:takes?|accepts?|expects?)\s+(\d+)\s+(?:parameter|argument)s?/gi;
+
+export function extractProseSignatures(doc: PreProcessedDoc): RawExtraction[] {
+  const results: RawExtraction[] = [];
+  const lines = doc.cleaned_content.split('\n');
+
+  for (let i = 0; i < lines.length; i++) {
+    if (doc.code_fence_lines.has(i)) continue;
+    const line = lines[i];
+
+    // Backtick-wrapped calls: `functionName(param1, param2)`
+    const callRegex = new RegExp(PROSE_CALL_PATTERN.source, PROSE_CALL_PATTERN.flags);
+    let match;
+    while ((match = callRegex.exec(line)) !== null) {
+      const functionName = match[1];
+      const paramsStr = match[2].trim();
+      const params = paramsStr ? paramsStr.split(/\s*,\s*/).filter(Boolean) : [];
+      results.push({
+        claim_text: line.trim(),
+        claim_type: 'code_example',
+        extracted_value: {
+          type: 'code_example',
+          prose_signature: true,
+          function_name: functionName,
+          params,
+        },
+        extraction_confidence: 0.7,
+        line_number: doc.original_line_map[i],
+        pattern_name: 'prose_function_call',
+      });
+    }
+
+    // "returns" pattern
+    const returnsRegex = new RegExp(PROSE_RETURNS_PATTERN.source, PROSE_RETURNS_PATTERN.flags);
+    while ((match = returnsRegex.exec(line)) !== null) {
+      results.push({
+        claim_text: line.trim(),
+        claim_type: 'code_example',
+        extracted_value: {
+          type: 'code_example',
+          prose_signature: true,
+          function_name: match[1],
+          return_type: match[2],
+        },
+        extraction_confidence: 0.7,
+        line_number: doc.original_line_map[i],
+        pattern_name: 'prose_returns_type',
+      });
+    }
+
+    // "takes N parameters" pattern
+    const paramsCountRegex = new RegExp(PROSE_PARAMS_COUNT_PATTERN.source, PROSE_PARAMS_COUNT_PATTERN.flags);
+    while ((match = paramsCountRegex.exec(line)) !== null) {
+      results.push({
+        claim_text: line.trim(),
+        claim_type: 'code_example',
+        extracted_value: {
+          type: 'code_example',
+          prose_signature: true,
+          function_name: match[1],
+          param_count: parseInt(match[2], 10),
+        },
+        extraction_confidence: 0.7,
+        line_number: doc.original_line_map[i],
+        pattern_name: 'prose_param_count',
+      });
+    }
+  }
+
+  return results;
+}
+
+// === B.11 Table Claims ===
+
+const TABLE_COLUMN_KEYWORDS: Record<string, string[]> = {
+  key: ['parameter', 'param', 'name', 'option', 'field', 'key', 'property', 'prop', 'setting', 'variable'],
+  type: ['type', 'data type', 'datatype'],
+  default: ['default', 'value', 'default value'],
+  version: ['version', 'ver'],
+  path: ['path', 'file', 'location', 'directory'],
+  command: ['command', 'script', 'cmd'],
+};
+
+export function extractTableClaims(
+  doc: PreProcessedDoc,
+  docFile: string,
+  knownPackages: Set<string>,
+): RawExtraction[] {
+  const results: RawExtraction[] = [];
+  const lines = doc.cleaned_content.split('\n');
+
+  let tableStart = -1;
+  let headerCols: string[] = [];
+  let colSemantics: Map<number, string> = new Map();
+
+  for (let i = 0; i < lines.length; i++) {
+    if (doc.code_fence_lines.has(i)) continue;
+    const line = lines[i].trim();
+
+    // Detect table rows: | cell | cell |
+    if (/^\|.*\|.*\|/.test(line)) {
+      if (tableStart === -1) {
+        // This might be the header row
+        tableStart = i;
+        headerCols = line.split('|').map((c) => c.trim()).filter(Boolean);
+        colSemantics = identifyColumnSemantics(headerCols);
+        continue;
+      }
+
+      // Check for separator row: |---|---|
+      if (/^\|[\s:-]+\|/.test(line)) continue;
+
+      // Data row
+      const cells = line.split('|').map((c) => c.trim()).filter(Boolean);
+      const claims = extractClaimsFromTableRow(cells, colSemantics, doc.original_line_map[i], knownPackages);
+      results.push(...claims);
+    } else {
+      // Reset table tracking
+      tableStart = -1;
+      headerCols = [];
+      colSemantics = new Map();
+    }
+  }
+
+  return results;
+}
+
+function identifyColumnSemantics(headers: string[]): Map<number, string> {
+  const semantics = new Map<number, string>();
+  for (let i = 0; i < headers.length; i++) {
+    const header = headers[i].toLowerCase().replace(/[`*_]/g, '');
+    for (const [semantic, keywords] of Object.entries(TABLE_COLUMN_KEYWORDS)) {
+      if (keywords.some((k) => header.includes(k))) {
+        semantics.set(i, semantic);
+        break;
+      }
+    }
+  }
+  return semantics;
+}
+
+function extractClaimsFromTableRow(
+  cells: string[],
+  colSemantics: Map<number, string>,
+  lineNumber: number,
+  knownPackages: Set<string>,
+): RawExtraction[] {
+  const results: RawExtraction[] = [];
+
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i].replace(/`/g, '').trim();
+    if (!cell || cell === '-' || cell === 'N/A') continue;
+
+    const semantic = colSemantics.get(i);
+
+    // Path detection
+    if ((semantic === 'path' || !semantic) && /^[a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+$/.test(cell) && isValidPath(cell)) {
+      results.push({
+        claim_text: cell,
+        claim_type: 'path_reference',
+        extracted_value: { type: 'path_reference', path: cell },
+        line_number: lineNumber,
+        pattern_name: 'table_cell_path',
+      });
+    }
+
+    // Version detection
+    if ((semantic === 'version' || !semantic) && /^\^?~?v?\d+\.\d+/.test(cell)) {
+      const keyCell = cells[colSemantics.has(0) ? 0 : Math.max(0, i - 1)]?.replace(/`/g, '').trim();
+      if (keyCell && knownPackages.has(keyCell)) {
+        results.push({
+          claim_text: `${keyCell} ${cell}`,
+          claim_type: 'dependency_version',
+          extracted_value: { type: 'dependency_version', package: keyCell, version: cell.replace(/^[v^~]/, '') },
+          line_number: lineNumber,
+          pattern_name: 'table_cell_version',
+        });
+      }
+    }
+
+    // Default value from key+default columns
+    if (semantic === 'default') {
+      const keyCol = findColumnIndex(colSemantics, 'key');
+      if (keyCol !== -1 && cells[keyCol]) {
+        const key = cells[keyCol].replace(/`/g, '').trim();
+        results.push({
+          claim_text: `${key} = ${cell}`,
+          claim_type: 'config',
+          extracted_value: { type: 'config', config_kind: 'default_value', key, value: cell },
+          line_number: lineNumber,
+          pattern_name: 'table_cell_default',
+        });
+      }
+    }
+  }
+
+  return results;
+}
+
+function findColumnIndex(semantics: Map<number, string>, target: string): number {
+  for (const [idx, sem] of semantics) {
+    if (sem === target) return idx;
+  }
+  return -1;
+}
+
 // === Appendix E: Deduplication ===
 
 export function deduplicateWithinFile(extractions: RawExtraction[]): RawExtraction[] {
@@ -776,8 +1154,10 @@ export function deduplicateWithinFile(extractions: RawExtraction[]): RawExtracti
 export function getIdentityKey(extraction: RawExtraction): string {
   const ev = extraction.extracted_value as Record<string, unknown>;
   switch (extraction.claim_type) {
-    case 'path_reference':
-      return 'path:' + (ev.path as string);
+    case 'path_reference': {
+      const anchor = ev.anchor as string | undefined;
+      return 'path:' + (ev.path as string) + (anchor ? '#' + anchor : '');
+    }
     case 'command':
       return 'cmd:' + (ev.runner as string) + ':' + (ev.script as string);
     case 'dependency_version':
@@ -799,6 +1179,16 @@ export function getIdentityKey(extraction: RawExtraction): string {
       if (convention) return 'conv:' + convention;
       if (fw) return 'conv:fw:' + (fw as string).toLowerCase();
       return 'conv:' + extraction.claim_text;
+    }
+    case 'url_reference': {
+      const url = ev.url as string;
+      return 'url:' + url;
+    }
+    case 'config': {
+      const configKind = ev.config_kind as string;
+      const configKey = ev.key as string | undefined;
+      const configValue = ev.value as string | undefined;
+      return `config:${configKind}:${configKey || ''}:${configValue || ''}`;
     }
     default:
       return extraction.claim_type + ':' + extraction.claim_text;
@@ -851,6 +1241,23 @@ export function generateKeywords(extraction: RawExtraction): string[] {
       const keywords: string[] = [];
       if (ev.convention) keywords.push(ev.convention as string);
       if (ev.framework) keywords.push(ev.framework as string);
+      return keywords;
+    }
+    case 'url_reference': {
+      const url = ev.url as string;
+      try {
+        const parsed = new URL(url);
+        const pathSegments = parsed.pathname.split('/').filter((s) => s.length > 2);
+        return [parsed.hostname, ...pathSegments];
+      } catch {
+        return [];
+      }
+    }
+    case 'config': {
+      const keywords: string[] = [];
+      if (ev.key) keywords.push(ev.key as string);
+      if (ev.config_kind) keywords.push(ev.config_kind as string);
+      if (ev.value) keywords.push(ev.value as string);
       return keywords;
     }
     default:

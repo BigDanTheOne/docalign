@@ -37,13 +37,23 @@ export function parseManifest(filePath: string, content: string): ParsedManifest
 function parsePackageJson(filePath: string, content: string): ParsedManifest | null {
   try {
     const pkg = JSON.parse(content);
-    return {
+    const result: ParsedManifest = {
       file_path: filePath,
       dependencies: flattenDeps(pkg.dependencies),
       dev_dependencies: flattenDeps(pkg.devDependencies),
       scripts: pkg.scripts && typeof pkg.scripts === 'object' ? { ...pkg.scripts } : {},
       source: 'manifest',
     };
+    if (typeof pkg.name === 'string') result.name = pkg.name;
+    if (typeof pkg.version === 'string') result.version = pkg.version;
+    if (typeof pkg.license === 'string') result.license = pkg.license;
+    if (pkg.engines && typeof pkg.engines === 'object') {
+      result.engines = {};
+      for (const [key, val] of Object.entries(pkg.engines)) {
+        if (typeof val === 'string') result.engines[key] = val;
+      }
+    }
+    return result;
   } catch {
     return null;
   }
@@ -199,13 +209,33 @@ function parsePyprojectToml(filePath: string, content: string): ParsedManifest |
     }
   }
 
-  return {
+  const result: ParsedManifest = {
     file_path: filePath,
     dependencies,
     dev_dependencies: {},
     scripts,
     source: 'manifest',
   };
+
+  // Extract project name
+  const nameMatch = content.match(/\[project\][\s\S]*?name\s*=\s*"([^"]+)"/);
+  if (nameMatch) result.name = nameMatch[1];
+
+  // Extract project version
+  const versionMatch = content.match(/\[project\][\s\S]*?version\s*=\s*"([^"]+)"/);
+  if (versionMatch) result.version = versionMatch[1];
+
+  // Extract license
+  const licenseMatch = content.match(/\[project\][\s\S]*?license\s*=\s*"([^"]+)"/);
+  if (licenseMatch) result.license = licenseMatch[1];
+
+  // Extract requires-python as engine constraint
+  const pythonMatch = content.match(/requires-python\s*=\s*"([^"]+)"/);
+  if (pythonMatch) {
+    result.engines = { python: pythonMatch[1] };
+  }
+
+  return result;
 }
 
 // === Makefile ===
@@ -314,13 +344,31 @@ function parseCargoToml(filePath: string, content: string): ParsedManifest | nul
     parseTomlDeps(devDepsSection[1], devDependencies);
   }
 
-  return {
+  const result: ParsedManifest = {
     file_path: filePath,
     dependencies,
     dev_dependencies: devDependencies,
     scripts: {},
     source: 'manifest',
   };
+
+  // Extract [package] metadata
+  const packageSection = content.match(/\[package\]([\s\S]*?)(?:\n\[|$)/);
+  if (packageSection) {
+    const nameMatch = packageSection[1].match(/^name\s*=\s*"([^"]+)"/m);
+    if (nameMatch) result.name = nameMatch[1];
+    const versionMatch = packageSection[1].match(/^version\s*=\s*"([^"]+)"/m);
+    if (versionMatch) result.version = versionMatch[1];
+    const licenseMatch = packageSection[1].match(/^license\s*=\s*"([^"]+)"/m);
+    if (licenseMatch) result.license = licenseMatch[1];
+    // Rust edition as engine constraint
+    const editionMatch = packageSection[1].match(/^edition\s*=\s*"([^"]+)"/m);
+    if (editionMatch) {
+      result.engines = { rust_edition: editionMatch[1] };
+    }
+  }
+
+  return result;
 }
 
 function parseTomlDeps(section: string, target: Record<string, string>): void {
@@ -364,11 +412,23 @@ function parseGoMod(filePath: string, content: string): ParsedManifest | null {
     dependencies[match[1]] = match[2];
   }
 
-  return {
+  const result: ParsedManifest = {
     file_path: filePath,
     dependencies,
     dev_dependencies: {},
     scripts: {},
     source: 'manifest',
   };
+
+  // Extract module name
+  const moduleMatch = content.match(/^module\s+(\S+)/m);
+  if (moduleMatch) result.name = moduleMatch[1];
+
+  // Extract go version as engine constraint
+  const goVersionMatch = content.match(/^go\s+(\S+)/m);
+  if (goVersionMatch) {
+    result.engines = { go: goVersionMatch[1] };
+  }
+
+  return result;
 }

@@ -10,7 +10,8 @@ export type ClaimType =
   | 'architecture'
   | 'config'
   | 'convention'
-  | 'environment';
+  | 'environment'
+  | 'url_reference';
 
 export type Testability = 'syntactic' | 'semantic' | 'untestable';
 
@@ -150,6 +151,14 @@ export interface ParsedManifest {
   dev_dependencies: Record<string, string>;
   scripts: Record<string, string>;
   source: 'lockfile' | 'manifest';
+  /** Package name from manifest (e.g., package.json "name" field) */
+  name?: string;
+  /** Package version from manifest (e.g., package.json "version" field) */
+  version?: string;
+  /** Engine/runtime constraints (e.g., { node: ">=18" }) */
+  engines?: Record<string, string>;
+  /** License identifier (e.g., "MIT") */
+  license?: string;
 }
 
 // === L1 Claim Extractor Types (phase4-api-contracts.md Section 3) ===
@@ -192,6 +201,7 @@ export interface RawExtraction {
   extracted_value: Record<string, unknown>;
   line_number: number;
   pattern_name: string;
+  extraction_confidence?: number;
 }
 
 export interface ExtractionConfig {
@@ -523,6 +533,16 @@ export interface DocAlignConfig {
     semantic_threshold?: number;
     path1_max_evidence_tokens?: number;
     max_agent_files_per_claim?: number;
+  };
+  url_check?: {
+    enabled?: boolean;
+    timeout_ms?: number;
+    max_per_domain?: number;
+    exclude_domains?: string[];
+  };
+  coverage?: {
+    enabled?: boolean;
+    min_entity_importance?: 'exported' | 'public' | 'all';
   };
 }
 

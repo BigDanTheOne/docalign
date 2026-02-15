@@ -2,6 +2,7 @@ import type { Pool, PoolClient } from 'pg';
 import type {
   CodeEntity,
   DependencyVersion,
+  ParsedManifest,
   RouteEntity,
   ScriptInfo,
   CodeEntityRow,
@@ -290,17 +291,30 @@ export class IndexStore {
     devDependencies: Record<string, string>,
     scripts: Record<string, string>,
     source: 'lockfile' | 'manifest',
+    metadata?: { name?: string; version?: string; engines?: Record<string, string>; license?: string },
   ): Promise<void> {
     await this.pool.query(
-      `INSERT INTO repo_manifests (repo_id, file_path, dependencies, dev_dependencies, scripts, source)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO repo_manifests (repo_id, file_path, dependencies, dev_dependencies, scripts, source, name, version, engines, license)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        ON CONFLICT (repo_id, file_path) DO UPDATE SET
          dependencies = $3,
          dev_dependencies = $4,
          scripts = $5,
          source = $6,
+         name = $7,
+         version = $8,
+         engines = $9,
+         license = $10,
          updated_at = NOW()`,
-      [repoId, filePath, JSON.stringify(dependencies), JSON.stringify(devDependencies), JSON.stringify(scripts), source],
+      [
+        repoId, filePath,
+        JSON.stringify(dependencies), JSON.stringify(devDependencies), JSON.stringify(scripts),
+        source,
+        metadata?.name ?? null,
+        metadata?.version ?? null,
+        metadata?.engines ? JSON.stringify(metadata.engines) : null,
+        metadata?.license ?? null,
+      ],
     );
   }
 
@@ -482,6 +496,12 @@ export class IndexStore {
           manifest.dev_dependencies,
           manifest.scripts,
           manifest.source,
+          {
+            name: manifest.name,
+            version: manifest.version,
+            engines: manifest.engines,
+            license: manifest.license,
+          },
         );
       }
 
@@ -504,13 +524,23 @@ export class IndexStore {
     devDependencies: Record<string, string>,
     scripts: Record<string, string>,
     source: 'lockfile' | 'manifest',
+    metadata?: { name?: string; version?: string; engines?: Record<string, string>; license?: string },
   ): Promise<void> {
     await client.query(
-      `INSERT INTO repo_manifests (repo_id, file_path, dependencies, dev_dependencies, scripts, source)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO repo_manifests (repo_id, file_path, dependencies, dev_dependencies, scripts, source, name, version, engines, license)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        ON CONFLICT (repo_id, file_path) DO UPDATE SET
-         dependencies = $3, dev_dependencies = $4, scripts = $5, source = $6, updated_at = NOW()`,
-      [repoId, filePath, JSON.stringify(dependencies), JSON.stringify(devDependencies), JSON.stringify(scripts), source],
+         dependencies = $3, dev_dependencies = $4, scripts = $5, source = $6,
+         name = $7, version = $8, engines = $9, license = $10, updated_at = NOW()`,
+      [
+        repoId, filePath,
+        JSON.stringify(dependencies), JSON.stringify(devDependencies), JSON.stringify(scripts),
+        source,
+        metadata?.name ?? null,
+        metadata?.version ?? null,
+        metadata?.engines ? JSON.stringify(metadata.engines) : null,
+        metadata?.license ?? null,
+      ],
     );
   }
 
@@ -519,6 +549,46 @@ export class IndexStore {
       'DELETE FROM repo_manifests WHERE repo_id = $1 AND file_path = $2',
       [repoId, filePath],
     );
+  }
+
+  // === getManifestMetadata ===
+
+  async getManifestMetadata(repoId: string): Promise<ParsedManifest | null> {
+    const result = await this.pool.query(
+      `SELECT file_path, dependencies, dev_dependencies, scripts, source, name, version, engines, license
+       FROM repo_manifests
+       WHERE repo_id = $1 AND source = 'manifest'
+       ORDER BY file_path
+       LIMIT 1`,
+      [repoId],
+    );
+
+    if (result.rowCount === 0) return null;
+
+    const row = result.rows[0];
+    const manifest: ParsedManifest = {
+      file_path: row.file_path as string,
+      dependencies: (row.dependencies as Record<string, string>) ?? {},
+      dev_dependencies: (row.dev_dependencies as Record<string, string>) ?? {},
+      scripts: (row.scripts as Record<string, string>) ?? {},
+      source: row.source as 'lockfile' | 'manifest',
+    };
+    if (row.name) manifest.name = row.name as string;
+    if (row.version) manifest.version = row.version as string;
+    if (row.engines) manifest.engines = row.engines as Record<string, string>;
+    if (row.license) manifest.license = row.license as string;
+    return manifest;
+  }
+
+  // === getHeadings ===
+
+  async getHeadings(
+    repoId: string,
+    filePath: string,
+  ): Promise<Array<{ text: string; level: number; slug: string }>> {
+    const content = await this.readFileContent(repoId, filePath);
+    if (!content) return [];
+    return parseMarkdownHeadings(content);
   }
 
   async readFileContent(_repoId: string, _filePath: string, _maxBytes?: number): Promise<string | null> {
@@ -713,4 +783,46 @@ export function computeEntityDiff(existing: CodeEntity[], parsed: ParsedEntity[]
   }
 
   return diff;
+}
+
+/**
+ * Parse markdown content and extract headings with GitHub-style slugs.
+ */
+export function parseMarkdownHeadings(
+  content: string,
+): Array<{ text: string; level: number; slug: string }> {
+  const headings: Array<{ text: string; level: number; slug: string }> = [];
+  const slugCounts = new Map<string, number>();
+
+  for (const line of content.split('\n')) {
+    const match = line.match(/^(#{1,6})\s+(.+)$/);
+    if (!match) continue;
+
+    const level = match[1].length;
+    // Strip inline markdown: bold, italic, code, links
+    let text = match[2].trim();
+    text = text.replace(/\*\*(.+?)\*\*/g, '$1'); // bold
+    text = text.replace(/\*(.+?)\*/g, '$1'); // italic
+    text = text.replace(/`(.+?)`/g, '$1'); // inline code
+    text = text.replace(/\[(.+?)\]\([^)]*\)/g, '$1'); // links
+
+    // GitHub-style slug: lowercase, replace non-alphanumeric with hyphens, collapse
+    let slug = text
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    // Handle duplicate slugs (GitHub appends -1, -2, etc.)
+    const count = slugCounts.get(slug) ?? 0;
+    slugCounts.set(slug, count + 1);
+    if (count > 0) {
+      slug = `${slug}-${count}`;
+    }
+
+    headings.push({ text, level, slug });
+  }
+
+  return headings;
 }

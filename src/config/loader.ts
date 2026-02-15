@@ -60,6 +60,7 @@ export const CONFIG_DEFAULTS: Required<DocAlignConfig> = {
     config: true,
     convention: true,
     environment: true,
+    url_reference: true,
   },
   suppress: [],
   schedule: {
@@ -84,6 +85,16 @@ export const CONFIG_DEFAULTS: Required<DocAlignConfig> = {
     semantic_threshold: 0.7,
     path1_max_evidence_tokens: 8000,
     max_agent_files_per_claim: 10,
+  },
+  url_check: {
+    enabled: true,
+    timeout_ms: 5000,
+    max_per_domain: 5,
+    exclude_domains: [],
+  },
+  coverage: {
+    enabled: false,
+    min_entity_importance: 'exported',
   },
 };
 
@@ -215,6 +226,8 @@ const KNOWN_KEYS = [
   'llm',
   'check',
   'mapping',
+  'url_check',
+  'coverage',
 ];
 
 function findSimilarKey(key: string): string | null {

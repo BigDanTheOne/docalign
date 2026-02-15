@@ -19,6 +19,8 @@ function makeMockIndex(overrides: Partial<CodebaseIndexService> = {}): CodebaseI
     searchSemantic: async () => [],
     updateFromDiff: async () => ({ entities_added: 0, entities_updated: 0, entities_removed: 0, files_skipped: [] }),
     readFileContent: async () => null,
+    getManifestMetadata: async () => null,
+    getHeadings: async () => [],
     ...overrides,
   };
 }
@@ -281,10 +283,14 @@ describe('D.5: Tool Version Check', () => {
 
   it('verifies from package.json engines', async () => {
     const index = makeMockIndex({
-      readFileContent: async (_r, path) => {
-        if (path === 'package.json') return JSON.stringify({ engines: { node: '>=18.0.0' } });
-        return null;
-      },
+      getManifestMetadata: async () => ({
+        file_path: 'package.json',
+        dependencies: {},
+        dev_dependencies: {},
+        scripts: {},
+        source: 'manifest' as const,
+        engines: { node: '>=18.0.0' },
+      }),
     });
     const claim = makeClaim({
       claim_type: 'environment',

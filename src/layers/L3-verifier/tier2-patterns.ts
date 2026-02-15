@@ -1,5 +1,6 @@
-import type { Claim, VerificationResult, Severity } from '../../shared/types';
+import type { Claim, ClaimMapping, VerificationResult, Severity } from '../../shared/types';
 import type { CodebaseIndexService } from '../L0-codebase-index';
+import { findCloseMatch } from './close-match';
 import { makeTier2Result } from './result-helpers';
 
 /**
@@ -15,8 +16,10 @@ import { makeTier2Result } from './result-helpers';
 export async function verifyTier2(
   claim: Claim,
   index: CodebaseIndexService,
+  mappings?: ClaimMapping[],
 ): Promise<VerificationResult | null> {
-  if (claim.claim_type !== 'convention' && claim.claim_type !== 'environment' && claim.claim_type !== 'config') {
+  if (claim.claim_type !== 'convention' && claim.claim_type !== 'environment' && claim.claim_type !== 'config'
+    && claim.claim_type !== 'dependency_version') {
     return null;
   }
 
@@ -42,6 +45,25 @@ export async function verifyTier2(
   if (claim.claim_type === 'environment') {
     const versionResult = await toolVersionCheck(claim, index);
     if (versionResult) return versionResult;
+  }
+
+  // D.6: License consistency check (convention)
+  if (claim.claim_type === 'convention') {
+    const licenseResult = await licenseCheck(claim, index);
+    if (licenseResult) return licenseResult;
+  }
+
+  // D.7: Changelog-to-version consistency (dependency_version in CHANGELOG files)
+  if (claim.claim_type === 'dependency_version' && claim.source_file &&
+      /changelog/i.test(claim.source_file)) {
+    const changelogResult = await changelogVersionCheck(claim, index);
+    if (changelogResult) return changelogResult;
+  }
+
+  // D.8: Deprecation awareness (any claim type with entity mappings)
+  if (mappings && mappings.length > 0) {
+    const deprecationResult = await deprecationCheck(claim, index, mappings);
+    if (deprecationResult) return deprecationResult;
   }
 
   return null;
@@ -163,15 +185,32 @@ async function envVarCheck(
 
   if (anyEnvFileExists) {
     const existingEnvFiles: string[] = [];
+    const allEnvVarNames: string[] = [];
     for (const f of ENV_FILES) {
-      if (await index.fileExists(claim.repo_id, f)) existingEnvFiles.push(f);
+      if (await index.fileExists(claim.repo_id, f)) {
+        existingEnvFiles.push(f);
+        const content = await index.readFileContent(claim.repo_id, f);
+        if (content) {
+          for (const line of content.split('\n')) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('#') || !trimmed) continue;
+            const eqIdx = trimmed.indexOf('=');
+            const name = eqIdx > 0 ? trimmed.slice(0, eqIdx).trim() : trimmed;
+            if (name && /^[A-Z][A-Z0-9_]+$/.test(name)) {
+              allEnvVarNames.push(name);
+            }
+          }
+        }
+      }
     }
+    const close = findCloseMatch(envVar, [...new Set(allEnvVarNames)], 3);
+    const suggestion = close ? ` Did you mean '${close.name}'?` : '';
     return makeTier2Result(claim, {
       verdict: 'drifted',
       severity: 'medium' as Severity,
       evidence_files: existingEnvFiles,
-      reasoning: `Environment variable '${envVar}' not found in any .env file.`,
-      specific_mismatch: `'${envVar}' is documented but not present in env configuration files.`,
+      reasoning: `Environment variable '${envVar}' not found in any .env file.${suggestion}`,
+      specific_mismatch: `'${envVar}' is documented but not present in env configuration files.${suggestion}`,
     });
   }
 
@@ -221,7 +260,7 @@ const VERSION_FILES: VersionFileSpec[] = [
   {
     file: '.tool-versions',
     tool: /\b(?:Node\.?js|Python|Ruby|Go|Rust|Java)\b/i,
-    extractVersion: (content) => null, // handled specially below
+    extractVersion: (_content) => null, // handled specially below
   },
 ];
 
@@ -280,23 +319,33 @@ async function toolVersionCheck(
     });
   }
 
-  // Check package.json engines field for Node.js
-  if (/\bNode\.?js\b/i.test(claim.claim_text)) {
-    const pkgContent = await index.readFileContent(claim.repo_id, 'package.json');
-    if (pkgContent) {
-      try {
-        const pkg = JSON.parse(pkgContent);
-        const engineVersion = pkg?.engines?.node;
-        if (engineVersion && claimedVersion) {
-          if (versionSatisfies(claimedVersion, engineVersion.replace(/[>=<^~\s]/g, ''))) {
-            return makeTier2Result(claim, {
-              verdict: 'verified',
-              evidence_files: ['package.json'],
-              reasoning: `Node.js engine constraint '${engineVersion}' in package.json is consistent with documented '${claimedVersion}'.`,
-            });
-          }
+  // Check manifest engines field for any runtime
+  const manifest = await index.getManifestMetadata(claim.repo_id);
+  if (manifest?.engines) {
+    // Map runtime name to engine key
+    const engineKeyMap: Record<string, string[]> = {
+      'node.js': ['node'],
+      'nodejs': ['node'],
+      'python': ['python', 'requires-python'],
+      'go': ['go'],
+      'rust': ['rust-edition'],
+    };
+
+    const runtimeLower = claimedRuntime.toLowerCase().replace(/\s+/g, '');
+    const engineKeys = engineKeyMap[runtimeLower] ?? [runtimeLower];
+
+    for (const key of engineKeys) {
+      const engineVersion = manifest.engines[key];
+      if (engineVersion && claimedVersion) {
+        const cleanEngineVersion = engineVersion.replace(/[>=<^~\s]/g, '');
+        if (versionSatisfies(claimedVersion, cleanEngineVersion)) {
+          return makeTier2Result(claim, {
+            verdict: 'verified',
+            evidence_files: [manifest.file_path],
+            reasoning: `${claimedRuntime} engine constraint '${engineVersion}' in ${manifest.file_path} is consistent with documented '${claimedVersion}'.`,
+          });
         }
-      } catch { /* skip unparseable */ }
+      }
     }
   }
 
@@ -366,4 +415,134 @@ function versionSatisfies(claimed: string, actual: string): boolean {
   }
 
   return true;
+}
+
+// === D.6: License Consistency Check ===
+
+const LICENSE_KEYWORDS: Record<string, string[]> = {
+  'MIT': ['mit'],
+  'Apache-2.0': ['apache-2', 'apache 2', 'apache2', 'apache-2.0', 'apache 2.0'],
+  'GPL-3.0': ['gpl-3', 'gpl 3', 'gplv3', 'gpl-3.0'],
+  'GPL-2.0': ['gpl-2', 'gpl 2', 'gplv2', 'gpl-2.0'],
+  'BSD-2-Clause': ['bsd-2', 'bsd 2-clause', 'bsd2'],
+  'BSD-3-Clause': ['bsd-3', 'bsd 3-clause', 'bsd3'],
+  'ISC': ['isc'],
+  'LGPL-3.0': ['lgpl-3', 'lgpl 3', 'lgplv3'],
+  'MPL-2.0': ['mpl-2', 'mpl 2', 'mpl-2.0'],
+  'AGPL-3.0': ['agpl-3', 'agpl 3', 'agplv3'],
+  'Unlicense': ['unlicense'],
+};
+
+function detectLicenseInText(text: string): string | null {
+  const lower = text.toLowerCase();
+  for (const [spdx, keywords] of Object.entries(LICENSE_KEYWORDS)) {
+    for (const kw of keywords) {
+      if (lower.includes(kw)) return spdx;
+    }
+  }
+  return null;
+}
+
+async function licenseCheck(
+  claim: Claim,
+  index: CodebaseIndexService,
+): Promise<VerificationResult | null> {
+  const docLicense = detectLicenseInText(claim.claim_text);
+  if (!docLicense) return null;
+
+  const manifest = await index.getManifestMetadata(claim.repo_id);
+  if (!manifest?.license) return null;
+
+  const manifestLicense = manifest.license;
+  // Normalize both to SPDX for comparison
+  const normalizedManifest = detectLicenseInText(manifestLicense) ?? manifestLicense;
+
+  if (normalizedManifest === docLicense) {
+    return makeTier2Result(claim, {
+      verdict: 'verified',
+      evidence_files: [manifest.file_path],
+      reasoning: `License '${docLicense}' matches '${manifestLicense}' in ${manifest.file_path}.`,
+    });
+  }
+
+  return makeTier2Result(claim, {
+    verdict: 'drifted',
+    severity: 'medium' as Severity,
+    evidence_files: [manifest.file_path],
+    reasoning: `Documentation says '${docLicense}' but ${manifest.file_path} has license '${manifestLicense}'.`,
+    specific_mismatch: `License mismatch: documented '${docLicense}', manifest '${manifestLicense}'.`,
+  });
+}
+
+// === D.7: Changelog-to-Version Consistency Check ===
+
+const CHANGELOG_VERSION_PATTERN = /^##\s+\[?v?(\d+\.\d+(?:\.\d+)?(?:-[\w.]+)?)\]?/m;
+
+async function changelogVersionCheck(
+  claim: Claim,
+  index: CodebaseIndexService,
+): Promise<VerificationResult | null> {
+  const manifest = await index.getManifestMetadata(claim.repo_id);
+  if (!manifest?.version) return null;
+
+  // Read the changelog file to find the latest version heading
+  const changelogContent = await index.readFileContent(claim.repo_id, claim.source_file!);
+  if (!changelogContent) return null;
+
+  const match = changelogContent.match(CHANGELOG_VERSION_PATTERN);
+  if (!match) return null;
+
+  const changelogVersion = match[1];
+  const manifestVersion = manifest.version;
+
+  if (changelogVersion === manifestVersion) {
+    return makeTier2Result(claim, {
+      verdict: 'verified',
+      evidence_files: [claim.source_file!, manifest.file_path],
+      reasoning: `CHANGELOG latest version '${changelogVersion}' matches ${manifest.file_path} version '${manifestVersion}'.`,
+    });
+  }
+
+  return makeTier2Result(claim, {
+    verdict: 'drifted',
+    severity: 'medium' as Severity,
+    evidence_files: [claim.source_file!, manifest.file_path],
+    reasoning: `CHANGELOG latest entry is '${changelogVersion}' but ${manifest.file_path} version is '${manifestVersion}'.`,
+    specific_mismatch: `Version mismatch: CHANGELOG '${changelogVersion}', manifest '${manifestVersion}'.`,
+  });
+}
+
+// === D.8: Deprecation Awareness Check ===
+
+const DEPRECATION_MARKERS = /(?:@deprecated|@obsolete|\/\/\s*DEPRECATED|#\s*DEPRECATED)/i;
+
+async function deprecationCheck(
+  claim: Claim,
+  index: CodebaseIndexService,
+  mappings: ClaimMapping[],
+): Promise<VerificationResult | null> {
+  // Only check mappings that have entity IDs
+  const entityMappings = mappings.filter((m) => m.code_entity_id);
+  if (entityMappings.length === 0) return null;
+
+  for (const mapping of entityMappings) {
+    const entity = await index.getEntityById(mapping.code_entity_id!);
+    if (!entity?.raw_code) continue;
+
+    if (DEPRECATION_MARKERS.test(entity.raw_code)) {
+      // Check if the doc already mentions deprecation
+      const docMentionsDeprecation = /\bdeprecated?\b/i.test(claim.claim_text);
+      if (docMentionsDeprecation) continue;
+
+      return makeTier2Result(claim, {
+        verdict: 'drifted',
+        severity: 'low' as Severity,
+        evidence_files: [entity.file_path],
+        reasoning: `Symbol '${entity.name}' is marked @deprecated in '${entity.file_path}' but documentation references it without noting deprecation.`,
+        specific_mismatch: `'${entity.name}' is deprecated in code but not in documentation.`,
+      });
+    }
+  }
+
+  return null;
 }

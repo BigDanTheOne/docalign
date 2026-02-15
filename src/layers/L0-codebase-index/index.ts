@@ -4,6 +4,7 @@ import type {
   DependencyVersion,
   FileChange,
   IndexUpdateResult,
+  ParsedManifest,
   RouteEntity,
   ScriptInfo,
 } from '../../shared/types';
@@ -44,6 +45,13 @@ export interface CodebaseIndexService {
   ): Promise<IndexUpdateResult>;
   /** Read raw file content. Returns null if file doesn't exist or is too large. */
   readFileContent(repoId: string, filePath: string, maxBytes?: number): Promise<string | null>;
+  /** Get parsed manifest metadata (name, version, engines, license). */
+  getManifestMetadata(repoId: string): Promise<ParsedManifest | null>;
+  /** Get markdown headings from a file with computed GitHub-style slugs. */
+  getHeadings(
+    repoId: string,
+    filePath: string,
+  ): Promise<Array<{ text: string; level: number; slug: string }>>;
 }
 
 /**

@@ -12,11 +12,62 @@ export async function verifyPathReference(
   index: CodebaseIndexService,
 ): Promise<VerificationResult | null> {
   const path = claim.extracted_value.path as string;
+  const anchor = claim.extracted_value.anchor as string | undefined;
   if (!path) return null;
+
+  // Handle self-reference anchors (#heading in same doc)
+  if (path === '<self>' && anchor) {
+    const selfFile = claim.source_file;
+    if (!selfFile) return null;
+    const headings = await index.getHeadings(claim.repo_id, selfFile);
+    const match = headings.find((h) => h.slug === anchor);
+    if (match) {
+      return makeResult(claim, {
+        verdict: 'verified',
+        evidence_files: [selfFile],
+        reasoning: `Anchor '#${anchor}' matches heading '${match.text}' in '${selfFile}'.`,
+      });
+    }
+    // Suggest closest heading
+    const closest = headings.reduce<{ slug: string; dist: number } | null>((best, h) => {
+      const dist = levenshteinDist(anchor, h.slug);
+      return !best || dist < best.dist ? { slug: h.slug, dist } : best;
+    }, null);
+    return makeResult(claim, {
+      verdict: 'drifted',
+      severity: 'medium' as Severity,
+      evidence_files: [selfFile],
+      reasoning: `Anchor '#${anchor}' not found in '${selfFile}'.${closest && closest.dist <= 3 ? ` Did you mean '#${closest.slug}'?` : ''}`,
+      specific_mismatch: `Anchor '#${anchor}' does not match any heading.`,
+    });
+  }
 
   // Step 1: Exact check
   const exists = await index.fileExists(claim.repo_id, path);
   if (exists) {
+    // If there's an anchor, validate it against headings
+    if (anchor) {
+      const headings = await index.getHeadings(claim.repo_id, path);
+      const match = headings.find((h) => h.slug === anchor);
+      if (match) {
+        return makeResult(claim, {
+          verdict: 'verified',
+          evidence_files: [path],
+          reasoning: `File '${path}' exists and anchor '#${anchor}' matches heading '${match.text}'.`,
+        });
+      }
+      const closest = headings.reduce<{ slug: string; dist: number } | null>((best, h) => {
+        const dist = levenshteinDist(anchor, h.slug);
+        return !best || dist < best.dist ? { slug: h.slug, dist } : best;
+      }, null);
+      return makeResult(claim, {
+        verdict: 'drifted',
+        severity: 'medium' as Severity,
+        evidence_files: [path],
+        reasoning: `File '${path}' exists but anchor '#${anchor}' not found.${closest && closest.dist <= 3 ? ` Did you mean '#${closest.slug}'?` : ''}`,
+        specific_mismatch: `Anchor '#${anchor}' does not match any heading in '${path}'.`,
+      });
+    }
     return makeResult(claim, {
       verdict: 'verified',
       evidence_files: [path],
@@ -81,4 +132,20 @@ export async function verifyPathReference(
     reasoning: `File '${path}' not found.`,
     specific_mismatch: `File path '${path}' does not exist.`,
   });
+}
+
+function levenshteinDist(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
 }

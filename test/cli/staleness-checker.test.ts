@@ -50,6 +50,8 @@ function makeMockIndex(entities: CodeEntity[] = []): CodebaseIndexService {
       files_skipped: [],
     }),
     readFileContent: async () => null,
+    getManifestMetadata: async () => null,
+    getHeadings: async () => [],
   };
 }
 
