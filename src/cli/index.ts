@@ -15,6 +15,7 @@ import { runFix } from './commands/fix';
 import { runInit } from './commands/init';
 import { runStatus } from './commands/status';
 import { runConfigure } from './commands/configure';
+import { runViz } from './commands/viz';
 import type { CliPipeline } from './local-pipeline';
 
 export interface CliArgs {
@@ -43,7 +44,7 @@ export function parseArgs(argv: string[]): CliArgs {
         // --key value (peek ahead — if next arg isn't a flag, treat as value)
         const key = arg.slice(2);
         // Known boolean flags don't consume the next arg
-        if (['verbose', 'help', 'json', 'dry-run', 'force'].includes(key)) {
+        if (['verbose', 'help', 'json', 'dry-run', 'force', 'no-open'].includes(key)) {
           flags[key] = true;
         } else {
           options[key] = args[++i];
@@ -90,6 +91,15 @@ export async function run(
     case 'status':
       return runStatus(write);
 
+    case 'viz': {
+      const vizExclude = options.exclude ? options.exclude.split(',').map((s) => s.trim()) : [];
+      return runViz(pipeline, {
+        output: options.output,
+        noOpen: !!flags['no-open'],
+        exclude: vizExclude,
+      }, write);
+    }
+
     case 'configure': {
       const excludePatterns = options.exclude ? options.exclude.split(',').map((s) => s.trim()) : undefined;
       return runConfigure({
@@ -111,6 +121,7 @@ export async function run(
       write('  fix [file]      Apply fixes from prior scan');
       write('  status          Show configuration and integration status');
       write('  configure       Create or update .docalign.yml');
+      write('  viz             Generate interactive knowledge graph');
       write('  mcp             Start MCP server (used by Claude Code)');
       write('');
       write('Options:');
@@ -121,6 +132,8 @@ export async function run(
       write('  --force                 Re-extract all sections (extract command)');
       write('  --min-severity=LEVEL    Set minimum severity (configure command)');
       write('  --reset                 Reset config to defaults (configure command)');
+      write('  --output=PATH           Output path for viz HTML (default: .docalign/viz.html)');
+      write('  --no-open               Do not auto-open viz in browser');
       write('  --help                  Show this help message');
       write('');
       write('Environment:');
