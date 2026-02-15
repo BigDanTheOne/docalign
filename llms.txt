@@ -1,0 +1,44 @@
+# DocAlign
+
+> Documentation-reality alignment engine. Detects when repo documentation drifts from code reality.
+
+DocAlign scans documentation files, extracts verifiable claims (file paths, dependency versions, commands, API routes, code examples, config values, URLs), and checks each claim against the actual codebase. Works as a CLI and as an MCP server for AI coding agents.
+
+## Quick Start
+
+```bash
+npx docalign scan                    # Scan entire repo
+npx docalign check README.md        # Check single file
+docalign init                        # Set up MCP for Claude Code
+```
+
+## Documentation Map
+
+- [Getting Started](docs/getting-started.md): Installation, first scan, reading output
+- [How It Works](docs/explanation/how-it-works.md): Extract-verify-report pipeline, verification tiers
+- [Verification Tiers](docs/explanation/verification-tiers.md): Tier 1 deterministic, Tier 2 pattern, Tier 3 LLM, Tier 4 human
+
+### Guides (task-oriented)
+
+- [Checking Files](docs/guides/checking-files.md): Scan repos, check files, read results
+- [Semantic Extraction](docs/guides/semantic-extraction.md): LLM-powered claim extraction with Claude
+- [MCP Integration](docs/guides/mcp-integration.md): Set up DocAlign as MCP server for AI agents
+- [Fixing Drift](docs/guides/fixing-drift.md): Generate and apply fix suggestions
+- [Suppressing Findings](docs/guides/suppressing-findings.md): Ignore files, patterns, claim types
+- [Custom Configuration](docs/guides/custom-configuration.md): Configure doc patterns, severity, claim types
+
+### Reference (lookup)
+
+- [CLI Reference](docs/reference/cli.md): All 10 commands with flags, options, exit codes
+- [Configuration Reference](docs/reference/configuration.md): All 14 .docalign.yml sections with defaults
+- [Checks Reference](docs/reference/checks.md): All 11 claim types and 8 cross-cutting checks
+- [MCP Tools Reference](docs/reference/mcp-tools.md): All 10 MCP tools with parameters and returns
+
+### Troubleshooting
+
+- [Troubleshooting](docs/troubleshooting.md): Common issues and solutions
+
+## Source
+
+- Repository: https://github.com/anthropics/docalign
+- License: MIT

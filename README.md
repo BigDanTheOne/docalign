@@ -53,7 +53,7 @@ No configuration needed. DocAlign auto-discovers doc files and applies sensible 
 - Architecture decisions: "Services communicate via REST" -- checked against imports
 - Config assumptions: "Rate limited to 100 req/min" -- verified against middleware
 
-See [docs/checks.md](docs/checks.md) for the complete reference.
+See [Checks Reference](docs/reference/checks.md) for all 11 claim types and 8 cross-cutting checks.
 
 ## Commands
 
@@ -70,7 +70,7 @@ See [docs/checks.md](docs/checks.md) for the complete reference.
 | `docalign mcp` | Start MCP server (used by Claude Code) |
 | `docalign help` | Show help |
 
-See [docs/cli.md](docs/cli.md) for flags, options, and output formats.
+See [CLI Reference](docs/reference/cli.md) for flags, options, and output formats.
 
 ## MCP Integration
 
@@ -95,11 +95,11 @@ Or add manually to your MCP config:
 
 10 tools available: `check_doc`, `check_section`, `get_doc_health`, `list_drift`, `get_docs_for_file`, `get_docs`, `fix_doc`, `report_drift`, `deep_check`, `register_claims`.
 
-See [docs/mcp.md](docs/mcp.md) for tool descriptions and usage patterns.
+See [MCP Integration Guide](docs/guides/mcp-integration.md) for setup and workflows, or [MCP Tools Reference](docs/reference/mcp-tools.md) for tool details.
 
 ## Semantic Extraction
 
-`docalign extract` uses Claude to find claims that regex can't catch -- behavior descriptions, architecture decisions, config assumptions. Claude reads the actual code, writes grep-verifiable assertions, and self-checks them before returning.
+`docalign extract` uses Claude to find claims that regex can't catch -- behavior descriptions, architecture decisions, config assumptions:
 
 ```bash
 docalign extract                    # All doc files
@@ -107,9 +107,7 @@ docalign extract README.md          # Single file
 docalign extract README.md --force  # Re-extract even if unchanged
 ```
 
-Extracted claims are stored in `.docalign/semantic/` and verified on every `docalign check` and `docalign scan`.
-
-See [docs/semantic-extraction.md](docs/semantic-extraction.md) for details.
+See [Semantic Extraction Guide](docs/guides/semantic-extraction.md) for details.
 
 ## Configuration
 
@@ -131,22 +129,41 @@ suppress:
   - package: 'internal-pkg'  # Ignore this package
 ```
 
-See [docs/configuration.md](docs/configuration.md) for all 14 config sections with defaults.
+See [Custom Configuration](docs/guides/custom-configuration.md) for common setups, or [Configuration Reference](docs/reference/configuration.md) for all 14 sections.
 
 ## How It Works
 
 DocAlign follows a three-stage pipeline: **extract** verifiable claims from docs using regex patterns and table parsing, **verify** each claim against the codebase using deterministic checks (file existence, version comparison, AST symbol resolution), and **report** results via CLI, MCP tools, or PR comments. Optional LLM verification handles claims that can't be checked deterministically.
 
-See [docs/how-it-works.md](docs/how-it-works.md) for the full pipeline explanation.
+See [How It Works](docs/explanation/how-it-works.md) for the full pipeline explanation.
 
-## LLM Verification (Optional)
+## Documentation
 
-Set `ANTHROPIC_API_KEY` to enable Tier 3 LLM-powered verification and fix generation:
-
-```bash
-export ANTHROPIC_API_KEY=sk-ant-...
-docalign scan
-```
+| Section | Contents |
+|---------|----------|
+| **[Getting Started](docs/getting-started.md)** | Installation, first scan, reading output |
+| **Guides** | |
+| [Checking Files](docs/guides/checking-files.md) | Scan repos, check files, CI integration |
+| [Semantic Extraction](docs/guides/semantic-extraction.md) | LLM-powered claim extraction |
+| [MCP Integration](docs/guides/mcp-integration.md) | Set up for AI coding agents |
+| [Fixing Drift](docs/guides/fixing-drift.md) | Generate and apply fixes |
+| [Suppressing Findings](docs/guides/suppressing-findings.md) | Ignore files, patterns, types |
+| [Custom Configuration](docs/guides/custom-configuration.md) | Configure scans and behavior |
+| **Reference** | |
+| [CLI Reference](docs/reference/cli.md) | All commands, flags, exit codes |
+| [Configuration Reference](docs/reference/configuration.md) | All .docalign.yml fields |
+| [Checks Reference](docs/reference/checks.md) | All 11 claim types + cross-cutting |
+| [MCP Tools Reference](docs/reference/mcp-tools.md) | All 10 MCP tools |
+| **Explanation** | |
+| [How It Works](docs/explanation/how-it-works.md) | Pipeline architecture |
+| [Verification Tiers](docs/explanation/verification-tiers.md) | Tier 1-4 system |
+| **Contributing** | |
+| [Architecture](docs/contributing/architecture.md) | Layers, data flow, entry points |
+| [Design Patterns](docs/contributing/design-patterns.md) | Code conventions and patterns |
+| [Adding a Check](docs/contributing/adding-a-check.md) | Step-by-step guide |
+| [Testing](docs/contributing/testing.md) | Test structure, fixtures, coverage |
+| **Other** | |
+| [Troubleshooting](docs/troubleshooting.md) | Common issues and solutions |
 
 ## License
 

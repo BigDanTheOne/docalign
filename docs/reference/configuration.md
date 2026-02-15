@@ -1,6 +1,15 @@
+---
+title: "Configuration Reference"
+description: "Use when you need the exact field names, types, defaults, and validation rules for .docalign.yml."
+category: "reference"
+related:
+  - docs/guides/custom-configuration.md
+  - docs/guides/suppressing-findings.md
+---
+
 # Configuration Reference
 
-DocAlign works with zero configuration. All settings have sensible defaults. To customize behavior, create a `.docalign.yml` file in your repo root.
+DocAlign works with zero configuration. All settings have sensible defaults. To customize, create `.docalign.yml` at your repo root.
 
 ## Zero-Config Behavior
 
@@ -12,7 +21,7 @@ With no config file, DocAlign:
 - Checks up to 50 claims per PR
 - Checks URLs with 5s timeout, max 5 per domain
 
-## Config File Format
+## Full Example
 
 ```yaml
 # .docalign.yml
@@ -103,11 +112,9 @@ Controls which documentation files are scanned.
 | `include` | `string[]` | See below | Glob patterns for doc files to include |
 | `exclude` | `string[]` | See below | Glob patterns for doc files to exclude |
 
-**Default include patterns:**
-`README.md`, `README.mdx`, `README.rst`, `CONTRIBUTING.md`, `ARCHITECTURE.md`, `CLAUDE.md`, `AGENTS.md`, `COPILOT-INSTRUCTIONS.md`, `.cursorrules`, `docs/**/*.md`, `docs/**/*.mdx`, `doc/**/*.md`, `wiki/**/*.md`, `adr/**/*.md`, `ADR-*.md`, `**/CLAUDE.md`, `**/AGENTS.md`, `api/**/*.md`
+**Default include:** `README.md`, `README.mdx`, `README.rst`, `CONTRIBUTING.md`, `ARCHITECTURE.md`, `CLAUDE.md`, `AGENTS.md`, `COPILOT-INSTRUCTIONS.md`, `.cursorrules`, `docs/**/*.md`, `docs/**/*.mdx`, `doc/**/*.md`, `wiki/**/*.md`, `adr/**/*.md`, `ADR-*.md`, `**/CLAUDE.md`, `**/AGENTS.md`, `api/**/*.md`
 
-**Default exclude patterns:**
-`node_modules/**`, `vendor/**`, `.git/**`, `**/CHANGELOG.md`, `**/LICENSE.md`
+**Default exclude:** `node_modules/**`, `vendor/**`, `.git/**`, `**/CHANGELOG.md`, `**/LICENSE.md`
 
 ### code_patterns
 
@@ -118,8 +125,7 @@ Controls which code files are indexed for verification.
 | `include` | `string[]` | `['**']` | Glob patterns for code files |
 | `exclude` | `string[]` | See below | Glob patterns to exclude |
 
-**Default exclude patterns:**
-`node_modules/**`, `.git/**`, `dist/**`, `build/**`, `vendor/**`, `__pycache__/**`
+**Default exclude:** `node_modules/**`, `.git/**`, `dist/**`, `build/**`, `vendor/**`, `__pycache__/**`
 
 ### verification
 
@@ -152,7 +158,7 @@ Enable or disable specific claim type extraction. Set to `false` to skip extract
 
 ### suppress
 
-Suppress specific findings from being reported. Each rule is an object with at least one field. Multiple fields in a rule are AND-combined.
+Suppress specific findings. Each rule is an object with at least one field. Multiple fields in a rule are AND-combined.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -211,12 +217,12 @@ Controls when scans are triggered (server mode, GitHub App).
 |-------|------|---------|-------------|
 | `on_pr_open` | `boolean` | (none) | Scan when PR is opened |
 | `on_push` | `boolean` | (none) | Scan on push to default branch |
-| `on_ready_for_review` | `boolean` | (none) | Scan when PR is marked ready for review |
+| `on_ready_for_review` | `boolean` | (none) | Scan when PR marked ready for review |
 | `on_command` | `boolean` | (none) | Scan on `/docalign` PR comment command |
 
 ### llm
 
-Controls LLM model selection. Requires `ANTHROPIC_API_KEY`.
+Controls LLM model selection.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
@@ -247,7 +253,7 @@ Controls claim-to-code mapping parameters.
 
 ### url_check
 
-Controls URL dead link checking behavior.
+Controls URL dead link checking.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
@@ -255,15 +261,6 @@ Controls URL dead link checking behavior.
 | `timeout_ms` | `number` (1000-30000) | `5000` | HTTP request timeout in milliseconds |
 | `max_per_domain` | `number` (1-50) | `5` | Max requests per domain per scan |
 | `exclude_domains` | `string[]` | `[]` | Domains to skip checking |
-
-**Example: skip internal and known-flaky domains:**
-
-```yaml
-url_check:
-  exclude_domains:
-    - 'internal.company.com'
-    - 'flaky-service.example.com'
-```
 
 ### coverage
 
@@ -274,7 +271,7 @@ Controls undocumented entity detection.
 | `enabled` | `boolean` | `false` | Enable coverage analysis |
 | `min_entity_importance` | `'exported' \| 'public' \| 'all'` | `'exported'` | Minimum entity visibility to track |
 
-When enabled, DocAlign reports code entities (functions, classes, routes) that have no documentation claims referencing them.
+When enabled, reports code entities (functions, classes, routes) with no documentation claims referencing them.
 
 ## Error Handling
 

@@ -1,3 +1,12 @@
+---
+title: "CLI Reference"
+description: "Use when you need the exact flags, options, exit codes, or environment variables for any DocAlign command."
+category: "reference"
+related:
+  - docs/guides/checking-files.md
+  - docs/reference/configuration.md
+---
+
 # CLI Reference
 
 ## Installation
@@ -39,7 +48,7 @@ docalign check README.md --verbose
 |------|-------------|
 | `--verbose` | Show all claims, not just drifted ones |
 
-**Output:** Shows each claim found in the file with its verification result. In verbose mode, includes verified claims too.
+**Output:** Each claim found in the file with its verification result. Verbose mode includes verified claims.
 
 ### docalign extract [file]
 
@@ -57,9 +66,9 @@ docalign extract --dry-run          # Preview without saving
 | `--force` | Re-extract all sections, even if content hasn't changed |
 | `--dry-run` | Show what would be extracted without saving |
 
-**Requirements:** Requires `claude` CLI to be installed and authenticated (Claude Code).
+**Requirements:** `claude` CLI installed and authenticated (Claude Code).
 
-**Storage:** Extracted claims are saved to `.docalign/semantic/` and automatically included in future `check` and `scan` runs.
+**Storage:** Extracted claims saved to `.docalign/semantic/`, included in future `check` and `scan` runs.
 
 ### docalign fix [file]
 
@@ -70,7 +79,7 @@ docalign fix                # Fix all files with drift
 docalign fix README.md      # Fix a specific file
 ```
 
-**Requirements:** Requires `ANTHROPIC_API_KEY` for LLM-powered fix generation. Without it, only deterministic fix suggestions (like version number replacements) are available.
+**Requirements:** `ANTHROPIC_API_KEY` for LLM-powered fixes. Without it, only deterministic suggestions (version replacements, path corrections) are available.
 
 ### docalign status
 
@@ -80,11 +89,11 @@ Show current configuration, MCP integration status, and environment info.
 docalign status
 ```
 
-**Output:** Shows active config file path, enabled claim types, MCP server status, and whether `ANTHROPIC_API_KEY` is set.
+**Output:** Active config file path, enabled claim types, MCP server status, `ANTHROPIC_API_KEY` presence, and any config warnings.
 
 ### docalign configure
 
-Create or update the `.docalign.yml` configuration file interactively.
+Create or update `.docalign.yml` interactively.
 
 ```bash
 docalign configure
@@ -101,7 +110,7 @@ docalign configure --reset
 
 ### docalign init
 
-Set up DocAlign for Claude Code integration. Configures MCP server and installs the DocAlign skill.
+Set up DocAlign for Claude Code integration.
 
 ```bash
 docalign init
@@ -124,11 +133,11 @@ docalign viz --exclude=docs/internal/**
 
 | Flag | Description |
 |------|-------------|
-| `--output=PATH` | Output path for HTML file (default: `.docalign/viz.html`) |
-| `--no-open` | Don't auto-open the HTML in a browser |
+| `--output=PATH` | Output path (default: `.docalign/viz.html`) |
+| `--no-open` | Don't auto-open in browser |
 | `--exclude=FILE[,FILE]` | Comma-separated files to exclude |
 
-**Output:** A self-contained HTML file with a Cytoscape.js graph. Nodes represent doc files and code files. Edges represent claims linking them. Colors indicate verification status.
+**Output:** Self-contained HTML with a Cytoscape.js graph. Nodes = doc files and code files. Edges = claims. Colors = verification status.
 
 ### docalign mcp
 
@@ -141,9 +150,9 @@ docalign mcp --repo /path/to/project
 
 | Flag | Description |
 |------|-------------|
-| `--repo=PATH` | Path to the repository root (required) |
+| `--repo=PATH` | Path to repository root (required) |
 
-This is typically called by the MCP client, not directly by users. See [mcp.md](mcp.md) for integration details.
+Typically called by the MCP client, not directly. See [MCP Integration](../guides/mcp-integration.md).
 
 ### docalign help
 
