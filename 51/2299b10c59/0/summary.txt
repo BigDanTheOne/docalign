@@ -1,0 +1,10 @@
+The gap analysis file has been updated. The v2 of `/Users/kotkot/Discovery/docalign/_planning/context/competitors/deterministic-gap-analysis.md` is complete with all 30 deterministic gaps organized into 4 categories:
+
+- **A: Extraction gaps** (6) — missing claim types like env vars, markdown tables, config keys
+- **B: Validation gaps** (11) — missing checks like URL reachability, semver compatibility, command execution
+- **C: Structural gaps** (11) — missing capabilities like cross-doc consistency, coverage scoring, staleness detection
+- **D: Deferred** (2) — out-of-scope items (image/diagram validation, i18n)
+
+Priority breakdown: 6 P0, 5 P1, 7 P2, 12 P3.
+
+Ready for your next direction.

@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "512299b10c59",
+  "strategy": "auto-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "_planning/context/competitors/deterministic-gap-analysis.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/51/2299b10c59/0/metadata.json",
+      "transcript": "/51/2299b10c59/0/full.jsonl",
+      "context": "",
+      "content_hash": "/51/2299b10c59/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 8,
+    "cache_creation_tokens": 31028,
+    "cache_read_tokens": 509893,
+    "output_tokens": 67,
+    "api_call_count": 4
+  }
+}

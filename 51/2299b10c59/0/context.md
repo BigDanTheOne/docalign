@@ -1,0 +1,494 @@
+# Session Context
+
+**Session ID:** 7cb54db1-2bf8-4a64-a016-c7571636212d
+
+**Commit Message:** This session is being continued from a previous conversation that ran ou
+
+## Prompt
+
+<task-notification>
+<task-id>a61db64</task-id>
+<status>completed</status>
+<summary>Agent "Find missed deterministic doc checks" completed</summary>
+<result>I now have enough information to give you a comprehensive answer. Here is the full gap analysis.
+
+---
+
+## Additional Deterministic Checks NOT in Your List of 12
+
+I identified 18 additional gaps beyond your existing 12. They are ordered roughly by implementation feasibility and impact.
+
+---
+
+### Gap 13: Image/Asset Reference Validation
+
+**What it is:** DocAlign explicitly **EXCLUDES** image extensions (`.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`, `.ico`) from path reference extraction (line 869 of `/Users/kotkot/Discovery/docalign/phases/tdd-1-claim-extractor.md`). This means `![diagram](./images/architecture.png)` is silently dropped. If the image file is deleted or renamed, no drift is detected.
+
+**Who does it:**
+- **remark-validate-links** checks that markdown image references (`![](path)`) point to existing local files in a Git repo. Works offline, specifically for Git repos.
+- **Docusaurus** validates image asset paths at build time, converting `![](path)` to `require()` calls that fail if the file is missing.
+- **markdown-link-check** supports image path validation with configurable replacement patterns (e.g., mapping `images/` to `assets/`).
+
+**How hard to implement:** Easy. Lift the image extension exclusion filter and add a separate `image_reference` claim type. Verification is the same Tier 1 file-existence check already used for `path_reference`. The only difference is the regex needs to specifically match `![alt](path)` syntax rather than general link syntax.
+
+**How common:** Very common. Nearly every project README has images. Architecture diagrams, screenshots, logos, and badges reference local image files that get moved or deleted during refactors.
+
+---
+
+### Gap 14: Markdown Table Claim Extraction
+
+**What it is:** Docs frequently use Markdown tables to document parameters, configuration options, API fields, default values, and types in a structured format. Example:
+
+```markdown
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| timeout   | number | 30    | Request timeout in seconds |
+| retries   | number | 3     | Max retry attempts |
+```
+
+DocAlign's L1 extractors process raw text line-by-line with regex. There is no table-aware parser. The prompt spec for P-EXTRACT (line 127 of `/Users/kotkot/Discovery/docalign/phases/phase4b-prompt-specs.md`) mentions "config" claims like "The default timeout is 30 seconds," but this depends on the LLM recognizing table rows as claims during semantic extraction. The syntactic (regex) extractors have no table-specific logic.
+
+**Who does it:**
+- **mattbriggs/markdown-validator** can validate document structure including tables against declarative rules.
+- **mdschema** validates markdown structure against schemas but does not extract claims from tables.
+- No tool I found does claim extraction from Markdown tables specifically. This is a genuine gap in the entire ecosystem.
+
+**How hard to implement:** Medium. You need a Markdown table parser (many exist: `marked`, `remark`/`mdast` already give you table AST nodes). Then for each table, detect if columns map to known claim patterns (parameter name + default value, parameter name + type, config key + value). Generate one claim per row for the relevant cells.
+
+**How common:** Extremely common. API documentation, configuration references, and CLI option docs overwhelmingly use tables. This is arguably the single highest-value structured extraction gap.
+
+---
+
+### Gap 15: Default Value Claims
+
+**What it is:** Docs state "the default timeout is 30 seconds" or a table row says `timeout | 30`. The actual code has `DEFAULT_TIMEOUT = 60` or `timeout: z.number().default(60)`. DocAlign's P-EXTRACT prompt (line 127) lists "config" as a claim type that covers defaults, but this flows through semantic (LLM) extraction and then Tier 4 (LLM verification). There is no **deterministic** regex extractor that specifically captures `<name> defaults to <value>` patterns and cross-references them against constant definitions, Zod schemas, or config files.
+
+**Who does it:** No tool I found does this deterministically. This is an open gap across the ecosystem.
+
+**How hard to implement:** Medium-Hard. Extraction is easy (regex for "defaults to X", "default is X", "default: X", table column named "Default"). Verification is harder: you need to search for the constant/config in code (variable names containing `default`, `DEFAULT_`, Zod `.default()` calls, etc.) and compare the literal value. L0's entity index could help if it indexes constant declarations.
+
+**How common:** Very common. Every configuration-heavy project documents defaults. They drift constantly as developers change defaults in code without updating docs.
+
+---
+
+### Gap 16: Frontmatter-to-Content Consistency
+
+**What it is:** YAML frontmatter in docs (title, description, sidebar_label, etc.) can contradict the actual document content. For example, `title: "Authentication Guide"` but the doc is actually about authorization. Or `sidebar_position: 3` but the sidebar config places it at position 5. DocAlign strips frontmatter during pre-processing (line 791 of `/Users/kotkot/Discovery/docalign/phases/tdd-1-claim-extractor.md`) and discards it entirely.
+
+**Who does it:**
+- **remark-lint-frontmatter-schema** validates frontmatter against a JSON schema (field types, required fields, date formats).
+- **@github-docs/frontmatter** (GitHub's internal tool) validates frontmatter against revalidator JSON schemas.
+- **mdschema** validates full document structure including frontmatter.
+
+**How hard to implement:** Easy for schema validation (just parse YAML, check against expected schema). Medium for content consistency (e.g., does `title` match the H1 heading?).
+
+**How common:** Moderate. Mainly affects projects using documentation frameworks (Docusaurus, Mintlify, MkDocs, Astro) where frontmatter drives navigation and metadata. Less relevant for plain README files.
+
+---
+
+### Gap 17: Navigation/Sidebar Config Validation
+
+**What it is:** Documentation frameworks use config files that reference doc pages:
+- Mintlify: `docs.json` (formerly `mint.json`)
+- Docusaurus: `sidebars.js` / `docusaurus.config.js`
+- MkDocs: `mkdocs.yml` nav section
+
+If a doc page is deleted or renamed, the nav config breaks. This is NOT the same as dead links in the docs (your gap #1) -- this is config-file-to-filesystem validation.
+
+**Who does it:**
+- **Docusaurus** validates broken sidebar references at build time (throws an error by default).
+- **MkDocs** warns when nav references point to non-existent files (`mkdocs build --strict` makes this an error).
+- **Mintlify** `@mintlify/validation` package validates that `docs.json` navigation entries match actual file structure.
+
+**How hard to implement:** Medium. DocAlign would need to understand each framework's config format (JSON/YAML/JS). A pragmatic approach: detect `docs.json`, `mkdocs.yml`, `sidebars.js` by filename, parse them, extract page references, and verify each file exists via L0. The number of config formats is finite and well-documented.
+
+**How common:** Very common for projects using documentation frameworks. Less relevant for single-file READMEs.
+
+---
+
+### Gap 18: Changelog-to-Version Consistency
+
+**What it is:** The latest entry in `CHANGELOG.md` should match the version in `package.json` (or `pyproject.toml`, `Cargo.toml`, etc.). Example: CHANGELOG says "## 2.3.0" but `package.json` says `"version": "2.4.0"`.
+
+**Who does it:**
+- **version-changelog** (npm) validates that CHANGELOG entries match `package.json` version. Works with `changelog-verify`.
+- No general-purpose documentation tool does this automatically.
+
+**How hard to implement:** Easy. Parse the first `## X.Y.Z` heading in CHANGELOG.md, parse `version` from the manifest file. Compare. DocAlign already extracts dependency versions and reads manifest files in L0.
+
+**How common:** Moderate. Mainly affects libraries and packages that maintain changelogs. Very low-hanging fruit for open-source projects.
+
+---
+
+### Gap 19: License Field Consistency
+
+**What it is:** `package.json` says `"license": "MIT"` but the `LICENSE` file contains Apache 2.0 text. Or there is no `LICENSE` file at all but `package.json` specifies one.
+
+**Who does it:** No tool I found specifically validates this as a documentation check. Some compliance tools (FOSSA, Snyk) scan licenses but for legal compliance, not doc-code consistency.
+
+**How hard to implement:** Easy. Check if `LICENSE` file exists. Optionally compare the first line or known markers (e.g., "MIT License", "Apache License, Version 2.0") against `package.json` license field.
+
+**How common:** Low-moderate. Matters most for open-source libraries and compliance-sensitive organizations. Not a frequent drift source but a high-value correctness check when it catches a mismatch.
+
+---
+
+### Gap 20: Engine/Runtime Version Claim vs. Manifest
+
+**What it is:** Docs say "Requires Node.js 18+" but `package.json` `engines.node` field says `">=20"`. DocAlign already handles runtime version claims as `environment` type (line 925 of the claim extractor TDD) and has a `toolVersionStrategy` in the verifier (TDD-3 Appendix D.5). However, the current implementation only checks for version file existence (`.nvmrc`, `.node-version`) and falls through to Tier 4 (LLM) because L0 cannot read file contents. It does NOT check `package.json` `engines` field deterministically, even though L0 already parses `package.json` for dependency data.
+
+**Who does it:** No tool does this specific doc-to-manifest cross-check.
+
+**How hard to implement:** Easy. L0 already reads `package.json`. Extract `engines.node` (or `engines.python`, etc.). Compare against the version claim extracted by L1. This could be a Tier 2 deterministic check, avoiding the Tier 4 LLM fallthrough entirely.
+
+**How common:** Common. Many projects document runtime requirements. The `engines` field in `package.json` is the canonical source, and discrepancies happen when one is updated without the other.
+
+---
+
+### Gap 21: Install Command Package Name Validation
+
+**What it is:** README says `npm install my-cool-package` but `package.json` `name` field is actually `@org/my-cool-package` or was renamed to `my-package-v2`.
+
+**Who does it:** No tool does this automatically. `validate-npm-package-name` validates name format but does not cross-reference documentation.
+
+**How hard to implement:** Easy. DocAlign already extracts CLI commands (B.2 patterns) including `npm install X`, `pip install X`, `cargo add X`. Cross-reference the package name argument against the `name` field in `package.json` / `pyproject.toml` / `Cargo.toml` (already indexed by L0).
+
+**How common:** Moderate. Happens during package renames, org scope changes, or when forking. High impact when it does happen -- users literally cannot install the package.
+
+---
+
+### Gap 22: Code Block Language Tag Validation
+
+**What it is:** A fenced code block tagged as ````python` but the content is clearly JavaScript (contains `const`, `=>`, `require()`). Or a code block has no language tag at all. This does not affect correctness but degrades rendering and discoverability.
+
+**Who does it:**
+- **markdownlint** rule MD040 requires all fenced code blocks to have a language specified.
+- **remark-lint-fenced-code-flag-case** warns on improperly cased language flags.
+- **mkdocs-code-validator** pipes code blocks to user-defined commands by language tag (e.g., runs `python -c` on Python blocks).
+
+**How hard to implement:** Easy for missing tags (markdownlint already does this). Medium for mismatched tags (would need heuristic language detection based on syntax patterns in the block content). DocAlign already parses code blocks and captures the language identifier (line 958-959 of TDD-1).
+
+**How common:** Moderate. Mainly cosmetic but affects syntax highlighting and AI agent consumption of docs. The mismatch case (wrong language tag) is less common than the missing tag case.
+
+---
+
+### Gap 23: Feature Flag Documentation Drift
+
+**What it is:** Docs describe features that are behind feature flags (e.g., "Enable the beta dashboard with `ENABLE_BETA_DASHBOARD=true`"). The flag is removed from code (feature is now always on, or was killed), but the docs still reference it.
+
+**Who does it:**
+- **Piranha** (Uber, open source) automates removal of stale feature flag code.
+- **GrowthBook**, **Harness**, **LaunchDarkly** detect stale flags within their own platforms.
+- None of them cross-reference documentation. They only track code + flag platform state.
+
+**How hard to implement:** Hard. Would need to identify feature flag patterns in docs (environment variable names, config keys, conditional feature descriptions) and verify the flags still exist in code. The definition of "feature flag" varies widely across codebases (env vars, config files, LaunchDarkly SDK calls, etc.).
+
+**How common:** Moderate in larger projects. Feature flag hygiene is a known industry problem (Uber built Piranha specifically for this). Documentation lags behind flag cleanup.
+
+---
+
+### Gap 24: Port/Hostname/URL Configuration Claims
+
+**What it is:** Docs say "The server runs on port 3000" but code says `const PORT = process.env.PORT || 8080`. Or "Access the API at http://localhost:4000" but the actual default is different.
+
+**Who does it:** No tool does this deterministically.
+
+**How hard to implement:** Medium. Extraction is easy (regex for port numbers in context: "port NNNN", "localhost:NNNN", etc.). This actually falls under DocAlign's existing `config` claim type, but verification requires finding the port constant in code and comparing values -- similar to the default value problem (Gap 15). Would benefit from the same infrastructure.
+
+**How common:** Common. Dev environment setup docs frequently list ports, and they drift as projects evolve.
+
+---
+
+### Gap 25: Prose Consistency / Terminology Validation
+
+**What it is:** Doc uses "user" in one place and "customer" in another to refer to the same entity. Or doc says "the authentication service" but the code calls it `AuthorizationService`. Not a code-doc mismatch per se, but a consistency check within documentation that can indicate underlying drift.
+
+**Who does it:**
+- **Vale** is the leading tool here -- a markup-aware prose linter with custom rule support (YAML-based rules for terminology, word choice, capitalization, etc.). Used by Grafana, GitLab, Elastic, Datadog.
+- **remark-lint** has ~70 plugins for markdown style consistency.
+
+**How hard to implement:** Out of scope for DocAlign's current mission (code-doc alignment). This is a "within-doc" quality problem, not a "doc vs. code" drift problem. Mention only for completeness.
+
+**How common:** Very common. But better served by integrating Vale alongside DocAlign rather than building into DocAlign.
+
+---
+
+### Gap 26: CSS/Style File Path References
+
+**What it is:** DocAlign explicitly excludes `.css`, `.scss`, `.less` extensions from path extraction (line 872 of TDD-1). Docs might reference `import './styles/main.css'` in a code example, and that file could be deleted or renamed.
+
+**Who does it:** No specific tool. General link checkers do not cover this.
+
+**How hard to implement:** Easy. Same as Gap 13 (image references). Lift the CSS extension filter for paths that appear inside code examples (not in prose, where they are likely false positives).
+
+**How common:** Low-moderate. More relevant for frontend-focused projects with documented CSS architecture.
+
+---
+
+### Gap 27: Documented Return Type / Function Signature Claims
+
+**What it is:** Docs say "the `createUser` function returns a `Promise<User>`" but the actual function now returns `Promise<UserResponse>`. This is related to your existing "TypeScript type documentation" item (#12 in your list), but specifically about **function signatures** (parameters, return types, async/sync) documented in prose rather than in JSDoc/TSDoc.
+
+**Who does it:**
+- **Oracle SignatureTest** validates API signatures against a baseline, but this is Java-specific and API-contract focused, not documentation focused.
+- No general-purpose doc tool extracts function signature claims from prose and verifies them.
+
+**How hard to implement:** Medium. DocAlign already extracts code examples with symbol references (B.5 patterns). Extending this to match prose statements like "returns X" or "takes parameters X and Y" against L0's entity index (which has type signatures) would be a natural extension of the existing `behavior` claim type verification.
+
+**How common:** Common in API documentation, tutorials, and architecture docs. Function signatures are one of the most frequently drifting documentation elements.
+
+---
+
+### Gap 28: Accessibility Checks in Documentation
+
+**What it is:** Images without alt text (`![](path)` instead of `![descriptive text](path)`), color contrast issues in custom HTML within docs, missing heading hierarchy (jumping from H2 to H4).
+
+**Who does it:**
+- **Mintlify** CLI includes accessibility validation (missing alt text, color contrast).
+- **markdownlint** enforces heading hierarchy, alt text presence.
+- **remark-lint** has plugins for accessibility rules.
+
+**How hard to implement:** Easy for alt-text checks (regex on image markdown). Medium for heading hierarchy (parse heading levels sequentially). Low value relative to DocAlign's mission.
+
+**How common:** Common but orthogonal to DocAlign's code-doc alignment mission. Better served by existing markdown linters running alongside DocAlign.
+
+---
+
+### Gap 29: Documented Ordering/Sequence Claims
+
+**What it is:** Docs describe a sequence: "First call `init()`, then `configure()`, then `start()`." But `init()` was renamed to `setup()` or the sequence changed. This is different from behavior claims (which describe what a function does) -- this is about documented **ordering constraints** between functions.
+
+**Who does it:** No tool handles this.
+
+**How hard to implement:** Hard. Requires understanding sequential relationships in prose and verifying them against actual call graphs or documented APIs. Would likely require LLM-based verification (Tier 4), not deterministic checks.
+
+**How common:** Moderate. Common in SDK/library documentation, setup guides, and lifecycle documentation.
+
+---
+
+### Gap 30: Documented Limits/Thresholds/Quotas
+
+**What it is:** Docs say "Maximum file upload size is 10MB" or "Rate limit: 100 requests per minute." The actual code has `MAX_FILE_SIZE = 5 * 1024 * 1024` (5MB) or `RATE_LIMIT = 200`. Similar to Gap 15 (default values) but specifically about limits, thresholds, and quotas.
+
+**Who does it:** No tool does this.
+
+**How hard to implement:** Medium. Same infrastructure as Gap 15. Extraction via regex for numeric claims with size/rate/limit context words. Verification by finding corresponding constants in code.
+
+**How common:** Common in API docs, SaaS platform docs, and infrastructure documentation. High-impact when wrong (users hit undocumented limits).
+
+---
+
+## Summary Ranking (by impact x feasibility)
+
+| Rank | Gap # | Check | Feasibility | Frequency | Priority |
+|------|-------|-------|-------------|-----------|----------|
+| 1 | 14 | Markdown table claim extraction | Medium | Extremely common | **HIGH** |
+| 2 | 13 | Image/asset reference validation | Easy | Very common | **HIGH** |
+| 3 | 15 | Default value claims (deterministic) | Medium-Hard | Very common | **HIGH** |
+| 4 | 20 | Engine/runtime version vs manifest | Easy | Common | **HIGH** |
+| 5 | 21 | Install command package name | Easy | Moderate | **HIGH** |
+| 6 | 18 | Changelog-to-version consistency | Easy | Moderate | **MEDIUM** |
+| 7 | 17 | Navigation/sidebar config validation | Medium | Common (framework users) | **MEDIUM** |
+| 8 | 24 | Port/hostname/URL config claims | Medium | Common | **MEDIUM** |
+| 9 | 30 | Limits/thresholds/quotas | Medium | Common | **MEDIUM** |
+| 10 | 22 | Code block language tag validation | Easy | Moderate | **MEDIUM** |
+| 11 | 27 | Function signature claims in prose | Medium | Common | **MEDIUM** |
+| 12 | 16 | Frontmatter-to-content consistency | Easy-Medium | Moderate | **LOW** |
+| 13 | 19 | License field consistency | Easy | Low-Moderate | **LOW** |
+| 14 | 26 | CSS/style file path references | Easy | Low-Moderate | **LOW** |
+| 15 | 23 | Feature flag documentation drift | Hard | Moderate | **LOW** |
+| 16 | 29 | Ordering/sequence claims | Hard | Moderate | **LOW** |
+| 17 | 28 | Accessibility checks | Easy | Common | **OUT OF SCOPE** |
+| 18 | 25 | Prose consistency / terminology | N/A | Common | **OUT OF SCOPE** |
+
+The top 5 are the most actionable: Gaps 13 and 20-21 are easy wins that could ship in days. Gap 14 (table extraction) is the single highest-value structural gap. Gap 15 (default values) is the deepest deterministic verification opportunity.
+
+Sources:
+- [remark-validate-links](https://github.com/remarkjs/remark-validate-links)
+- [remark-lint-no-dead-urls](https://github.com/remarkjs/remark-lint-no-dead-urls)
+- [markdown-link-check](https://github.com/tcort/markdown-link-check)
+- [markdownlint](https://github.com/DavidAnson/markdownlint)
+- [mkdocs-code-validator](https://github.com/oprypin/mkdocs-code-validator)
+- [Docusaurus broken links](https://docusaurus.io/docs/api/docusaurus-config)
+- [MkDocs Configuration](https://www.mkdocs.org/user-guide/configuration/)
+- [Mintlify validation npm](https://www.npmjs.com/package/@mintlify/validation)
+- [Mintlify navigation docs](https://www.mintlify.com/docs/organize/navigation)
+- [Vale prose linter](https://vale.sh/)
+- [mdschema markdown validator](https://github.com/jackchuka/mdschema)
+- [remark-lint-frontmatter-schema](https://github.com/JulianCataldo/remark-lint-frontmatter-schema)
+- [version-changelog npm](https://www.npmjs.com/package/version-changelog)
+- [validate-npm-package-name](https://www.npmjs.com/package/validate-npm-package-name)
+- [Piranha by Uber](https://www.uber.com/blog/piranha/)
+- [GrowthBook stale flag detection](https://docs.growthbook.io/features/stale-detection)
+- [Swimm code-coupled docs](https://docs.swimm.io/new-to-swimm/benefits-of-code-coupled-documentation/)
+- [oasdiff OpenAPI comparison](https://www.oasdiff.com/)</result>
+<usage>total_tokens: 83675
+tool_uses: 46
+duration_ms: 314148</usage>
+</task-notification>
+Full transcript available at: REDACTED.output
+
+---
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Analysis:
+Let me chronologically analyze the conversation:
+
+1. **Initial Request**: User asked to spawn multiple agents to research competitors in terms of "aligning docs with reality" (documentation-code alignment). They wanted a detailed tactical report on how competitors do this, what approaches they use, because "most likely a lot of things should be inherited by us."
+
+2. **First Round - Existing Intel Review**: I read existing competitor files:
+   - `_planning/context/landscape.md` - Broad AI coding market landscape
+   - `_planning/context/competitors/swimm.md` - Deep Swimm competitor dossier
+   - `_planning/context/signals.md` - Intent gap research with 22 findings
+
+3. **First Round - 5 Parallel Research Agents**: I spawned 5 agents:
+   - Agent 1 (a041d30): Swimm auto-sync mechanics, patents, internals
+   - Agent 2 (ad62e91): Dedicated doc-drift detection tools (Doctave, ReadMe, Mintlify, etc.)
+   - Agent 3 (abfebd4): Platform built-ins (GitHub, GitLab, Atlassian, JetBrains, Backstage)
+   - Agent 4 (aa8c3e7): OSS & academic approaches (Vale, doctests, API validators, papers)
+   - Agent 5 (a99c5fd): AI/LLM-powered doc verification frontier
+
+4. **All 5 agents completed** with extensive findings. I synthesized everything into a single report written to `_planning/context/competitors/doc-alignment-landscape.md`.
+
+5. **User Pivot**: User said "Right now I want us to focus on deterministic stuff, not semantics." They noted competitors like Swimm and Mintlify do deterministic checks and asked what features they have that DocAlign probably lacks.
+
+6. **Second Round - 2 Parallel Agents**: I spawned:
+   - Agent (aed77d3): Explore DocAlign's TDD specs to inventory all 27 deterministic checks
+   - Agent (a5c6edc): Research ALL competitor deterministic checks (~400+ found)
+
+7. **Gap Analysis v1**: I wrote the initial gap analysis to `_planning/context/competitors/deterministic-gap-analysis.md` identifying 12 gaps.
+
+8. **User Challenge**: "You sure that this is a complete list of gaps and we have missed nothing?"
+
+9. **Third Round - 2 More Agents**: I spawned:
+   - Agent (a61db64): Search for missed competitor deterministic checks (found 18 more gaps)
+   - Agent (a7c619e): Audit DocAlign's L1 spec for extraction blind spots (found 6 extraction gaps)
+
+10. **Final Update**: I presented all 30 gaps and asked the user what to do. They chose "Update the gap analysis file only." I rewrote the complete gap analysis to `_planning/context/competitors/deterministic-gap-analysis.md` (v2).
+
+Key files written/modified:
+- `/Users/kotkot/Discovery/docalign/_planning/context/competitors/doc-alignment-landscape.md` - Comprehensive competitor landscape report
+- `/Users/kotkot/Discovery/docalign/_planning/context/competitors/deterministic-gap-analysis.md` - 30-gap deterministic analysis (v2)
+
+Key existing files read:
+- `_planning/context/landscape.md` - AI coding market landscape
+- `_planning/context/competitors/swimm.md` - Swimm dossier
+- `_planning/context/signals.md` - Intent gap research
+
+The project is DocAlign - a documentation-reality alignment engine. It has a layered architecture:
+- L0: Codebase index (AST parsing, entity indexing)
+- L1: Claim extractor (doc parsing, regex extractors)
+- L2: Mapper (claim-to-code mapping)
+- L3: Verifier (deterministic verification Tier 1-2, LLM Tier 3-4)
+- L4: Triggers (orchestration)
+- L5: Reporter (PR comments)
+- L6: MCP server
+- L7: Learning (feedback, suppression)
+
+Plan mode was activated at some point. The user asked to just update the file, not plan implementation.
+
+Summary:
+1. Primary Request and Intent:
+   The user requested a comprehensive competitive research effort focused on how competitors detect documentation drift from code reality ("aligning docs with reality"). The initial request was broad - spawn multiple agents to research competitors and synthesize findings into a detailed tactical report because "most likely a lot of things should be inherited by us."
+   
+   The user then pivoted to focus specifically on **deterministic (non-LLM) checks**, noting that Swimm, Mintlify, and others all have deterministic approaches, techniques, and algorithms. They wanted to know precisely what features competitors have that DocAlign probably lacks.
+   
+   When presented with an initial 12-gap analysis, the user challenged completeness: "You sure that this is a complete list of gaps and we have missed nothing?" This led to a second round of research that expanded the inventory to 30 gaps.
+   
+   Finally, when asked what to do with the findings, the user chose: **"Update the gap analysis file only"** — no implementation planning, just the reference document.
+
+2. Key Technical Concepts:
+   - **DocAlign Architecture**: Layered system (L0-L7) for documentation-code alignment detection
+     - L0: Codebase index (tree-sitter WASM AST parsing, entity indexing, manifest parsing, pgvector semantic search)
+     - L1: Claim extractor (5 regex extractors: paths, commands, dependency versions, API routes, code examples)
+     - L2: Mapper (3-step progressive: direct reference → symbol search → semantic search)
+     - L3: Verifier (Tier 1 syntactic, Tier 2 pattern, Tier 3-4 LLM-based)
+     - L4: Triggers/orchestration, L5: Reporter, L6: MCP server, L7: Learning/feedback
+   - **Swimm's Patented Auto-sync**: Patch-based detection (US11132193B1, US11847444B2) using git-apply reverse patches, Levenshtein distance with 40%/90% thresholds, iterative commit processing, Smart Token tracking
+   - **Competitor Tiers**: 5 tiers identified - (1) Code-coupled docs (Swimm), (2) AI doc updaters (DeepDocs, Mintlify, GitHub Agentic Workflows), (3) API spec validators (Dredd, Schemathesis, Prism, Optic, Pact), (4) Doctest-style (Rust doctests, Python doctest, Doc Detective), (5) Git heuristics (danger-js, Code Maat)
+   - **Academic Frontier**: CARL-CCI (90.89% F1), CCISolver, LLM Traceability (Claude 79-80% F1), critical finding that simple verification prompts beat complex chain-of-thought (over-correction bias)
+   - **Embedding Models**: Voyage-code-3 is SOTA for code retrieval, two-stage retrieval (embeddings for candidates, LLM for verification)
+   - **DocAlign's 27 existing deterministic checks** vs **400+ competitor checks** (most irrelevant), resulting in **30 actionable gaps**
+
+3. Files and Code Sections:
+   - **`/Users/kotkot/Discovery/docalign/_planning/context/competitors/doc-alignment-landscape.md`** (CREATED)
+     - Comprehensive competitive landscape report synthesized from 5 parallel research agents
+     - Covers all 5 competitor tiers, platform built-ins, academic research, embedding/RAG insights
+     - Contains "What DocAlign Should Inherit" and "What DocAlign Should Avoid" sections
+     - Key finding: "Nobody does claim-level semantic verification of arbitrary prose documentation against code reality"
+   
+   - **`/Users/kotkot/Discovery/docalign/_planning/context/competitors/deterministic-gap-analysis.md`** (CREATED, then REWRITTEN as v2)
+     - Complete 30-gap inventory of deterministic checks DocAlign lacks
+     - Organized into 4 categories: A (Extraction gaps), B (Validation gaps), C (Structural gaps), D (Deferred)
+     - Priority matrix: P0 (6 gaps), P1 (5 gaps), P2 (7 gaps), P3 (12 gaps including 2 out-of-scope)
+     - Documents what DocAlign does well (8 areas where it leads or matches competitors)
+     - Lists 9 techniques to inherit from competitors and 6 things to avoid
+   
+   - **`/Users/kotkot/Discovery/docalign/_planning/context/landscape.md`** (READ - existing)
+     - Broad AI coding market landscape (14 players analyzed)
+   
+   - **`/Users/kotkot/Discovery/docalign/_planning/context/competitors/swimm.md`** (READ - existing)
+     - Deep Swimm competitor dossier covering product capabilities, limitations, pricing, changelog analysis
+     - Key finding: Swimm's "semantic gap is their ceiling" — architecture built for pre-LLM world
+   
+   - **`/Users/kotkot/Discovery/docalign/_planning/context/signals.md`** (READ - existing)
+     - 22 validated intent-gap findings from community research
+   
+   - **`/Users/kotkot/Discovery/docalign/phases/tdd-1-claim-extractor.md`** (READ via agent)
+     - L1 claim extractor spec audited for extraction blind spots
+     - Found: environment ClaimType defined but has ZERO extraction code (ghost type)
+     - Found: Markdown tables not parsed, image/CSS extensions explicitly excluded, no env var/port/default value extraction
+
+4. Errors and Fixes:
+   - No code errors encountered (this was a research/analysis task, not implementation)
+   - Initial gap analysis was incomplete (12 gaps) — user challenged this, leading to a second round of research that found 18 additional gaps for a total of 30
+   - The `signals.md` file path was initially wrong (`/Users/kotkot/Discovery/docalign/context/signals.md` doesn't exist; actual path is `_planning/context/signals.md`)
+
+5. Problem Solving:
+   - **Completeness challenge**: User asked "You sure that this is a complete list?" — solved by spawning 2 additional focused agents: one to search for missed competitor checks, another to audit DocAlign's L1 spec internally. This expanded from 12 to 30 gaps.
+   - **Key discovery - Ghost Type**: The `'environment'` ClaimType exists in DocAlign's API contracts and is referenced in L3 Tier 2 verification strategies, but has absolutely no extraction code in L1. This is partially-built infrastructure that needs finishing.
+   - **Key discovery - Markdown Tables**: The single highest-value structural extraction gap — tables are the most common structure for API/config documentation and are completely invisible to L1.
+   - **Key discovery - Image exclusion**: Deliberate design choice in L1 to exclude image extensions creates a blind spot for architecture diagrams, screenshots, logos.
+
+6. All User Messages:
+   - "I want to increase quality. Please spawn multiple agents aiming to research our competitors in terms of aligning dogs with reality and synthesize the research: how exactly do they do this? What are the approaches? I want to have a very detailed tactical report because most likely a lot of things should be inherited by us."
+   - "Right now I want us to focus on deterministic stuff, not semantics. Specifically I know a lot of products check the deterministic stuff. Swimm does, Mildify does. A lot of others also do. Do we probably lack a lot of features that they have? And they all probably have their own approaches, their own techniques, their own algorithms. Please synthesize the report with these things precisely."
+   - "You sure that this is a complete list of gaps and we have missed nothing?"
+   - (In response to AskUserQuestion about next steps): Selected "Update the gap analysis file only" — "Write the complete 30-gap inventory to the competitor analysis file as a reference document, no implementation planning yet"
+
+7. Pending Tasks:
+   - No explicit pending tasks. The user chose to update the gap analysis file only, which was completed. Plan mode is active but no implementation plan has been requested.
+
+8. Current Work:
+   The most recent work was rewriting `/Users/kotkot/Discovery/docalign/_planning/context/competitors/deterministic-gap-analysis.md` to its v2 version containing all 30 gaps. This was completed successfully. The file now contains:
+   - Complete inventory of 30 deterministic gaps organized into 4 categories (A: Extraction, B: Validation, C: Structural, D: Deferred)
+   - Priority matrix (P0: 6 gaps, P1: 5 gaps, P2: 7 gaps, P3: 12 gaps)
+   - 9 techniques to inherit from competitors
+   - 6 anti-patterns to avoid
+   
+   Plan mode is active. The last tool call was the Write to update the gap analysis file, which the user explicitly requested.
+
+9. Optional Next Step:
+   No next step is warranted. The user's explicit request was "Update the gap analysis file only" and that has been completed. The user has not requested any further action. Plan mode is active but no plan has been requested. Any next step should wait for user direction.
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/kotkot/.REDACTED.jsonl
+Please continue the conversation from where we left off without asking the user any further questions. Continue with the last task that you were asked to work on.
+
+## Summary
+
+The gap analysis file has been updated. The v2 of `/Users/kotkot/Discovery/docalign/_planning/context/competitors/deterministic-gap-analysis.md` is complete with all 30 deterministic gaps organized into 4 categories:
+
+- **A: Extraction gaps** (6) — missing claim types like env vars, markdown tables, config keys
+- **B: Validation gaps** (11) — missing checks like URL reachability, semver compatibility, command execution
+- **C: Structural gaps** (11) — missing capabilities like cross-doc consistency, coverage scoring, staleness detection
+- **D: Deferred** (2) — out-of-scope items (image/diagram validation, i18n)
+
+Priority breakdown: 6 P0, 5 P1, 7 P2, 12 P3.
+
+Ready for your next direction.
+
+## Key Actions
+
+- - **AskUserQuestion**: 
+- - **Read**: /Users/kotkot/Discovery/docalign/_planning/context/competitors/deterministic-gap-analysis.md
+- - **Write**: /Users/kotkot/Discovery/docalign/_planning/context/competitors/deterministic-gap-analysis.md
