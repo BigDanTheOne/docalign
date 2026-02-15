@@ -1,0 +1,41 @@
+All tasks complete. Here's a summary of everything implemented:
+
+## Implementation Summary — 23 Deterministic Check Gaps
+
+### New Files Created (10)
+| File | Purpose |
+|------|---------|
+| `src/layers/L3-verifier/tier1-url-reference.ts` | HTTP URL dead link verifier (HEAD/GET, rate limiting) |
+| `src/layers/L3-verifier/tier2-navigation.ts` | Navigation/sidebar config validation |
+| `src/layers/L5-reporter/cross-doc-consistency.ts` | Cross-document inconsistency detection |
+| `src/layers/L5-reporter/coverage.ts` | Missing documentation detection |
+| `src/layers/L5-reporter/frontmatter-consistency.ts` | Frontmatter-to-content consistency |
+| `test/layers/L3-verifier/tier1-url-reference.test.ts` | URL verifier tests (6 tests) |
+| `test/layers/L3-verifier/tier2-navigation.test.ts` | Navigation verifier tests (5 tests) |
+| `test/layers/L5-reporter/cross-doc-consistency.test.ts` | Cross-doc consistency tests (5 tests) |
+| `test/layers/L5-reporter/coverage.test.ts` | Coverage query tests (4 tests) |
+| `test/layers/L5-reporter/frontmatter-consistency.test.ts` | Frontmatter tests (5 tests) |
+| `test/layers/L1-claim-extractor/table-extraction.test.ts` | Table extraction tests (5 tests) |
+
+### Modified Files (19)
+- **`src/shared/types.ts`** — `url_reference` ClaimType, extended `ParsedManifest`, `DocAlignConfig` extensions
+- **`src/config/schema.ts` + `loader.ts`** — Config schema for url_check, coverage
+- **`src/layers/L0-codebase-index/`** — `getManifestMetadata()`, `getHeadings()`, `parseMarkdownHeadings()`, migration 0018
+- **`src/layers/L1-claim-extractor/extractors.ts`** — 6 new extractors (URLs, anchors, tables, config, prose sigs), lifted image/CSS filter
+- **`src/layers/L1-claim-extractor/syntactic.ts`** — Wired all new extractors
+- **`src/layers/L3-verifier/index.ts`** — url_reference case, mappings to Tier 2
+- **`src/layers/L3-verifier/tier1-path-reference.ts`** — Anchor/heading validation
+- **`src/layers/L3-verifier/tier1-command.ts`** — Install package name validation
+- **`src/layers/L3-verifier/tier1-code-example.ts`** — Language tag, prose signature checks
+- **`src/layers/L3-verifier/tier1-dependency-version.ts`** — Fuzzy package suggestions
+- **`src/layers/L3-verifier/tier2-patterns.ts`** — License, changelog-version, deprecation strategies; fuzzy env suggestions; generalized engine version
+- **5 test mock files** — Added `getManifestMetadata`/`getHeadings` to all mock indexes
+
+### Gap Coverage
+All 23 gaps from the analysis are covered: dead links, anchors, missing docs, snippet staleness, deprecation, env vars (fuzzy), cross-doc consistency, PR impact, fuzzy suggestions, image/asset refs, table extraction, default values, frontmatter, navigation config, changelog-version, license, engine versions, install package names, language tags, ports/limits, CSS references, and prose signatures.
+
+### Metrics
+- **Before:** 1411 tests / 92 files
+- **After:** 1441 tests / 98 files (+30 tests, +6 test files)
+- Typecheck: clean
+- Lint: clean on all modified files (5 pre-existing errors in unmodified files)

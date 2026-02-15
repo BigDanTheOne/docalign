@@ -1,0 +1,529 @@
+Now please create a complete implementation plan for all the gaps. Don't separate into phases; plan to implement all the features at one phase at one run, single shot.
+
+---
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Analysis:
+Let me trace through the conversation chronologically:
+
+1. **Previous conversation context (from summary)**: The user had been doing competitive research on documentation-code alignment tools. They created a gap analysis document (`deterministic-gap-analysis.md`) identifying 30 gaps between DocAlign and competitors. The gap analysis was at v2 with all 30 gaps documented.
+
+2. **Current conversation starts**: The user asks to create a complete implementation plan for all the gaps, explicitly saying "Don't separate into phases; plan to implement all the features at one phase at one run, single shot."
+
+3. **Plan mode was activated**: The system entered plan mode, which is read-only except for the plan file.
+
+4. **Phase 1 - Exploration**: I read the gap analysis file and spawned 3 Explore agents to understand:
+   - Agent 1: L0-L3 implementation state, task files, project structure
+   - Agent 2: TDD specs for exact interfaces, types, extension points
+   - Agent 3: Testing and integration patterns
+
+5. **Additional file reads**: I read critical source files:
+   - `src/layers/L1-claim-extractor/extractors.ts` - All regex extractors
+   - `src/layers/L1-claim-extractor/syntactic.ts` - Main extraction pipeline
+   - `src/layers/L3-verifier/routing.ts` - Claim routing logic
+   - `src/shared/types.ts` - All type definitions
+   - `src/layers/L3-verifier/tier1-path-reference.ts` - Path verification
+   - `src/layers/L3-verifier/tier1-dependency-version.ts` - Dep version verification
+   - `src/layers/L3-verifier/tier2-patterns.ts` - Tier 2 strategies
+   - `src/layers/L0-codebase-index/manifest-parser.ts` - Manifest parsing
+   - `src/layers/L3-verifier/result-helpers.ts` - Result creation helpers
+   - `src/layers/L3-verifier/index.ts` - Verifier service interface
+   - `src/layers/L0-codebase-index/index.ts` - L0 service interface
+   - `src/layers/L1-claim-extractor/preprocessing.ts` - Document preprocessing
+
+6. **Phase 2 - Design**: Launched a Plan agent to design the architecture for 23 implementable gaps. Key design decisions:
+   - Only 1 new ClaimType needed: `url_reference`
+   - Tables produce claims of existing types
+   - Defaults/ports/limits use `config` type
+   - Cross-doc consistency lives in L5
+   - Missing doc detection is a coverage query in L5
+   - PR-scoped scanning already partially works
+
+7. **Phase 4 - Final Plan**: Wrote comprehensive plan to `/Users/kotkot/.claude/plans/federated-imagining-boole.md` with 27 tasks covering 23 gaps.
+
+8. **ExitPlanMode**: Plan was approved by the user.
+
+9. **Implementation started**: Created 7 task tracking items, then began implementing Task 1:
+   - Added `'url_reference'` to `ClaimType` union in `types.ts`
+   - Extended `ParsedManifest` with `name?`, `version?`, `engines?`, `license?` fields
+   - Added `url_check` and `coverage` sections to `DocAlignConfig`
+   - Added `url_reference` case to `getIdentityKey()` in `extractors.ts`
+   - Added `url_reference` case to `generateKeywords()` in `extractors.ts`
+   - Had NOT yet: added `'url_reference'` to `DEFAULT_CLAIM_TYPES` in `syntactic.ts`
+
+The implementation was in progress when the summary was requested. Task 1 was partially complete (types.ts and extractors.ts edited, syntactic.ts DEFAULT_CLAIM_TYPES not yet updated).
+
+Let me now verify all the specific edits made:
+
+**Edit 1 - types.ts ClaimType**: Added `| 'url_reference'` to the union
+**Edit 2 - types.ts ParsedManifest**: Added name?, version?, engines?, license? fields
+**Edit 3 - types.ts DocAlignConfig**: Added url_check? and coverage? sections
+**Edit 4 - extractors.ts getIdentityKey**: Added `case 'url_reference'` returning `'url:' + url`
+**Edit 5 - extractors.ts generateKeywords**: Added `case 'url_reference'` parsing URL for hostname and path segments
+
+No errors were encountered during implementation.
+
+The task list created:
+- Task #1: Add url_reference ClaimType and extend ParsedManifest (in_progress)
+- Task #2: Extend manifest parser metadata fields (pending)
+- Task #3: Add getManifestMetadata and getHeadings to L0 (pending)
+- Task #4: Tasks 4-9: L1 extraction changes (pending)
+- Task #5: Tasks 10-17: L3 verifier extensions (pending)
+- Task #6: Tasks 18-20: New Tier 2 strategies (pending)
+- Task #7: Tasks 21-27: Structural features, config, tests (pending)
+
+Summary:
+1. Primary Request and Intent:
+   The user asked to create a complete implementation plan for all deterministic check gaps identified in the competitive gap analysis (`deterministic-gap-analysis.md` v2, 30 gaps total). The user explicitly stated: "Don't separate into phases; plan to implement all the features at one phase at one run, single shot." After the plan was written and approved, implementation began. The scope covers 23 implementable gaps (7 deferred/out-of-scope), requiring 11 new files and modifications to 21 existing files across L0-L6 layers.
+
+2. Key Technical Concepts:
+   - **DocAlign Architecture**: 7-layer system (L0-L7) for documentation-code alignment. L0=codebase index, L1=claim extraction, L2=mapping, L3=verification, L4=triggers, L5=reporting, L6=MCP, L7=learning
+   - **ClaimType union**: Discriminated union controlling the entire pipeline. Adding a new type touches extractors, dedup, keywords, verifier routing, config schema
+   - **Only 1 new ClaimType needed**: `url_reference` — all other gaps extend existing types via `extracted_value` sub-fields
+   - **Tier 1 vs Tier 2 verification**: Tier 1 = deterministic syntactic checks (file exists, version matches). Tier 2 = pattern-based (read config files, check conventions). Both are zero-LLM-cost.
+   - **Extension patterns**: New extractors are pure functions `extract*(doc: PreProcessedDoc): RawExtraction[]`, wired manually in `syntactic.ts`. New verifiers follow `verify*(claim: Claim, index: CodebaseIndexService): Promise<VerificationResult | null>`.
+   - **`makeResult()` and `makeTier2Result()`**: Helper functions in `result-helpers.ts` that create `VerificationResult` objects with proper defaults
+   - **`CodebaseIndexService` interface**: Already has `readFileContent()`, `fileExists()`, `findSymbol()`, `getDependencyVersion()`, `getFileTree()`, `scriptExists()`, `getAvailableScripts()`, `searchSemantic()`. Plan adds `getManifestMetadata()` and `getHeadings()`.
+   - **ParsedManifest**: Currently only has `dependencies`, `dev_dependencies`, `scripts`, `source`. Extended with `name`, `version`, `engines`, `license`.
+   - **Path extraction filters**: `IMAGE_EXTENSIONS` (.png,.jpg,.gif,.svg,.ico) and `STYLE_EXTENSIONS` (.css,.scss,.less) are explicitly excluded — plan lifts these filters
+   - **Anchor fragments**: Currently stripped from links — plan preserves them for heading validation
+   - **Frontmatter**: Currently stripped entirely by preprocessing — plan captures it for consistency checks
+   - **Cross-doc consistency**: Lives in L5 as post-verification analysis, not L3
+   - **Missing doc detection**: Reverse query on L0 entities with zero L2 claim mappings
+   - **Table extraction**: Tables produce claims of EXISTING types (path_reference, dependency_version, etc.) — no new `table_claim` type
+   - **Config claims**: Defaults, ports, limits all use existing `config` ClaimType with `config_kind` sub-field in extracted_value
+
+3. Files and Code Sections:
+
+   - **`/Users/kotkot/Discovery/docalign/_planning/context/competitors/deterministic-gap-analysis.md`** (READ)
+     - The source document for all 30 gaps. Organized into 4 categories: A (Extraction, 6 gaps), B (Validation, 11 gaps), C (Structural, 11 gaps), D (Deferred, 7 gaps). Priority matrix: P0 (6), P1 (5), P2 (7), P3 (12).
+
+   - **`/Users/kotkot/Discovery/docalign/src/shared/types.ts`** (READ then MODIFIED)
+     - Central type definitions for entire project. Contains ClaimType union, all Row types, interfaces.
+     - **Edit 1**: Added `'url_reference'` to ClaimType union (line after `'environment'`)
+     - **Edit 2**: Extended ParsedManifest with metadata fields:
+       ```typescript
+       export interface ParsedManifest {
+         file_path: string;
+         dependencies: Record<string, string>;
+         dev_dependencies: Record<string, string>;
+         scripts: Record<string, string>;
+         source: 'lockfile' | 'manifest';
+         /** Package name from manifest (e.g., package.json "name" field) */
+         name?: string;
+         /** Package version from manifest (e.g., package.json "version" field) */
+         version?: string;
+         /** Engine/runtime constraints (e.g., { node: ">=18" }) */
+         engines?: Record<string, string>;
+         /** License identifier (e.g., "MIT") */
+         license?: string;
+       }
+       ```
+     - **Edit 3**: Added url_check and coverage to DocAlignConfig:
+       ```typescript
+       url_check?: {
+         enabled?: boolean;
+         timeout_ms?: number;
+         max_per_domain?: number;
+         exclude_domains?: string[];
+       };
+       coverage?: {
+         enabled?: boolean;
+         min_entity_importance?: 'exported' | 'public' | 'all';
+       };
+       ```
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L1-claim-extractor/extractors.ts`** (READ then MODIFIED)
+     - Contains all regex extractors: `extractPaths`, `extractApiRoutes`, `extractCommands`, `extractDependencyVersions`, `extractCodeExamples`, `extractEnvironmentClaims`, `extractConventionClaims`. Also `deduplicateWithinFile`, `getIdentityKey`, `generateKeywords`.
+     - Key constants: `IMAGE_EXTENSIONS`, `STYLE_EXTENSIONS`, `KNOWN_FILE_EXTENSIONS`, `FILE_PATH_PATTERNS`
+     - `passesPathFilters()` at line 131 — this is where image/CSS paths are filtered out (to be lifted in Task 4)
+     - `isIllustrativeLine()` at line 50 — already skips table rows (`/^\|.*\|.*\|/`)
+     - **Edit 4**: Added `url_reference` to `getIdentityKey()`:
+       ```typescript
+       case 'url_reference': {
+         const url = ev.url as string;
+         return 'url:' + url;
+       }
+       ```
+     - **Edit 5**: Added `url_reference` to `generateKeywords()`:
+       ```typescript
+       case 'url_reference': {
+         const url = ev.url as string;
+         try {
+           const parsed = new URL(url);
+           const pathSegments = parsed.pathname.split('/').filter((s) => s.length > 2);
+           return [parsed.hostname, ...pathSegments];
+         } catch {
+           return [];
+         }
+       }
+       ```
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L1-claim-extractor/syntactic.ts`** (READ, NOT YET MODIFIED)
+     - Main extraction pipeline. 7-step process: binary check → size check → format detection → preprocess → determine enabled types → run extractors → path validation → dedup → batch insert.
+     - `DEFAULT_CLAIM_TYPES` at line 19 currently has 7 types. Needs `'url_reference'` added.
+     - Extractor wiring at lines 59-81 — each extractor gated by `enabledTypes.has(type)`.
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L3-verifier/routing.ts`** (READ)
+     - Claim routing: determines Path 1 (entity evidence) vs Path 2 (agent-delegated) based on mapping count and token estimates.
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L3-verifier/tier1-path-reference.ts`** (READ)
+     - Path verification: exact check → relative resolution → basename search → Levenshtein similar path. Uses `makeResult()` helper. Anchor validation to be added here (Task 10).
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L3-verifier/tier1-dependency-version.ts`** (READ)
+     - Dependency version verification: lookup → version comparison via `compareVersions()`. Fuzzy package name suggestion to be added (Task 16).
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L3-verifier/tier2-patterns.ts`** (READ)
+     - Tier 2 strategies: `strictModeCheck`, `frameworkImportCheck`, `envVarCheck`, `toolVersionCheck`. Already uses `index.readFileContent()` for file parsing. Multiple new strategies to be added (Tasks 18-20). `verifyTier2()` signature needs extending to accept mappings (Task 18).
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L0-codebase-index/manifest-parser.ts`** (READ)
+     - Parses package.json, package-lock.json, requirements.txt, pyproject.toml, Makefile, yarn.lock, pnpm-lock.yaml, Cargo.toml, go.mod. Currently extracts deps/scripts only, not name/version/engines/license.
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L3-verifier/result-helpers.ts`** (READ)
+     - `makeResult(claim, fields)` creates Tier 1 result (tier=1, confidence=1.0, token_cost=null)
+     - `makeTier2Result(claim, fields)` creates Tier 2 result (same but tier=2)
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L3-verifier/index.ts`** (READ)
+     - `VerifierService` interface and `createVerifier()` factory. The `verifyDeterministic()` method has switch on claim_type for Tier 1 (path_reference, command, dependency_version, api_route, code_example) and then Tier 2 for convention/environment. Needs `url_reference` case added (Task 11).
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L0-codebase-index/index.ts`** (READ)
+     - `CodebaseIndexService` interface with all lookup methods. Has `readFileContent()`. Needs `getManifestMetadata()` and `getHeadings()` added (Task 3).
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L1-claim-extractor/preprocessing.ts`** (READ)
+     - Document preprocessing: strips YAML frontmatter, HTML tags, base64 images, SVG, JSX. Builds code fence line set. Frontmatter is completely discarded — plan adds frontmatter preservation (Task 25).
+
+   - **`/Users/kotkot/.claude/plans/federated-imagining-boole.md`** (CREATED)
+     - The complete implementation plan with 27 tasks, gap-to-task mapping, file change summary, and verification steps.
+
+4. Errors and fixes:
+   - No errors were encountered during implementation. All edits applied cleanly.
+
+5. Problem Solving:
+   - **Design decision: How many new ClaimTypes?** Resolved by analyzing each gap individually. Only `url_reference` truly needs a new type because HTTP validation is fundamentally different from file existence checks. Everything else extends existing types.
+   - **Design decision: Where do cross-cutting features live?** Cross-doc consistency → L5 (post-verification analysis). Missing doc detection → L5 (coverage query). PR-scoped impact → L4 (orchestration enhancement). Navigation config → L3 Tier 2 (new strategy).
+   - **Design decision: Table extraction output type?** Tables produce claims of EXISTING types, not a new `table_claim` type. The table parser dispatches cell contents through sub-recognizers.
+
+6. All user messages:
+   - "Now please create a complete implementation plan for all the gaps. Don't separate into phases; plan to implement all the features at one phase at one run, single shot."
+   - (No other explicit user messages — plan was auto-approved after ExitPlanMode)
+
+7. Pending Tasks:
+   - **Task #1** (in_progress): Add url_reference ClaimType and extend ParsedManifest — PARTIALLY DONE. Still needs: add `'url_reference'` to `DEFAULT_CLAIM_TYPES` in `syntactic.ts`
+   - **Task #2** (pending): Extend manifest parser to extract name, version, engines, license
+   - **Task #3** (pending): Add getManifestMetadata and getHeadings to L0 interface
+   - **Task #4** (pending): Tasks 4-9: L1 extraction changes (lift filters, URL extraction, anchors, tables, config claims, prose signatures)
+   - **Task #5** (pending): Tasks 10-17: L3 verifier extensions
+   - **Task #6** (pending): Tasks 18-20: New Tier 2 strategies
+   - **Task #7** (pending): Tasks 21-27: Structural features, config, tests
+
+8. Current Work:
+   Implementing Task 1 of the approved plan. Three files have been edited so far:
+   - `src/shared/types.ts` — Added `url_reference` to ClaimType, extended ParsedManifest with metadata fields, added url_check/coverage to DocAlignConfig
+   - `src/layers/L1-claim-extractor/extractors.ts` — Added `url_reference` cases to `getIdentityKey()` and `generateKeywords()`
+   
+   **NOT YET DONE for Task 1**: Adding `'url_reference'` to `DEFAULT_CLAIM_TYPES` in `src/layers/L1-claim-extractor/syntactic.ts` (line 19).
+
+9. Optional Next Step:
+   Complete Task 1 by adding `'url_reference'` to `DEFAULT_CLAIM_TYPES` in `syntactic.ts`, then proceed to Task 2 (extend manifest parser). The plan file at `/Users/kotkot/.claude/plans/federated-imagining-boole.md` has the complete ordered task list. Task 1 states: "Add `'url_reference'` to `DEFAULT_CLAIM_TYPES`" in syntactic.ts. After that, Task 2: "In `parsePackageJson()`, extract `pkg.name`, `pkg.version`, `pkg.engines`, `pkg.license` into the returned `ParsedManifest`. Also extract `requires-python` from `parsePyprojectToml()`, `go` version from `parseGoMod()`."
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/kotkot/.REDACTED.jsonl
+Please continue the conversation from where we left off without asking the user any further questions. Continue with the last task that you were asked to work on.
+
+---
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Analysis:
+Let me trace through the conversation chronologically:
+
+1. **Context from previous conversation**: The user had been doing competitive research on documentation-code alignment tools, created a gap analysis identifying 30 gaps, and asked for a complete implementation plan for all gaps in a single shot. A plan was created with 27 tasks covering 23 implementable gaps. The plan was approved and implementation began.
+
+2. **This conversation continues from where the previous one left off**. The system message says "Please continue the conversation from where we left off without asking the user any further questions. Continue with the last task that you were asked to work on."
+
+3. **Task 1 completion**: Added `'url_reference'` to `DEFAULT_CLAIM_TYPES` in `syntactic.ts`. Then discovered `CONFIG_DEFAULTS` in `loader.ts` was missing `url_check` and `coverage` fields (typecheck error). Fixed by:
+   - Adding `url_reference: true` to claim_types defaults in loader.ts
+   - Adding `url_check` and `coverage` default objects in loader.ts
+   - Adding `url_check` and `coverage` keys to `KNOWN_KEYS` in loader.ts
+   - Adding `url_reference` to claimTypeEnum in schema.ts
+   - Adding `url_reference` to claim_types schema in schema.ts
+   - Adding `url_check` and `coverage` Zod schemas in schema.ts
+
+4. **Task 2**: Extended manifest parser to extract metadata:
+   - `parsePackageJson`: Added name, version, license, engines extraction
+   - `parsePyprojectToml`: Added name, version, license, requires-python extraction
+   - `parseGoMod`: Added module name, go version extraction
+   - `parseCargoToml`: Added package name, version, license, rust edition extraction
+
+5. **Task 3**: Added `getManifestMetadata` and `getHeadings` to L0:
+   - Updated `CodebaseIndexService` interface in `index.ts`
+   - Implemented both methods in `IndexStore` (index-store.ts)
+   - Added `parseMarkdownHeadings` helper function
+   - Created migration `0018_add-manifest-metadata.ts` for new DB columns
+   - Updated `storeManifest` and `storeManifestInTx` to persist metadata
+   - Updated `updateFromDiff` to pass metadata
+   - Added methods to `InMemoryIndex` in `local-index.ts`
+   - Ran the migration against local DB
+   - Error: Tests failed because DB didn't have new columns. Fixed by running migration.
+
+6. **Tasks 4-9** (L1 extraction changes):
+   - **Task 4**: Lifted image/CSS filter from `passesPathFilters()`. Now images and styles are extracted with `asset_type` field.
+   - **Task 5**: Added `extractUrlReferences()` function with placeholder domain filtering.
+   - **Task 6**: Modified `extractPaths` regex to capture `#fragment` anchors. Added `ANCHOR_LINK_PATTERN` for bare anchor links (`[text](#slug)`).
+   - **Task 7**: Added `extractTableClaims()` with column semantic detection and row parsing.
+   - **Task 8**: Added `extractConfigClaims()` for defaults, ports, and limits.
+   - **Task 9**: Added `extractProseSignatures()` for prose function signatures.
+   - Wired all new extractors in `syntactic.ts`
+   - Updated `getIdentityKey` for `config` and path anchors
+   - Updated `generateKeywords` for `config`
+   - Added `extraction_confidence` optional field to `RawExtraction` interface
+   - Error: Tests expected images/CSS to be rejected. Fixed by updating tests to expect extraction with `asset_type`.
+
+7. **Tasks 10-17** (L3 verifier extensions - IN PROGRESS):
+   - **Task 10**: Added anchor/heading validation to `tier1-path-reference.ts` with self-reference handling and Levenshtein suggestion.
+   - **Task 11**: Created `tier1-url-reference.ts` with HTTP HEAD/GET checking, rate limiting, timeout.
+   - **Task 13**: Added install command package name validation to `tier1-command.ts`.
+   - **Task 14**: Added language tag validation to `tier1-code-example.ts` with KNOWN_LANGUAGES set.
+   - **Task 17**: Added prose signature verification to `tier1-code-example.ts`.
+   - **Task 16**: Added fuzzy package name suggestions to `tier1-dependency-version.ts`.
+   - Wired `url_reference` into verifier switch in `index.ts`.
+   - Added `config` to Tier 2 routing.
+   - Error: Tests fail because mock `index` object doesn't have `getManifestMetadata` and `getHeadings` methods. This is what I was about to fix when the summary was requested.
+
+The current error is in `test/layers/L3-verifier/verifier.test.ts` - the `makeMockIndex` function needs `getManifestMetadata` and `getHeadings` added to it.
+
+Task list state:
+- #1 completed: Add url_reference ClaimType and extend ParsedManifest
+- #2 completed: Extend manifest parser metadata fields
+- #3 completed: Add getManifestMetadata and getHeadings to L0
+- #4 completed: Tasks 4-9: L1 extraction changes
+- #5 in_progress: Tasks 10-17: L3 verifier extensions
+- #6 pending: Tasks 18-20: New Tier 2 strategies
+- #7 pending: Tasks 21-27: Structural features, config, tests
+
+Summary:
+1. Primary Request and Intent:
+   The user asked to create a complete implementation plan for all deterministic check gaps identified in `_planning/context/competitors/deterministic-gap-analysis.md` (30 gaps total, 23 implementable). The user explicitly stated: "Don't separate into phases; plan to implement all the features at one phase at one run, single shot." The plan was approved and implementation is underway. The plan file is at `/Users/kotkot/.claude/plans/federated-imagining-boole.md` with 27 tasks covering 23 gaps across L0-L6 layers (11 new files, 21 modified files).
+
+2. Key Technical Concepts:
+   - **DocAlign Architecture**: 7-layer system (L0=codebase index, L1=claim extraction, L2=mapping, L3=verification, L4=triggers, L5=reporting, L6=MCP, L7=learning)
+   - **ClaimType union**: Discriminated union controlling the entire pipeline. Only ONE new type added: `url_reference`. All other gaps extend existing types via `extracted_value` sub-fields
+   - **Tier 1 vs Tier 2 verification**: Tier 1 = deterministic syntactic checks. Tier 2 = pattern-based. Both zero-LLM-cost
+   - **Extension patterns**: New extractors are pure functions `extract*(doc: PreProcessedDoc): RawExtraction[]`, wired in `syntactic.ts`. New verifiers follow `verify*(claim, index): Promise<VerificationResult | null>`
+   - **`makeResult()` helper**: Creates `VerificationResult` objects with defaults
+   - **`CodebaseIndexService` interface**: Now has `getManifestMetadata()` and `getHeadings()` in addition to existing methods
+   - **`ParsedManifest`**: Extended with `name`, `version`, `engines`, `license`
+   - **Path extraction changes**: Image/CSS filters lifted (now extracted with `asset_type`), anchor fragments preserved, bare anchor links captured
+   - **Table extraction**: Tables produce claims of EXISTING types (path_reference, dependency_version, config) — no new table type
+   - **Config claims**: Defaults, ports, limits use existing `config` ClaimType with `config_kind` sub-field
+   - **GitHub-style slug computation**: For heading anchor validation
+
+3. Files and Code Sections:
+
+   - **`/Users/kotkot/Discovery/docalign/src/shared/types.ts`** (MODIFIED)
+     - Central type definitions. Added `'url_reference'` to ClaimType union, extended ParsedManifest with metadata fields, added `url_check`/`coverage` to DocAlignConfig, added `extraction_confidence?: number` to RawExtraction
+     ```typescript
+     export type ClaimType =
+       | 'path_reference' | 'dependency_version' | 'command' | 'api_route'
+       | 'code_example' | 'behavior' | 'architecture' | 'config'
+       | 'convention' | 'environment' | 'url_reference';
+     
+     export interface ParsedManifest {
+       file_path: string;
+       dependencies: Record<string, string>;
+       dev_dependencies: Record<string, string>;
+       scripts: Record<string, string>;
+       source: 'lockfile' | 'manifest';
+       name?: string;
+       version?: string;
+       engines?: Record<string, string>;
+       license?: string;
+     }
+     
+     // Added to DocAlignConfig:
+     url_check?: {
+       enabled?: boolean;
+       timeout_ms?: number;
+       max_per_domain?: number;
+       exclude_domains?: string[];
+     };
+     coverage?: {
+       enabled?: boolean;
+       min_entity_importance?: 'exported' | 'public' | 'all';
+     };
+     
+     export interface RawExtraction {
+       claim_text: string;
+       claim_type: ClaimType;
+       extracted_value: Record<string, unknown>;
+       line_number: number;
+       pattern_name: string;
+       extraction_confidence?: number; // NEW
+     }
+     ```
+
+   - **`/Users/kotkot/Discovery/docalign/src/config/schema.ts`** (MODIFIED)
+     - Added `url_reference` to claimTypeEnum and claim_types schema, added `url_check` and `coverage` Zod schemas
+
+   - **`/Users/kotkot/Discovery/docalign/src/config/loader.ts`** (MODIFIED)
+     - Added `url_reference: true` to claim_types defaults, added `url_check` and `coverage` default objects, added `url_check` and `coverage` to `KNOWN_KEYS`
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L0-codebase-index/manifest-parser.ts`** (MODIFIED)
+     - Extended `parsePackageJson` to extract `name`, `version`, `engines`, `license`
+     - Extended `parsePyprojectToml` to extract `name`, `version`, `license`, `requires-python` (as engine)
+     - Extended `parseGoMod` to extract module name and go version (as engine)
+     - Extended `parseCargoToml` to extract package name, version, license, rust edition (as engine)
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L0-codebase-index/index.ts`** (MODIFIED)
+     - Added `ParsedManifest` import, added `getManifestMetadata` and `getHeadings` to `CodebaseIndexService` interface
+     ```typescript
+     getManifestMetadata(repoId: string): Promise<ParsedManifest | null>;
+     getHeadings(repoId: string, filePath: string): Promise<Array<{ text: string; level: number; slug: string }>>;
+     ```
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L0-codebase-index/index-store.ts`** (MODIFIED)
+     - Implemented `getManifestMetadata` (queries repo_manifests with source='manifest')
+     - Implemented `getHeadings` (calls readFileContent then parseMarkdownHeadings)
+     - Updated `storeManifest` and `storeManifestInTx` to accept and persist metadata (name, version, engines, license)
+     - Updated `updateFromDiff` to pass metadata when storing manifests
+     - Added exported `parseMarkdownHeadings()` function with GitHub-style slug computation
+     ```typescript
+     export function parseMarkdownHeadings(content: string): Array<{ text: string; level: number; slug: string }> {
+       // Strips bold/italic/code/links from heading text
+       // Slug: lowercase, replace non-alphanumeric with hyphens, handle duplicates (-1, -2)
+     }
+     ```
+
+   - **`/Users/kotkot/Discovery/docalign/migrations/0018_add-manifest-metadata.ts`** (CREATED)
+     - Adds `name`, `version`, `engines`, `license` columns to `repo_manifests` table
+
+   - **`/Users/kotkot/Discovery/docalign/src/cli/local-index.ts`** (MODIFIED)
+     - Added `getManifestMetadata` and `getHeadings` implementations to `InMemoryIndex`
+     - Imported `parseMarkdownHeadings` from index-store
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L1-claim-extractor/extractors.ts`** (HEAVILY MODIFIED)
+     - **Task 4**: Modified `passesPathFilters()` - removed image/CSS rejection, added `getAssetType()` helper
+     - **Task 5**: Added `extractUrlReferences()` with `PLACEHOLDER_DOMAINS` filtering, trailing punctuation stripping
+     - **Task 6**: Modified `FILE_PATH_PATTERNS` markdown_link_path regex to capture `#fragment`, added `ANCHOR_LINK_PATTERN` for bare anchors `[text](#slug)`, updated `extractPaths` to emit anchor and asset_type in extracted_value, added self-reference anchor extraction
+     - **Task 7**: Added `extractTableClaims()` with `identifyColumnSemantics()`, `extractClaimsFromTableRow()`, `TABLE_COLUMN_KEYWORDS`
+     - **Task 8**: Added `extractConfigClaims()` with DEFAULT_VALUE_PATTERNS, PORT_PATTERNS, LIMIT_PATTERNS
+     - **Task 9**: Added `extractProseSignatures()` with PROSE_CALL_PATTERN, PROSE_RETURNS_PATTERN, PROSE_PARAMS_COUNT_PATTERN
+     - Updated `getIdentityKey` for `path_reference` (includes anchor), `url_reference`, `config`
+     - Updated `generateKeywords` for `config`
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L1-claim-extractor/syntactic.ts`** (MODIFIED)
+     - Added imports for new extractors
+     - Added `'url_reference'` and `'config'` to `DEFAULT_CLAIM_TYPES`
+     - Wired new extractors: `extractUrlReferences`, `extractConfigClaims`, `extractProseSignatures`, `extractTableClaims`
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L3-verifier/tier1-url-reference.ts`** (CREATED)
+     - HTTP HEAD/GET with 5s timeout, 405 fallback, per-domain rate limiting (5/domain)
+     - `resetDomainCounts()` for testing, `verifyUrlReference(claim, _index, httpClient?)` 
+     - Returns: verified (2xx-3xx), drifted (404/410), uncertain (5xx/timeout/network)
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L3-verifier/index.ts`** (MODIFIED)
+     - Added `verifyUrlReference` import and export
+     - Added `case 'url_reference'` to Tier 1 switch
+     - Extended Tier 2 routing to include `config` claim type
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L3-verifier/tier1-path-reference.ts`** (MODIFIED)
+     - Added anchor/heading validation: self-reference (`<self>`) handling, anchor validation after file existence confirmed
+     - Added `levenshteinDist` helper for closest heading suggestion
+     - For broken anchors: returns `drifted` with severity `medium` and "Did you mean?" suggestion
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L3-verifier/tier1-code-example.ts`** (MODIFIED)
+     - Added `KNOWN_LANGUAGES` set for language tag validation
+     - Added prose signature handling (early return for `prose_signature: true`)
+     - Added `verifyProseSignature()` function - looks up function_name via findSymbol
+     - Language tag check: unknown tag with close match → drifted with suggestion
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L3-verifier/tier1-command.ts`** (MODIFIED)
+     - Added install command package name validation (`isInstallCommand`, `verifyInstallPackageName`)
+     - For `npm install <pkg>` style commands, checks if pkg matches manifest name
+
+   - **`/Users/kotkot/Discovery/docalign/src/layers/L3-verifier/tier1-dependency-version.ts`** (MODIFIED)
+     - Added fuzzy package name suggestions when package not found
+     - Uses `getManifestMetadata` to collect all dep names, `findCloseMatch` for suggestion
+
+   - **`/Users/kotkot/Discovery/docalign/test/layers/L1-claim-extractor/extractors.test.ts`** (MODIFIED)
+     - Updated "rejects image extensions" → "extracts image paths with asset_type"
+     - Updated "rejects style extensions" → "extracts style paths with asset_type"
+
+   - **`/Users/kotkot/Discovery/docalign/test/layers/L3-verifier/verifier.test.ts`** (READ, needs modification)
+     - Contains `makeMockIndex()` function that needs `getManifestMetadata` and `getHeadings` added
+     - Current mock at lines 24-41:
+     ```typescript
+     function makeMockIndex(overrides: Partial<CodebaseIndexService> = {}): CodebaseIndexService {
+       return {
+         fileExists: async () => false,
+         getFileTree: async () => [],
+         findSymbol: async () => [],
+         getEntityByFile: async () => [],
+         getEntityById: async () => null,
+         findRoute: async () => null,
+         searchRoutes: async () => [],
+         getDependencyVersion: async () => null,
+         scriptExists: async () => false,
+         getAvailableScripts: async () => [],
+         searchSemantic: async () => [],
+         updateFromDiff: async () => ({ entities_added: 0, entities_updated: 0, entities_removed: 0, files_skipped: [] }),
+         readFileContent: async () => null,
+         ...overrides,
+       };
+     }
+     ```
+
+4. Errors and fixes:
+   - **Error 1**: `CONFIG_DEFAULTS` missing `url_check` and `coverage` properties after adding them to DocAlignConfig type.
+     - Fix: Added default values for both in `loader.ts`, added to `KNOWN_KEYS`, added Zod schemas in `schema.ts`
+   - **Error 2**: DB tests failing (16 tests) because `storeManifest` SQL referenced columns that didn't exist yet.
+     - Fix: Ran `DATABASE_URL='postgresql://docalign:docalign@localhost:5432/docalign_dev' npm run migrate:up` to apply migration 0018
+   - **Error 3**: Two tests "rejects image extensions" and "rejects style extensions" failing because the image/CSS filter was lifted.
+     - Fix: Updated tests to expect extraction with `asset_type` field instead of rejection
+   - **Error 4 (CURRENT)**: Two tests in `verifier.test.ts` failing: `index.getManifestMetadata is not a function`
+     - The mock `makeMockIndex` doesn't have `getManifestMetadata` or `getHeadings` methods
+     - Not yet fixed - this is where work was interrupted
+
+5. Problem Solving:
+   - **Design**: Only 1 new ClaimType (`url_reference`). All other gaps extend existing types via extracted_value sub-fields
+   - **Table extraction**: Tables produce claims of existing types, not a new table type
+   - **Config claims**: Defaults, ports, limits use existing `config` type with `config_kind` discriminator
+   - **Anchor validation**: Self-references use `path: '<self>'` sentinel value
+   - **DB schema evolution**: New metadata fields added via migration, store methods updated to persist them
+
+6. All user messages:
+   - The continuation message: "This session is being continued from a previous conversation that ran out of context. [summary of previous context]... Please continue the conversation from where we left off without asking the user any further questions. Continue with the last task that you were asked to work on."
+   - No other explicit user messages in this session.
+
+7. Pending Tasks (from task list):
+   - **#5 [in_progress]**: Tasks 10-17: L3 verifier extensions — partially done, needs mock fix
+   - **#6 [pending]**: Tasks 18-20: New Tier 2 strategies (deprecation awareness, changelog-to-version, license consistency)
+   - **#7 [pending]**: Tasks 21-27: Structural features, config, tests (missing doc detection, cross-doc consistency, PR-scoped impact, navigation config validation, frontmatter consistency, config schema updates, test updates)
+
+8. Current Work:
+   Implementing Task #5 (Tasks 10-17: L3 verifier extensions). Most sub-tasks are complete:
+   - Task 10 (anchor validation) ✓
+   - Task 11 (URL dead link verifier) ✓
+   - Task 12 (engine version from manifest) — deferred to Tier 2 patterns
+   - Task 13 (install package name validation) ✓
+   - Task 14 (code block language tag) ✓
+   - Task 15 (snippet staleness) — basic handling in place
+   - Task 16 (fuzzy suggestions) ✓
+   - Task 17 (prose signature verification) ✓
+   
+   **Currently blocked on**: 2 failing tests in `test/layers/L3-verifier/verifier.test.ts`:
+   ```
+   TypeError: index.getManifestMetadata is not a function
+   ```
+   The `makeMockIndex()` function (line 24-41) needs `getManifestMetadata: async () => null` and `getHeadings: async () => []` added to it.
+
+9. Optional Next Step:
+   Fix the failing tests by adding `getManifestMetadata` and `getHeadings` to the mock index in `test/layers/L3-verifier/verifier.test.ts`. The mock at line 24 needs:
+   ```typescript
+   getManifestMetadata: async () => null,
+   getHeadings: async () => [],
+   ```
+   Then run `npm run typecheck && npm run test` to verify all 1411+ tests pass, mark Task #5 complete, and proceed to Task #6 (Tasks 18-20: New Tier 2 strategies). Also need to check if other test files have similar mock index objects that need updating.
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/kotkot/.REDACTED.jsonl
+Please continue the conversation from where we left off without asking the user any further questions. Continue with the last task that you were asked to work on.

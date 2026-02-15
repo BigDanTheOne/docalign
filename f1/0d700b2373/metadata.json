@@ -1,0 +1,58 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "f10d700b2373",
+  "strategy": "auto-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "migrations/0018_add-manifest-metadata.ts",
+    "src/cli/local-index.ts",
+    "src/config/loader.ts",
+    "src/config/schema.ts",
+    "src/layers/L0-codebase-index/index-store.ts",
+    "src/layers/L0-codebase-index/index.ts",
+    "src/layers/L0-codebase-index/manifest-parser.ts",
+    "src/layers/L1-claim-extractor/extractors.ts",
+    "src/layers/L1-claim-extractor/syntactic.ts",
+    "src/layers/L3-verifier/index.ts",
+    "src/layers/L3-verifier/tier1-code-example.ts",
+    "src/layers/L3-verifier/tier1-command.ts",
+    "src/layers/L3-verifier/tier1-dependency-version.ts",
+    "src/layers/L3-verifier/tier1-path-reference.ts",
+    "src/layers/L3-verifier/tier1-url-reference.ts",
+    "src/layers/L3-verifier/tier2-navigation.ts",
+    "src/layers/L3-verifier/tier2-patterns.ts",
+    "src/layers/L5-reporter/coverage.ts",
+    "src/layers/L5-reporter/cross-doc-consistency.ts",
+    "src/layers/L5-reporter/frontmatter-consistency.ts",
+    "src/shared/types.ts",
+    "test/cli/evidence-builder.test.ts",
+    "test/cli/staleness-checker.test.ts",
+    "test/layers/L1-claim-extractor/extractors.test.ts",
+    "test/layers/L1-claim-extractor/table-extraction.test.ts",
+    "test/layers/L2-mapper/mapper.test.ts",
+    "test/layers/L3-verifier/tier1-url-reference.test.ts",
+    "test/layers/L3-verifier/tier2-navigation.test.ts",
+    "test/layers/L3-verifier/tier2-patterns.test.ts",
+    "test/layers/L3-verifier/verifier.test.ts",
+    "test/layers/L5-reporter/coverage.test.ts",
+    "test/layers/L5-reporter/cross-doc-consistency.test.ts",
+    "test/layers/L5-reporter/frontmatter-consistency.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/f1/0d700b2373/0/metadata.json",
+      "transcript": "/f1/0d700b2373/0/full.jsonl",
+      "context": "",
+      "content_hash": "/f1/0d700b2373/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 204,
+    "cache_creation_tokens": 483607,
+    "cache_read_tokens": 23371317,
+    "output_tokens": 22589,
+    "api_call_count": 196
+  }
+}
