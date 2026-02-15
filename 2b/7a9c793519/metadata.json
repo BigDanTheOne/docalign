@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "2b7a9c793519",
+  "strategy": "auto-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "README.md",
+    "docs/checks.md",
+    "docs/cli.md",
+    "docs/configuration.md",
+    "docs/how-it-works.md",
+    "docs/mcp.md",
+    "docs/semantic-extraction.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/2b/7a9c793519/0/metadata.json",
+      "transcript": "/2b/7a9c793519/0/full.jsonl",
+      "context": "",
+      "content_hash": "/2b/7a9c793519/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 28,
+    "cache_creation_tokens": 105693,
+    "cache_read_tokens": 2708828,
+    "output_tokens": 1343,
+    "api_call_count": 22
+  }
+}

@@ -1,0 +1,11 @@
+All 6 links in README match existing docs/ files. Here's a summary of what was created:
+
+**README.md** (rewritten, ~154 lines): Hero, Quick Start, What It Finds (11 categories + 8 cross-cutting checks + semantic), Commands table, MCP Integration, Semantic Extraction, Configuration example, How It Works summary, LLM section.
+
+**docs/** (6 new files):
+- **checks.md** -- Complete reference for all 11 claim types + 8 cross-cutting checks, with extraction and verification details
+- **cli.md** -- All 10 commands with flags, env vars, and exit codes
+- **configuration.md** -- All 14 config sections with field types, defaults, and examples (verified against `src/config/loader.ts` defaults)
+- **mcp.md** -- All 10 MCP tools with parameters, return values, and usage patterns
+- **semantic-extraction.md** -- How LLM extraction works, storage, commands, requirements
+- **how-it-works.md** -- Pipeline overview with ASCII diagram, verification tiers, verdicts, cross-cutting analysis
