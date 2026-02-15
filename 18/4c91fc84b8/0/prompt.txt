@@ -1,0 +1,120 @@
+Implement the following plan:
+
+# Plan: `docalign viz` — Interactive Knowledge Graph
+
+## Context
+
+DocAlign scans repos and extracts claims from docs, verifying them against code. The data already exists (doc files → claims → code files, with verdicts). This plan adds a `docalign viz` command that generates a self-contained HTML file with an interactive Cytoscape.js force-directed graph and opens it in the browser.
+
+## New File
+
+`src/cli/commands/viz.ts` — All viz logic (graph transform, HTML template, CLI command)
+`test/cli/commands/viz.test.ts` — Tests
+
+## Modified File
+
+`src/cli/index.ts` — Register `viz` command in router + help text
+
+## Graph Design
+
+**Nodes:**
+- **Doc files** — blue rounded rectangles, sized by claim count
+- **Code files** — gray ellipses, sized by claim count
+
+**Edges** (doc → code, one per unique pair):
+- **Green** = all claims verified
+- **Red** = any claim drifted
+- **Yellow** = any uncertain (no drift)
+- Width scales with claim count
+
+**Interactivity:**
+- Click node → sidebar shows all claims for that file with verdicts
+- Click edge → sidebar shows claims on that connection
+- Checkbox filters: show/hide verified/drifted/uncertain edges
+- Search box filters nodes by name
+- Zoom, pan, drag nodes
+
+**Layout:** Cytoscape.js with fcose (force-directed) from CDN. Two `<script>` tags, no build step.
+
+## Implementation
+
+### Step 1: `src/cli/commands/viz.ts`
+
+**Types:**
+```typescript
+interface GraphNode { data: { id, label, type: 'doc'|'code', claimCount, driftedCount, verifiedCount } }
+interface GraphEdge { data: { id, source, target, claimCount, worstVerdict, claims: ClaimSummary[] } }
+interface ClaimSummary { text, verdict, type, line }
+```
+
+**`buildGraphData(result: ScanResult): CytoscapeGraphData`**
+- For each `ScanFileResult`: create doc node, find code files from `evidence_files` + `extracted_value.path`
+- Deduplicate code nodes, aggregate edges by (doc, code) pair
+- Edge `worstVerdict` = drifted > uncertain > verified
+- Compute summary stats (health %, totals)
+
+**`buildHtml(data: CytoscapeGraphData): string`**
+- Template literal HTML (~250 lines) with:
+  - Header bar: health %, doc count, code file count, claim count
+  - Sidebar (280px): legend, filters (checkboxes), search box, detail panel
+  - Cytoscape canvas (fills rest)
+- CDN: `cytoscape@3` + `cytoscape-fcose`
+- Data injected via `window.__GRAPH_DATA__ = ${JSON.stringify(data)}`
+- Cytoscape stylesheet: doc nodes blue/round-rect, code nodes gray/ellipse, edges colored by verdict
+- fcose layout: `nodeSeparation: 100, idealEdgeLength: 150, animate: true`
+- Event handlers: tap node/edge → populate sidebar detail panel
+- Filter checkboxes toggle edge visibility
+- Search input dims non-matching nodes
+
+**`openInBrowser(filePath: string): void`**
+- `open` (macOS) / `xdg-open` (Linux) / `start` (Windows)
+- Errors silently ignored
+
+**`runViz(pipeline, options, write): Promise<number>`**
+- Run `pipeline.scanRepo()` with progress callback
+- Handle empty case (no doc files)
+- `buildGraphData()` → `buildHtml()` → write to `.docalign/viz.html`
+- Auto-open unless `--no-open`
+- Options: `{ output?: string, noOpen?: boolean, exclude?: string[] }`
+
+### Step 2: Register in `src/cli/index.ts`
+
+- Import `runViz`
+- Add `case 'viz':` in switch block
+- Add help text: `viz               Generate interactive knowledge graph`
+
+### Step 3: Tests (`test/cli/commands/viz.test.ts`)
+
+`buildGraphData` unit tests:
+- Empty scan → empty graph, 100% health
+- Single doc + path_reference (verified) → 1 doc node, 1 code node, 1 green edge
+- Drifted claim → red edge, doc node driftedCount > 0
+- Multiple docs → same code file → code node appears once
+- Claim with no evidence_files → doc node exists, no edge
+- Mixed verdicts on same edge → worst wins
+- Semantic claims → code nodes from evidence_entities files
+
+`runViz` tests (mock pipeline):
+- Writes HTML to `.docalign/viz.html`
+- HTML contains `window.__GRAPH_DATA__`
+- Respects `--no-open`
+- Creates output dir if needed
+
+### Step 4: Verify
+
+```bash
+npm run typecheck && npm run test && npm run lint:fix && npm run build
+npx docalign viz   # E2E: opens graph in browser
+```
+
+## Key Reuse
+
+- `pipeline.scanRepo()` — existing scan logic, no new data fetching
+- `filterUncertain()`, `countVerdicts()` from `src/cli/local-pipeline.ts`
+- CLI command pattern from `src/cli/commands/extract.ts`
+- Types from `src/shared/types.ts` (Claim, VerificationResult)
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/kotkot/.REDACTED.jsonl
+
+If this plan can be broken down into multiple independent tasks, consider using the TeamCreate tool to create a team and parallelize the work.

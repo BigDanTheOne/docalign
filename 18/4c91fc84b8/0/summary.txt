@@ -1,0 +1,18 @@
+Everything passes. Here's a summary of what was implemented:
+
+## Files Created
+
+- **`src/cli/commands/viz.ts`** — The viz command with:
+  - `buildGraphData(result)` — Transforms `ScanResult` into Cytoscape graph nodes/edges. Doc files become blue rounded-rectangle nodes, code files become gray ellipse nodes. Edges are colored by worst verdict (green=verified, red=drifted, yellow=uncertain). Deduplicates code nodes, aggregates edges by (doc, code) pair.
+  - `buildHtml(data)` — Generates a self-contained HTML file with Cytoscape.js + fcose layout from CDN. Includes header stats bar, sidebar with legend/filters/search/detail panel, and interactive graph canvas. Click node/edge to see claims, checkboxes filter by verdict, search dims non-matching nodes.
+  - `openInBrowser(filePath)` — Cross-platform browser open (macOS/Linux/Windows).
+  - `runViz(pipeline, options, write)` — CLI command that scans, builds graph, writes HTML to `.docalign/viz.html`, and auto-opens in browser.
+
+- **`test/cli/commands/viz.test.ts`** — 15 tests covering:
+  - `buildGraphData`: empty scan, single verified claim, drifted claims, multi-doc dedup, no evidence files, mixed verdicts worst-wins, semantic claims with extracted_value.path
+  - `buildHtml`: valid HTML structure, JSON data injection
+  - `runViz`: file output, stats reporting, empty scan handling, `--no-open` flag, custom output dir creation, error handling
+
+## Files Modified
+
+- **`src/cli/index.ts`** — Added `viz` to imports, switch case, help text, and `no-open` to the boolean flags list

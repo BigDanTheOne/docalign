@@ -1,0 +1,22 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "184c91fc84b8",
+  "session_id": "d2de4a88-18d8-492b-8b36-35ec06fc0fe7",
+  "strategy": "auto-commit",
+  "created_at": "2026-02-15T02:10:06.861228Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/cli/commands/viz.ts",
+    "src/cli/index.ts",
+    "test/cli/commands/viz.test.ts"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 24,
+    "cache_creation_tokens": 45508,
+    "cache_read_tokens": 1596334,
+    "output_tokens": 7325,
+    "api_call_count": 22
+  }
+}
