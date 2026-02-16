@@ -1,0 +1,9 @@
+Done. Here's everything fixed this round:
+
+1. **pipeline.js prefix matching** — `resolveRunId()` added to all 8 subcommands. Short IDs like `24919391` now resolve to the full UUID.
+2. **openclaw.json unrecognized keys** — Removed `maxSpawnDepth` and `maxChildrenPerAgent` (caused hot-reload failures).
+3. **Broken Anthropic auth** — Removed from all 7 agents + main config (fixed earlier).
+4. **Telegram notification list** — Added "artifact revised after CEO feedback" (fixed earlier).
+5. **Mem0 memory recall** — Chief was using the broken built-in `memory_search` tool instead of the working Mem0 shell scripts. Added CRITICAL instruction to always use the skill scripts.
+
+The bot should handle your latest feedback (D9 not deferred + AI-agent review process from blog) correctly now. Did it proceed to make the revision, or is it waiting for your confirmation?

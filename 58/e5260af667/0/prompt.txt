@@ -1,0 +1,16 @@
+ok, now I hed this msgs:
+me: "
+
+
+I don't think that we should defer aggressive correction first merge policy. Plus I think that the blog post also described how they do reviews by ai agents and so on, which I don't see in the decision doc or maybe I just missed it"
+bot: "You’re right — we should not defer the aggressive-correction-first merge policy if that’s core to the strategy.
+
+And good catch on the second point: if the blog post includes an AI-agent review flow, that absolutely should be explicit in the decision doc (not implied).
+
+I checked memory, but recall is currently unavailable in this session, so I can’t verify prior notes with confidence right now.
+
+If you want, I’ll treat this as formal feedback and request a revision with these exact changes:
+
+1. Make Aggressive Correction First the default merge policy (not deferred).
+2. Add a clear section on AI-agent review process (roles, gates, and where human approval is required).
+3. Add a short “alignment with blog post” mapping table so nothing is missed again."
