@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "63c5fd310018",
+  "strategy": "auto-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".gitignore",
+    "CONVENTIONS.md",
+    "_team/outputs/7741ba09-ce0e-4e24-ba8f-15305a8f5c9c/decision.md",
+    "_team/outputs/7741ba09-ce0e-4e24-ba8f-15305a8f5c9c/spec/tech-lead.md",
+    "_team/outputs/7741ba09-ce0e-4e24-ba8f-15305a8f5c9c/spec_review/critic.md",
+    "_team/outputs/7741ba09-ce0e-4e24-ba8f-15305a8f5c9c/spec_review/pm.md",
+    "package.json",
+    "scripts/agent-lint.js",
+    "scripts/lint-remediation.json"
+  ],
+  "sessions": [
+    {
+      "metadata": "/63/c5fd310018/0/metadata.json",
+      "transcript": "/63/c5fd310018/0/full.jsonl",
+      "context": "",
+      "content_hash": "/63/c5fd310018/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 216,
+    "cache_creation_tokens": 60768,
+    "cache_read_tokens": 5449377,
+    "output_tokens": 7235,
+    "api_call_count": 49
+  }
+}

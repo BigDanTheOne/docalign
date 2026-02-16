@@ -1,0 +1,4 @@
+I agree with everything except the garbage collection cron. Our docker line main product purpose is to be proactive in terms of state documentation rather than reactive so I hope this is simply not necessary to do this. 
+Regarding the remaining three ideas, yes please create a plan of what to do with them. 
+---
+And the article had also a link attached. It wasn't copy-pasted yet. I think it is important to share it with you - https://github.com/openai/openai-cookbook/blob/main/articles/codex_exec_plans.md

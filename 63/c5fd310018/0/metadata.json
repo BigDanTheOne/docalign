@@ -1,0 +1,38 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "63c5fd310018",
+  "session_id": "8698195b-1f0f-4bac-9329-b78bf5c7749c",
+  "strategy": "auto-commit",
+  "created_at": "2026-02-16T21:22:08.642912Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".gitignore",
+    "CONVENTIONS.md",
+    "_team/outputs/7741ba09-ce0e-4e24-ba8f-15305a8f5c9c/decision.md",
+    "_team/outputs/7741ba09-ce0e-4e24-ba8f-15305a8f5c9c/spec/tech-lead.md",
+    "_team/outputs/7741ba09-ce0e-4e24-ba8f-15305a8f5c9c/spec_review/critic.md",
+    "_team/outputs/7741ba09-ce0e-4e24-ba8f-15305a8f5c9c/spec_review/pm.md",
+    "package.json",
+    "scripts/agent-lint.js",
+    "scripts/lint-remediation.json"
+  ],
+  "agent": "Claude Code",
+  "transcript_identifier_at_start": "15122727-42ba-41e1-9a9e-988f8cc5ef9f",
+  "checkpoint_transcript_start": 6142,
+  "transcript_lines_at_start": 6142,
+  "token_usage": {
+    "input_tokens": 216,
+    "cache_creation_tokens": 60768,
+    "cache_read_tokens": 5449377,
+    "output_tokens": 7235,
+    "api_call_count": 49,
+    "subagent_tokens": {
+      "input_tokens": 508,
+      "cache_creation_tokens": 110809,
+      "cache_read_tokens": 1120934,
+      "output_tokens": 78,
+      "api_call_count": 20
+    }
+  }
+}
