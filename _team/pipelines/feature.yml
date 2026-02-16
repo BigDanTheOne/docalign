@@ -1,17 +1,23 @@
-# Feature Pipeline — Full team process
-# Signal → Debate → Define → Spec → Spec Review → Build → Build Review → GTM Content → Content Review → Ship
+# Feature Pipeline — Autonomous OS
 #
-# Full team process with parallel reviews.
-# Who creates: CEO (direct), competitive scan (auto), Epic decomposition.
-# Debate: PM + Tech Lead + GTM + Critic argue in parallel.
-# Define: Acceptance criteria, files affected, definition of done.
-# Spec Review: PM + Critic in parallel (rejection takes precedence).
-# Build Review: PM + Tech Lead + Critic in parallel.
-# Content Review: CEO approves GTM content.
-# Examples: new CLI command, new check type, new MCP tool.
+# CEO involvement: decision doc approval, spec approval, ship notification ONLY.
+# Everything between spec approval and ship is FULLY AUTONOMOUS.
+#
+# Flow:
+#   Signal → Debate → Define → Spec → Spec Review → CEO Approves Spec
+#   → Plan → Build (via Claude Code / Codex CLI) → CI/CD → Code Review (automated)
+#   → Verification → GTM Content → Ship → CEO Notified
+#
+# Key design principles:
+# - CEO is NOT asked to approve build, build_review, gtm, or content.
+# - Build uses external coding tools (claude CLI or codex CLI), NOT agent self-coding.
+# - Build pushes to git, runs CI, iterates on failures autonomously.
+# - Code review is automated by agent personas, not CEO.
+# - Plan stage produces task breakdown referencing spec — build follows it.
+# - Ship only happens after all checks pass and verification against spec.
 
 name: feature
-description: Full feature pipeline with debate, spec, build, and GTM
+description: Full feature pipeline — autonomous after spec approval
 
 stages:
   - id: signal
@@ -31,15 +37,13 @@ stages:
       - agent: gtm
     parallel: true
     parallel_group: debate_r1
-    # Each produces: VERDICT, KEY_CLAIMS, CONDITIONS, RISKS, CONFIDENCE
-    # Orchestrator checks convergence after fan-in
     on_converge: define
     on_diverge: debate_round2
 
   - id: debate_round2
     description: "Targeted resolution: only disagreeing agents re-assess with full context"
     type: review
-    reviewers: dynamic  # Only agents who disagreed in round 1
+    reviewers: dynamic
     parallel: true
     parallel_group: debate_r2
     on_converge: define
@@ -49,8 +53,6 @@ stages:
     description: Debate unresolved after 2 rounds — escalate to CEO
     type: escalation
     notify: ceo
-    # CEO decides. Decision stored in Mem0 as global precedent.
-    # After CEO decision, advance to 'define' or 'done' (if killed)
     next_on_build: define
     next_on_kill: done
 
@@ -60,7 +62,6 @@ stages:
     description: PM defines acceptance criteria, scope boundaries, definition of done
     type: work
     agent: pm
-    # PM produces: acceptance criteria, files affected, scope boundaries, dependencies
     next: spec
 
   # --- SPEC PHASE ---
@@ -69,8 +70,6 @@ stages:
     description: Tech Lead writes technical specification
     type: work
     agent: tech-lead
-    # Tech Lead produces: technical spec, interfaces, data flows, test strategy,
-    # files to create/modify, migration notes
     next: spec_review
 
   - id: spec_review
@@ -82,76 +81,126 @@ stages:
     parallel: true
     parallel_group: spec_review
     max_loops: 3
-    on_approve: build
-    on_reject: spec  # Author (Tech Lead) addresses feedback, resubmits
+    on_approve: ceo_spec_approval
+    on_reject: spec
     on_max_loops: escalate_spec
 
   - id: escalate_spec
     description: Spec review failed after 3 loops — escalate to CEO
     type: escalation
     notify: ceo
-    next: build  # CEO can force-approve
+    next: ceo_spec_approval
 
-  # --- BUILD PHASE ---
+  # --- CEO SPEC APPROVAL (last CEO gate before autonomous execution) ---
 
-  - id: build
-    description: "Implementation phase — generates handoff.md for Claude Code"
+  - id: ceo_spec_approval
+    description: "CEO reviews and approves spec. LAST human gate before autonomous build."
+    type: approval
+    approver: ceo
+    notify: ceo
+    # Send CEO: decision doc + spec + define artifacts + review feedback
+    # CEO can approve, request changes, or kill
+    on_approve: plan
+    on_reject: spec
+    on_kill: done
+
+  # --- PLAN PHASE (task breakdown) ---
+
+  - id: plan
+    description: "Tech Lead breaks spec into execution plan with ordered tasks, dependencies, and session estimates"
     type: work
     agent: tech-lead
-    # Orchestrator generates handoff.md before this stage
-    # CEO gets Telegram notification with handoff path
-    # After build complete, CEO tells Chief → pipeline advances
-    generate_handoff: true
-    next: build_review
+    # Produces: tasks/feature-<id>.md with numbered tasks, dependencies, files affected,
+    # test criteria per task, and session groupings (like tasks/EXECUTION-PLAN.md pattern).
+    # Build stage follows this plan task-by-task.
+    next: build
 
-  - id: build_review
-    description: "PM + Tech Lead + Critic review the build in parallel"
+  # --- BUILD PHASE (fully autonomous from here) ---
+  # Uses external coding tools (claude CLI or codex CLI), NOT agent self-coding.
+  # Creates feature branch, pushes code, runs CI, iterates on failures.
+
+  - id: build
+    description: "Autonomous build: execute plan tasks via Claude Code / Codex CLI"
+    type: work
+    agent: tech-lead
+    autonomous: true  # No CEO involvement
+    generate_handoff: true
+    # For each task in the plan:
+    #   1. Call claude/codex CLI with task context + handoff
+    #   2. Run typecheck + lint + tests after each task
+    #   3. Commit after each passing task
+    #   4. If CI fails, iterate (call coding tool again to fix)
+    # After all tasks complete:
+    #   5. Push feature branch
+    #   6. Open PR
+    next: code_review
+
+  # --- CODE REVIEW (automated by agents, NOT CEO) ---
+
+  - id: code_review
+    description: "Automated code review: PM + Tech Lead + Critic review the PR"
     type: review
     reviewers:
       - agent: pm
       - agent: tech-lead
       - agent: critic
     parallel: true
-    parallel_group: build_review
+    parallel_group: code_review
     max_loops: 3
-    on_approve: gtm_content
-    on_reject: build
+    autonomous: true  # No CEO involvement
+    on_approve: verify
+    on_reject: build  # Iterate: fix issues, re-push, re-review
     on_max_loops: escalate_build
 
   - id: escalate_build
-    description: Build review failed after 3 loops — escalate to CEO
+    description: "Build/review failed after 3 loops — escalate to CEO (exceptional)"
     type: escalation
     notify: ceo
-    next: gtm_content
+    next: verify
 
-  # --- GTM PHASE ---
+  # --- VERIFICATION (automated) ---
+
+  - id: verify
+    description: "Verify implementation against spec: all acceptance criteria, CI green, tests pass"
+    type: work
+    agent: tech-lead
+    autonomous: true
+    # Checklist:
+    #   1. All acceptance criteria from define stage are met
+    #   2. All tasks from plan stage are completed
+    #   3. CI pipeline passes (typecheck, lint, test)
+    #   4. PR merged to main
+    #   5. No regressions in existing tests
+    #   6. Evidence artifacts collected
+    # If verification fails: loop back to build with specific failures
+    on_pass: gtm_content
+    on_fail: build
+
+  # --- GTM PHASE (autonomous) ---
 
   - id: gtm_content
-    description: GTM creates content (blog, tweets, demo plan)
+    description: "GTM creates content (blog, tweets, demo plan) — autonomous, no CEO review"
     type: work
     agent: gtm
-    next: content_review
-
-  - id: content_review
-    description: CEO reviews and approves GTM content
-    type: review
-    reviewers:
-      - agent: ceo  # Human review via Telegram
-    parallel: false
-    max_loops: 3
-    on_approve: ship
-    on_reject: gtm_content
-    on_max_loops: ship  # Ship anyway after 3 content loops
+    autonomous: true
+    next: ship
 
   # --- SHIP ---
 
   - id: ship
-    description: Feature shipped — publish content, update changelog
+    description: "Feature shipped — notify CEO with summary of what was built, tested, and deployed"
     type: terminal
     status: completed
     actions:
       - store_memories
       - notify_ceo
+    # CEO notification includes:
+    #   - What was built (summary)
+    #   - PR link
+    #   - CI/test results
+    #   - Verification evidence
+    #   - GTM content links (if applicable)
+    #   - Any open items or follow-ups
 
   - id: done
     description: Feature killed or completed without shipping

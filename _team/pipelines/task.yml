@@ -1,14 +1,20 @@
-# Task Pipeline — Simple execution path
-# Request → [Research?] → Build → Review → Done
+# Task Pipeline — Autonomous OS
 #
-# No debate, no spec, no GTM content.
-# Who creates: PM, Tech Lead, CEO, or auto-spawned from an Epic.
-# Research is optional (only if task needs investigation).
-# Review: Critic only, 1 round, 1 retry max.
-# Examples: bug fix, doc update, dependency upgrade, config change.
+# CEO involvement: NONE (unless escalated).
+# Tasks are fully autonomous from start to finish.
+#
+# Flow:
+#   Request → [Research?] → Build (via Claude Code / Codex CLI)
+#   → CI/CD → Code Review (automated) → Verify → Done → CEO Notified
+#
+# Key design principles:
+# - Build uses external coding tools (claude CLI or codex CLI), NOT agent self-coding.
+# - Build pushes to git, runs CI, iterates on failures autonomously.
+# - Code review is automated by Critic, not CEO.
+# - CEO is only notified when task is done or escalated.
 
 name: task
-description: Simple task pipeline for small, well-defined work items
+description: Simple task pipeline — fully autonomous
 
 stages:
   - id: request
@@ -20,9 +26,6 @@ stages:
     description: Determine if research is needed before building
     type: decision
     agent: orchestrator
-    # Orchestrator reads the task description and decides:
-    # - If task requires investigation → advance to 'research'
-    # - If task is clear enough → skip to 'build'
     next_if_yes: research
     next_if_no: build
 
@@ -32,32 +35,60 @@ stages:
     agent: researcher
     next: build
 
+  # --- BUILD PHASE ---
+  # Uses external coding tools (claude CLI or codex CLI), NOT agent self-coding.
+  # Creates branch, pushes code, runs CI, iterates on failures.
+
   - id: build
-    description: Implementation phase
+    description: "Autonomous build: execute task via Claude Code / Codex CLI"
     type: work
     agent: tech-lead
-    # Tech Lead receives: task description, research findings (if any),
-    # recalled Mem0 context. Produces: implementation or code changes.
-    next: review
+    autonomous: true
+    # 1. Call claude/codex CLI with task context
+    # 2. Run typecheck + lint + tests
+    # 3. Commit on success
+    # 4. If CI fails, iterate (call coding tool again to fix)
+    # 5. Push branch, open PR
+    next: code_review
 
-  - id: review
-    description: Critic reviews the build output
+  # --- CODE REVIEW (automated, NOT CEO) ---
+
+  - id: code_review
+    description: "Automated code review: Critic reviews the PR"
     type: review
     reviewers:
       - agent: critic
     parallel: false
-    max_loops: 1
-    # 1 round, 1 retry max. If rejected after retry → escalate.
-    on_approve: done
+    max_loops: 2
+    autonomous: true
+    on_approve: verify
     on_reject: build
     on_max_loops: escalate
 
+  # --- VERIFICATION ---
+
+  - id: verify
+    description: "Verify: CI green, tests pass, PR merged"
+    type: work
+    agent: tech-lead
+    autonomous: true
+    # 1. Confirm CI passes
+    # 2. Merge PR
+    # 3. Collect evidence
+    on_pass: done
+    on_fail: build
+
   - id: done
-    description: Task completed successfully
+    description: Task completed — notify CEO
     type: terminal
     status: completed
+    actions:
+      - store_memories
+      - notify_ceo
+    # CEO notification: what was done, PR link, test results
 
   - id: escalate
     description: Escalated to CEO after max review loops
-    type: terminal
-    status: escalated
+    type: escalation
+    notify: ceo
+    next: verify  # CEO can force-approve

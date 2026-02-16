@@ -1,14 +1,23 @@
-# Epic Pipeline — Multi-feature strategic initiative
-# Signal → Strategic Debate → Decompose → [Feature Pipelines...] → Integration Review → Launch Content → Ship
+# Epic Pipeline — Autonomous OS
 #
-# Spans multiple features running concurrently.
-# Who creates: CEO only (epics are strategic bets).
-# Decompose: PM + Tech Lead break into features and tasks, each spawns its own pipeline.
-# Integration Review: After all child features complete, Tech Lead + Critic review the whole.
-# Examples: "Add semantic extraction," "Redesign PR output," "Build CLI mode"
+# CEO involvement: decision doc approval, decomposition approval, ship notification ONLY.
+# Everything between decomposition approval and ship is FULLY AUTONOMOUS.
+# Child feature/task pipelines follow their own autonomy rules.
+#
+# Flow:
+#   Signal → Strategic Debate → CEO Approves Decision
+#   → Decompose → CEO Approves Decomposition
+#   → Execute Children (autonomous) → Integration Review (automated)
+#   → Verification → GTM Content → Ship → CEO Notified
+#
+# Key design principles:
+# - CEO approves strategic direction (debate decision doc) and decomposition plan.
+# - All child pipelines (features/tasks) run with their own autonomy rules.
+# - Integration review, GTM, and ship are fully autonomous.
+# - CEO is notified at ship with comprehensive summary.
 
 name: epic
-description: Multi-feature epic pipeline for strategic initiatives
+description: Multi-feature epic pipeline — autonomous after decomposition approval
 
 stages:
   - id: signal
@@ -28,7 +37,7 @@ stages:
       - agent: gtm
     parallel: true
     parallel_group: strategic_debate_r1
-    on_converge: decompose
+    on_converge: ceo_decision_approval
     on_diverge: strategic_debate_round2
 
   - id: strategic_debate_round2
@@ -37,52 +46,75 @@ stages:
     reviewers: dynamic
     parallel: true
     parallel_group: strategic_debate_r2
-    on_converge: decompose
+    on_converge: ceo_decision_approval
     on_diverge: escalate_debate
 
   - id: escalate_debate
     description: Strategic debate unresolved — CEO decides
     type: escalation
     notify: ceo
-    next_on_build: decompose
+    next_on_build: ceo_decision_approval
     next_on_kill: done
+
+  # --- CEO DECISION APPROVAL ---
+
+  - id: ceo_decision_approval
+    description: "CEO approves strategic direction and decision doc"
+    type: approval
+    approver: ceo
+    notify: ceo
+    on_approve: decompose
+    on_reject: strategic_debate_round1
+    on_kill: done
 
   # --- DECOMPOSE ---
 
   - id: decompose
-    description: PM + Tech Lead break epic into features and tasks
+    description: PM + Tech Lead break epic into features and tasks with execution plan
     type: work
     agents:
       - pm
       - tech-lead
     parallel: true
     parallel_group: decompose
-    # Output: list of features and tasks with dependencies
-    # Each feature spawns its own Feature pipeline
-    # Each task spawns its own Task pipeline
-    # All child pipelines reference parent_epic_id
-    next: execute_children
+    # Output: ordered list of features and tasks with dependencies,
+    # session estimates, and priority order.
+    next: ceo_decompose_approval
+
+  # --- CEO DECOMPOSITION APPROVAL (last human gate) ---
+
+  - id: ceo_decompose_approval
+    description: "CEO approves decomposition plan. LAST human gate before autonomous execution."
+    type: approval
+    approver: ceo
+    notify: ceo
+    on_approve: execute_children
+    on_reject: decompose
+    on_kill: done
+
+  # --- EXECUTE CHILDREN (fully autonomous from here) ---
 
   - id: execute_children
-    description: "Child feature/task pipelines run concurrently"
+    description: "Child feature/task pipelines run concurrently — fully autonomous"
     type: fan_out
+    autonomous: true
     # Orchestrator creates child pipeline runs via pipeline skill
+    # Each child follows its own pipeline autonomy rules
     # Tracks all children via parent_epic_id
     # Waits for all children to complete
-    # Periodically checks child status
     on_all_complete: integration_review
     on_any_failed: escalate_children
 
   - id: escalate_children
-    description: One or more child pipelines failed — escalate
+    description: One or more child pipelines failed — escalate (exceptional)
     type: escalation
     notify: ceo
     next: integration_review
 
-  # --- INTEGRATION REVIEW ---
+  # --- INTEGRATION REVIEW (automated, NOT CEO) ---
 
   - id: integration_review
-    description: "Tech Lead + Critic review the integrated whole"
+    description: "Automated: Tech Lead + Critic review the integrated whole"
     type: review
     reviewers:
       - agent: tech-lead
@@ -90,42 +122,50 @@ stages:
     parallel: true
     parallel_group: integration_review
     max_loops: 3
-    on_approve: launch_content
+    autonomous: true
+    on_approve: verify
     on_reject: escalate_integration
     on_max_loops: escalate_integration
 
   - id: escalate_integration
-    description: Integration issues found — CEO decides
+    description: Integration issues found — escalate to CEO (exceptional)
     type: escalation
     notify: ceo
-    next: launch_content
+    next: verify
 
-  # --- LAUNCH ---
+  # --- VERIFICATION (automated) ---
 
-  - id: launch_content
-    description: GTM creates launch content for the epic
+  - id: verify
+    description: "Verify all child features integrated, CI green, acceptance criteria met"
+    type: work
+    agent: tech-lead
+    autonomous: true
+    on_pass: gtm_content
+    on_fail: escalate_integration
+
+  # --- GTM + SHIP (autonomous) ---
+
+  - id: gtm_content
+    description: "GTM creates launch content — autonomous, no CEO review"
     type: work
     agent: gtm
-    next: launch_review
-
-  - id: launch_review
-    description: CEO reviews launch content
-    type: review
-    reviewers:
-      - agent: ceo
-    parallel: false
-    max_loops: 2
-    on_approve: ship
-    on_reject: launch_content
-    on_max_loops: ship
+    autonomous: true
+    next: ship
 
   - id: ship
-    description: Epic shipped — publish launch content, update roadmap
+    description: "Epic shipped — notify CEO with comprehensive summary"
     type: terminal
     status: completed
     actions:
       - store_memories
       - notify_ceo
+    # CEO notification includes:
+    #   - Strategic summary
+    #   - All child features completed
+    #   - PR links and CI results
+    #   - Integration review outcome
+    #   - GTM content links
+    #   - Follow-up items
 
   - id: done
     description: Epic killed or completed
