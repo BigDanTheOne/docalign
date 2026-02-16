@@ -10,3 +10,5 @@ coverage/
 *.tgz
 .claude/settings.local.json
 .docalign/
+.agent-dev.json
+.env.agent
