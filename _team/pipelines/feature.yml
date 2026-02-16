@@ -11,10 +11,13 @@
 # Key design principles:
 # - CEO is NOT asked to approve build, build_review, gtm, or content.
 # - Build uses external coding tools (claude CLI or codex CLI), NOT agent self-coding.
+# - Git worktree created automatically by pipeline.js for build isolation.
 # - Build pushes to git, runs CI, iterates on failures autonomously.
 # - Code review is automated by agent personas, not CEO.
+# - Verify stage rebases onto main, resolves conflicts, and merges PR.
 # - Plan stage produces task breakdown referencing spec — build follows it.
 # - Ship only happens after all checks pass and verification against spec.
+# - Worktree is cleaned up automatically on pipeline completion.
 
 name: feature
 description: Full feature pipeline — autonomous after spec approval
@@ -120,19 +123,15 @@ stages:
   # Creates feature branch, pushes code, runs CI, iterates on failures.
 
   - id: build
-    description: "Autonomous build: execute plan tasks via Claude Code / Codex CLI"
+    description: "Autonomous build in git worktree via Claude Code / Codex CLI"
     type: work
     agent: tech-lead
     autonomous: true  # No CEO involvement
     generate_handoff: true
-    # For each task in the plan:
-    #   1. Call claude/codex CLI with task context + handoff
-    #   2. Run typecheck + lint + tests after each task
-    #   3. Commit after each passing task
-    #   4. If CI fails, iterate (call coding tool again to fix)
-    # After all tasks complete:
-    #   5. Push feature branch
-    #   6. Open PR
+    # Worktree created automatically by pipeline.js advance --stage build
+    # All work happens in the worktree (NEVER in main repo)
+    # Build agent uses worktree path from advance response
+    # After all tasks: push branch, open PR
     next: code_review
 
   # --- CODE REVIEW (automated by agents, NOT CEO) ---
@@ -169,9 +168,10 @@ stages:
     #   1. All acceptance criteria from define stage are met
     #   2. All tasks from plan stage are completed
     #   3. CI pipeline passes (typecheck, lint, test)
-    #   4. PR merged to main
-    #   5. No regressions in existing tests
-    #   6. Evidence artifacts collected
+    #   4. Rebase onto main, resolve conflicts if any
+    #   5. Merge PR to main (squash)
+    #   6. No regressions in existing tests
+    #   7. Evidence artifacts collected
     # If verification fails: loop back to build with specific failures
     on_pass: gtm_content
     on_fail: build
@@ -194,6 +194,7 @@ stages:
     actions:
       - store_memories
       - notify_ceo
+      # Worktree cleanup is automatic via pipeline.js complete-run
     # CEO notification includes:
     #   - What was built (summary)
     #   - PR link
@@ -206,3 +207,4 @@ stages:
     description: Feature killed or completed without shipping
     type: terminal
     status: completed
+    # Worktree cleanup is automatic via pipeline.js complete-run

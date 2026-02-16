@@ -99,6 +99,7 @@ stages:
     type: fan_out
     autonomous: true
     # Orchestrator creates child pipeline runs via pipeline skill
+    # Each child gets its own git worktree (managed by pipeline.js)
     # Each child follows its own pipeline autonomy rules
     # Tracks all children via parent_epic_id
     # Waits for all children to complete

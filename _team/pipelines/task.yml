@@ -9,8 +9,11 @@
 #
 # Key design principles:
 # - Build uses external coding tools (claude CLI or codex CLI), NOT agent self-coding.
+# - Git worktree created automatically by pipeline.js for build isolation.
 # - Build pushes to git, runs CI, iterates on failures autonomously.
+# - Verify stage rebases onto main, resolves conflicts, and merges PR.
 # - Code review is automated by Critic, not CEO.
+# - Worktree is cleaned up automatically on pipeline completion.
 # - CEO is only notified when task is done or escalated.
 
 name: task
@@ -37,18 +40,17 @@ stages:
 
   # --- BUILD PHASE ---
   # Uses external coding tools (claude CLI or codex CLI), NOT agent self-coding.
-  # Creates branch, pushes code, runs CI, iterates on failures.
+  # Worktree created automatically by pipeline.js advance --stage build.
+  # All work happens in the worktree (NEVER in main repo).
 
   - id: build
-    description: "Autonomous build: execute task via Claude Code / Codex CLI"
+    description: "Autonomous build in git worktree via Claude Code / Codex CLI"
     type: work
     agent: tech-lead
     autonomous: true
-    # 1. Call claude/codex CLI with task context
-    # 2. Run typecheck + lint + tests
-    # 3. Commit on success
-    # 4. If CI fails, iterate (call coding tool again to fix)
-    # 5. Push branch, open PR
+    # Worktree created automatically by pipeline.js advance --stage build
+    # Build agent uses worktree path from advance response
+    # After task complete: push branch, open PR
     next: code_review
 
   # --- CODE REVIEW (automated, NOT CEO) ---
@@ -68,13 +70,14 @@ stages:
   # --- VERIFICATION ---
 
   - id: verify
-    description: "Verify: CI green, tests pass, PR merged"
+    description: "Verify: CI green, tests pass, rebase + merge PR to main"
     type: work
     agent: tech-lead
     autonomous: true
     # 1. Confirm CI passes
-    # 2. Merge PR
-    # 3. Collect evidence
+    # 2. Rebase onto main, resolve conflicts if any
+    # 3. Merge PR (squash)
+    # 4. Collect evidence
     on_pass: done
     on_fail: build
 
