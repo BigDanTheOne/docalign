@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "686d31056b23",
+  "strategy": "auto-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "_team/outputs/24919391-3857-458b-a416-90666443ede9/debate_round1/critic.md",
+    "_team/outputs/24919391-3857-458b-a416-90666443ede9/debate_round1/gtm.md",
+    "_team/outputs/24919391-3857-458b-a416-90666443ede9/debate_round1/pm.md",
+    "_team/outputs/24919391-3857-458b-a416-90666443ede9/debate_round1/researcher.md",
+    "_team/outputs/24919391-3857-458b-a416-90666443ede9/debate_round1/tech-lead.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/68/6d31056b23/0/metadata.json",
+      "transcript": "/68/6d31056b23/0/full.jsonl",
+      "context": "",
+      "content_hash": "/68/6d31056b23/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 5,
+    "cache_creation_tokens": 1183,
+    "cache_read_tokens": 492890,
+    "output_tokens": 46,
+    "api_call_count": 3
+  }
+}
