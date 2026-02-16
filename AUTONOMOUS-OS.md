@@ -241,8 +241,8 @@ Mem0's core API supports full metadata filtering. The OpenClaw plugin doesn't ex
 mem0 recall --feature feat-123 --scope feature   # feature memories only
 mem0 recall --scope global                         # global memories only
 mem0 recall --feature feat-123 --scope all         # both
-mem0 store --feature feat-123 --scope feature "PM approved spec with conditions: ..."
-mem0 store --scope global "Team preference: event-driven over polling"
+mem0 store --feature feat-123 --scope feature --content "PM approved spec with conditions: ..."
+mem0 store --scope global --content "Team preference: event-driven over polling"
 ```
 
 **Injection format** (prepended to worker task descriptions):
@@ -265,7 +265,7 @@ Agents evaluate relevance rather than blindly incorporating.
 Used in Feature "debate" stage and Epic "strategic debate" stage.
 
 **Round 1 — Parallel Assessment:**
-- Orchestrator spawns PM, Tech Lead, Critic (+ GTM for Epics) as depth-2 workers simultaneously
+- Orchestrator spawns PM, Tech Lead, Critic, GTM as depth-2 workers simultaneously
 - Each gets: the signal/topic + their persona prompt + recalled Mem0 context
 - Each produces structured output:
   ```
@@ -555,12 +555,13 @@ For the chief (root agent handling Telegram DMs and cron), `model` is what matte
 
 **Chief cron schedule:**
 ```
+"0 7 * * *"   → Daily competitive scan: researcher checks competitor changelogs/releases
 "0 8 * * *"   → Morning brief: pipeline status + overnight scan results
 "0 9 * * 1"   → Weekly planning: review completed work, propose next priorities
 "0 14 * * *"  → Afternoon check: competitive scan results, content queue
 ```
 
-**Chief heartbeat:** 30 minutes. Safety net only.
+**Chief heartbeat:** 30 minutes. Safety net only. OpenClaw auto-detects `HEARTBEAT.md` in the agent workspace and triggers heartbeat polls at the platform's default interval. The checklist in `HEARTBEAT.md` defines what checks run on each poll.
 
 ---
 
@@ -677,7 +678,7 @@ Therefore: persona prompts for sub-agents go in `AGENTS.md`. The chief (depth 0)
 |---|---|
 | SQLite state tracker | 3 tables, pipeline CRUD, step management, concurrency queue |
 | Pipeline rules engine | Deterministic: read state → determine next action → spawn sub-agents |
-| Pipeline management skills | `create`, `advance`, `add-step`, `complete-step`, `complete-run`, `fan-in`, `escalate`, `list` |
+| Pipeline management skills | `create`, `advance`, `add-step`, `complete-step`, `complete-run`, `fan-in`, `escalate`, `pause`, `resume`, `list` |
 | Concurrency queue | Max 8 active runs; excess queued; auto-dequeue on complete/escalate |
 | Fan-in logic | Track N announces, advance when all complete or apply rejection rule |
 | Custom Mem0 skill | Shell scripts calling Mem0 v1 (writes) and v2 (search/filter) APIs |
@@ -706,4 +707,10 @@ Therefore: persona prompts for sub-agents go in `AGENTS.md`. The chief (depth 0)
 | Non-overlapping agent criteria | Prevents duplicate feedback, wasted tokens, and ambiguous responsibility. |
 | AGENTS.md for sub-agents (not SOUL.md) | OpenClaw sub-agents at depth 1+ only load AGENTS.md + TOOLS.md. SOUL.md is only loaded at depth 0 (chief). |
 | Mem0 v1 for writes, v2 for search | v1 API handles memory creation with metadata. v2 API provides search with metadata filtering. Both work correctly. |
-| Concurrency queue in pipeline.js | Max 8 active runs enforced at creation time. Auto-dequeue (oldest first) on complete-run or escalate. |
+| Concurrency queue in pipeline.js | Max 8 active runs enforced at creation time. Auto-dequeue (oldest first) on complete-run, escalate, or pause. |
+| Per-stage rejection tracking | `complete-step` computes `stage_rejection_count` from steps table. Returns `escalation_recommended: true` at >= 3. Global `review_loop_count` kept for reporting only. |
+| Pause/resume commands | Design lists 'paused' as valid status. CEO can pause active runs (frees concurrency slot) and resume them (respects concurrency limit). |
+| GTM in all feature debates | Section 2 and feature.yml both include GTM in feature debate Round 1. All 4 personas (PM, Tech Lead, Critic, GTM) participate. |
+| Competitive scan cron | Daily at 7am ET. Spawns researcher to check competitor changelogs/releases. Proposes features to CEO if warranted. |
+| Mem0 plugin: autoCapture=true, autoRecall=false | Plugin handles automatic memory extraction. Custom skill handles scoped recall with metadata filtering. |
+| Heartbeat: platform-managed interval | OpenClaw auto-detects HEARTBEAT.md and triggers at platform default interval (~30 min). No explicit config needed. |
