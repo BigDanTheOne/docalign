@@ -1,0 +1,176 @@
+I've now read every single file. Let me do the hardest possible line-by-line comparison.
+
+---
+
+## Section-by-Section Findings
+
+### Section 1: Team Structure (lines 9-22)
+
+| Claim | Status | Detail |
+|-------|--------|--------|
+| Five AI personas + CEO | ✅ | PM, GTM, Tech Lead, Critic, Researcher + Chief (infra) + Orchestrator (infra) |
+| Non-overlapping criteria hardcoded | ✅ | Every AGENTS.md has explicit "You do NOT evaluate" exclusions |
+| PM evaluates value+scope, model Opus | ✅ | subagents.model: claude-opus-4-6 |
+| GTM evaluates distribution+messaging, model Sonnet | ✅ | subagents.model: claude-sonnet-4-5 |
+| Tech Lead evaluates feasibility+architecture, model Opus | ✅ | subagents.model: claude-opus-4-6 |
+| Critic evaluates edge cases+failures, model Opus | ✅ | subagents.model: claude-opus-4-6 |
+| Researcher gathers context only, model Sonnet | ✅ | subagents.model: claude-sonnet-4-5 |
+| Researcher is stateless, spawned on-demand | ✅ | researcher AGENTS.md line 59: "You are stateless — spawned on-demand, no persistent identity" |
+
+### Section 2: Pipeline Types (lines 26-61)
+
+| Claim | Status | Detail |
+|-------|--------|--------|
+| Task: Request→[Research?]→Build→Review→Done | ✅ | task.yml stages match exactly |
+| Task: No debate, no spec, no GTM | ✅ | task.yml has none of these |
+| Task: Review = Critic only, 1 round, 1 retry max | ✅ | task.yml: reviewer: critic, max_loops: 1 |
+| Feature: full 10-stage pipeline | ✅ | feature.yml has all 10 stages |
+| Feature: Debate = PM+TL+GTM+Critic parallel | ✅ | feature.yml debate_round1: all 4 agents |
+| Feature: Spec Review = PM+Critic parallel | ✅ | feature.yml spec_review: pm + critic |
+| Feature: Build Review = PM+TL+Critic parallel | ✅ | feature.yml build_review: pm + tech-lead + critic |
+| Feature: Content Review = CEO | ✅ | feature.yml content_review: agent: ceo |
+| Epic: Signal→StratDebate→Decompose→Children→IntReview→Launch→Ship | ✅ | epic.yml stages match |
+| Epic: Decompose = PM+TL | ✅ | epic.yml decompose: agents: [pm, tech-lead] |
+| Epic: Integration Review = TL+Critic | ✅ | epic.yml integration_review: tech-lead + critic |
+
+### Section 3: Review Rules (lines 65-70)
+
+| Rule | Status | Detail |
+|------|--------|--------|
+| 1. Rejection takes precedence | ✅ | Orchestrator AGENTS.md + pipeline.js any_rejected flag |
+| 2. Author resubmits to all reviewers | ✅ | Orchestrator AGENTS.md + YAML on_reject loops back |
+| 3. Max 3 loops then escalate | **BUG** | `review_loop_count` is **per-run, not per-stage** |
+| 4. CEO can force-approve | ✅ | Orchestrator AGENTS.md rule 4 |
+
+**BUG DETAIL**: pipeline.js increments `review_loop_count` on ANY rejection in ANY stage. A feature with 2 rejections in spec_review and 2 in build_review has count=4. The orchestrator has no way to distinguish per-stage counts from the global counter. After max_loops=3 total rejections (across all stages combined), the pipeline would trigger escalation prematurely. The counter should be per-stage or the orchestrator needs to count stage-specific rejections from the steps table.
+
+### Section 4: Entry Classification (lines 74-95)
+
+| Claim | Status | Detail |
+|-------|--------|--------|
+| CEO→Chief classifies→spawns pipeline | ✅ | Chief SOUL.md classification heuristic |
+| System-initiated: Daily competitive scan | **MISSING** | No cron job implements competitive scanning |
+| Heartbeat detects stale/stuck pipeline | ✅ | HEARTBEAT.md |
+| Pipeline-internal: Epic decompose creates children | ✅ | epic.yml decompose→execute_children |
+| Classification heuristic in Chief's prompt | ✅ | Chief SOUL.md lines 19-26, word-for-word match |
+
+**MISSING**: Design line 82: "Daily competitive scan finds relevant signal → Chief creates Research task." There is no competitive scan cron job. The afternoon check cron says "Review pipeline progress" not "scan competitors." The design's "competitive scan (daily)" from line 160 was never implemented.
+
+### Section 5: Technical Architecture (lines 99-173)
+
+| Claim | Status | Detail |
+|-------|--------|--------|
+| Chief: depth 0, Telegram, 30min heartbeat, Sonnet | ✅ | model: claude-sonnet-4-5, bindings, HEARTBEAT.md |
+| Chief: 7 responsibilities listed | ✅ | Chief SOUL.md matches all 7 |
+| Orchestrator: depth 1, Sonnet, deterministic | ✅ | subagents.model: sonnet, AGENTS.md |
+| Workers: depth 2, correct models, can't spawn | ✅ | maxSpawnDepth: 2 prevents depth-3 |
+| maxConcurrent: 8 | ✅ | agents.defaults.subagents.maxConcurrent: 8 |
+| maxChildrenPerAgent: 5 | ✅ | agents.defaults.subagents.maxChildrenPerAgent: 5 |
+| archiveAfterMinutes: 120 | ✅ | agents.defaults.subagents.archiveAfterMinutes: 120 |
+| Queue when limit hit | ✅ | pipeline.js cmdCreate checks active count |
+| Cron: Morning brief (8am) | ✅ | Cron job exists |
+| Cron: competitive scan (daily) | **MISSING** | No competitive scan cron job |
+| Cron: weekly priorities (Mon 9am) | ✅ | Cron job exists |
+
+### Section 6: State Persistence (lines 177-220)
+
+| Table | Status | Detail |
+|-------|--------|--------|
+| runs: all 10 columns | ✅ | Schema matches character-for-character |
+| steps: all 11 columns | ✅ | Schema matches |
+| fan_in_tracker: all 6 columns + PK | ✅ | Schema matches |
+| Status includes 'paused' | ⚠️ | Design lists 'paused' as valid status; nothing ever sets it |
+
+**MINOR**: Design line 200, agent comment says `'tech_lead'` (underscore) but actual agent IDs use `'tech-lead'` (hyphen). The schema allows any string so this works, but the comment is misleading.
+
+### Section 7: Memory Layer (lines 224-259)
+
+| Claim | Status | Detail |
+|-------|--------|--------|
+| autoRecall: false | **NOT CONFIGURED** | No Mem0 plugin in openclaw.json at all |
+| autoCapture: true | **NOT CONFIGURED** | No Mem0 plugin → no auto-capture |
+| Two-tier: Feature + Global scoping | ✅ | recall.sh and store.sh both implement this |
+| recall --feature --scope feature | ✅ | recall.sh handles feature scope |
+| recall --scope global | ✅ | recall.sh handles global scope |
+| recall --scope all (both) | ✅ | recall.sh makes two calls |
+| store with metadata tagging | ✅ | store.sh tags with scope + feature_id |
+| Content as positional arg in store | **DIFFERS** | Design: `mem0 store ... "content"`. Impl: `--content "content"` flag |
+
+**ISSUE**: Design says `autoCapture: true` to keep Mem0's automatic memory extraction. With no Mem0 plugin configured, there's no auto-capture. All memory storage is manual via store.sh. The orchestrator must explicitly call store.sh after every important decision. If it forgets, no memory is stored. This makes the system more fragile than designed.
+
+### Section 8: Debate Mechanism (lines 263-294)
+
+| Claim | Status | Detail |
+|-------|--------|--------|
+| Round 1: PM, TL, Critic (+ GTM for Epics) | **CONTRADICTS** | Design Section 2 says GTM in Feature debate; Section 8 says GTM only for Epics |
+| Structured output: VERDICT/KEY_CLAIMS/CONDITIONS/RISKS/CONFIDENCE | ✅ | Orchestrator AGENTS.md |
+| Convergence check | ✅ | Orchestrator AGENTS.md |
+| Round 2: ONLY disagreeing agents | ✅ | YAML: reviewers: dynamic + orchestrator instruction |
+| Max 2 debate rounds then escalate | ✅ | YAML: round1→round2→escalate |
+| CEO decision stored in Mem0 as global precedent | ✅ | Orchestrator instruction |
+
+**INTERNAL DESIGN CONTRADICTION**: Line 46 says "Debate: PM + Tech Lead + GTM + Critic argue in parallel" (feature). Line 268 says "PM, Tech Lead, Critic (+ GTM for Epics)". Implementation follows line 46 (GTM in feature debate). This is a design doc inconsistency.
+
+### Section 9: Claude Code Handoff (lines 298-333)
+
+| Claim | Status | Detail |
+|-------|--------|--------|
+| 7 sections in handoff.md | ✅ | handoff.js produces all 7 |
+| Path: _team/handoffs/{feature_id}/handoff.md | ✅ | handoff.js line 139 |
+| status.json alongside handoff.md | ✅ | handoff.js line 150 |
+| CEO gets Telegram notification | **INDIRECT** | handoff.js doesn't notify; orchestrator must call notify.sh separately |
+| Pipeline advances after CEO says "build done" | ✅ | Instruction-driven via Chief routing |
+
+### Section 10: Persona System Prompts (lines 337-478)
+
+| Persona | Core Content | Output Formats | Exclusions | Enrichments |
+|---------|-------------|----------------|------------|-------------|
+| PM | ✅ word-for-word | ✅ Review + Spec formats | ✅ | Context, Memory, Boundaries added |
+| Tech Lead | ✅ word-for-word | ✅ Review format | ✅ | Spec Writing, Codebase Location added |
+| Critic | ✅ word-for-word | ✅ Review format | ✅ | Good/Bad critique examples added |
+| GTM | ✅ word-for-word | ✅ Content format | ✅ | **Extra Review format added** (not in design) |
+| Researcher | ✅ word-for-word | ✅ Output format | ✅ | Research types expanded |
+
+### Section 11: Config — Now Matches (after fix) ✅
+
+### Section 12: File Structure — Now Matches (after fix) ✅
+
+### Cron Jobs
+
+| Design Claim | Cron Job | Message Match |
+|-------------|----------|---------------|
+| "Morning brief: pipeline status + **overnight scan results**" | ✅ exists | **NO** — says "overnight progress" not "scan results" |
+| "Weekly planning: review completed work, propose next priorities" | ✅ exists | ✅ matches |
+| "Afternoon check: **competitive scan results**, content queue" | ✅ exists | **NO** — says "escalations or stuck items" not "competitive scan" |
+
+---
+
+## Summary of ALL Remaining Issues
+
+### Bugs (code behavior doesn't match design)
+
+1. **`review_loop_count` is per-run, not per-stage** — A feature pipeline going through spec_review (rejections) then build_review (rejections) shares a single counter. After 3 total rejections across ALL stages, escalation triggers prematurely. The orchestrator can't distinguish which stage's rejections drove the count. Fix: either make it per-stage in the schema, or have the orchestrator count stage rejections from the steps table.
+
+### Missing Features
+
+2. **No competitive scan cron job** — Design mentions "daily competitive scan" in 3 places (lines 82, 160, 560). Never implemented. No cron job, no researcher task for it.
+
+3. **No Mem0 auto-capture** — Design says `autoCapture: true` (line 230). No Mem0 plugin configured. All memory storage is manual via store.sh only.
+
+### Minor Issues
+
+4. **Chief AGENTS.md missing handoff from skills list** — Lists "pipeline, mem0, notify, content-copilot" but not "handoff" even though openclaw.json has it.
+
+5. **Design Section 8 contradicts Section 2** on whether GTM is in Feature debate. Implementation follows Section 2 (GTM included).
+
+6. **store.sh uses `--content` flag** instead of design's positional argument syntax.
+
+7. **Cron messages don't match design descriptions** — "overnight scan results" and "competitive scan results" mentioned in design but not in cron messages.
+
+8. **`paused` status** listed in design but never used anywhere.
+
+9. **Heartbeat interval** not explicitly configured in openclaw.json (relies on HEARTBEAT.md being auto-detected by OpenClaw).
+
+---
+
+Want me to fix issues 1-4 (the bug + missing features + minor fix)?

@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "879ef70a2c89",
+  "strategy": "auto-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "_team/data/pipeline.db-shm",
+    "_team/data/pipeline.db-wal"
+  ],
+  "sessions": [
+    {
+      "metadata": "/87/9ef70a2c89/0/metadata.json",
+      "transcript": "/87/9ef70a2c89/0/full.jsonl",
+      "context": "",
+      "content_hash": "/87/9ef70a2c89/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 7,
+    "cache_creation_tokens": 32760,
+    "cache_read_tokens": 711767,
+    "output_tokens": 368,
+    "api_call_count": 5
+  }
+}
