@@ -16,6 +16,7 @@ import path from 'path';
 import fs from 'fs';
 import { LocalPipeline } from '../../cli/real-pipeline';
 import { registerLocalTools } from './tool-handlers';
+import { resolveRepoRoot } from '../../lib/repo-root-resolver';
 
 function log(msg: string): void {
   process.stderr.write(`[docalign-mcp] ${msg}\n`);
@@ -56,8 +57,8 @@ async function main(): Promise<void> {
 
   // Default to cwd if no --repo specified
   const repoPath = args.repoPath
-    ? path.resolve(args.repoPath)
-    : process.cwd();
+    ? resolveRepoRoot({ cwd: path.resolve(args.repoPath) }).root
+    : resolveRepoRoot({ cwd: process.cwd() }).root;
 
   if (!fs.existsSync(path.join(repoPath, '.git'))) {
     log(`Error: ${repoPath} is not a git repository (no .git directory)`);

@@ -11,6 +11,7 @@ import path from 'path';
 import fs from 'fs';
 import { LocalPipeline } from '../real-pipeline';
 import { registerLocalTools } from '../../layers/L6-mcp/tool-handlers';
+import { resolveRepoRoot } from '../../lib/repo-root-resolver';
 
 function log(msg: string): void {
   process.stderr.write(`[docalign-mcp] ${msg}\n`);
@@ -30,8 +31,8 @@ export async function startMcpServer(argv: string[]): Promise<void> {
   const args = parseMcpArgs(argv);
 
   const repoPath = args.repoPath
-    ? path.resolve(args.repoPath)
-    : process.cwd();
+    ? resolveRepoRoot({ cwd: path.resolve(args.repoPath) }).root
+    : resolveRepoRoot({ cwd: process.cwd() }).root;
 
   if (!fs.existsSync(path.join(repoPath, '.git'))) {
     log(`Error: ${repoPath} is not a git repository (no .git directory)`);

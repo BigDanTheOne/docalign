@@ -21,6 +21,12 @@ jobs:
 
       - run: npm run typecheck
 
+      - name: Path hygiene gate
+        run: npm run check:path-hygiene
+
+      - name: Stage artifact gate (build)
+        run: npm run check:stage-artifacts -- --run-id 24919391-3857-458b-a416-90666443ede9 --stage build --schema-version 1
+
       - run: npm run lint
 
       - run: npm run test

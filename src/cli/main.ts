@@ -14,6 +14,7 @@ import { LocalPipeline } from './real-pipeline';
 import { runInit } from './commands/init';
 import { startMcpServer } from './commands/mcp';
 import { runExtract } from './commands/extract';
+import { resolveRepoRoot } from '../lib/repo-root-resolver';
 
 async function main(): Promise<void> {
   // Detect command before creating pipeline (some commands don't need one)
@@ -29,7 +30,7 @@ async function main(): Promise<void> {
     return; // MCP server runs until killed
   }
 
-  const repoRoot = process.cwd();
+  const repoRoot = resolveRepoRoot({ cwd: process.cwd() }).root;
   const pipeline = new LocalPipeline(repoRoot);
 
   if (rawCommand === 'extract') {

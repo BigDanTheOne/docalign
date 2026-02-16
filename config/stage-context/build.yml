@@ -1,0 +1,14 @@
+stage: build
+schema_version: 1
+required_inputs:
+  - _team/outputs/<run_id>/decision.md
+  - _team/outputs/<run_id>/spec/tech-lead.md
+  - _team/outputs/<run_id>/spec_review/pm.md
+  - _team/outputs/<run_id>/spec_review/critic.md
+required_outputs:
+  - _team/outputs/<run_id>/build/tech-lead.md
+  - _team/outputs/<run_id>/build/evidence-checklist.md
+  - _team/handoffs/<run_id>/handoff.md
+forbidden_context:
+  - unresolved_absolute_repo_paths
+  - unversioned_artifact_headers

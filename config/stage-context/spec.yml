@@ -1,0 +1,6 @@
+stage: spec
+schema_version: 1
+required_inputs:
+  - _team/outputs/<run_id>/decision.md
+required_outputs:
+  - _team/outputs/<run_id>/spec/tech-lead.md

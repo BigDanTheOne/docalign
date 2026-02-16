@@ -23,7 +23,12 @@
     "test:watch": "vitest",
     "migrate:up": "node-pg-migrate up --migrations-dir migrations --tsconfig tsconfig.json --ignore-pattern \"_|^\\.\"",
     "migrate:down": "node-pg-migrate down --count 1 --migrations-dir migrations --tsconfig tsconfig.json --ignore-pattern \"_|^\\.\"",
-    "migrate:create": "node-pg-migrate create --migrations-dir migrations --migration-file-language ts --template-file-name migrations/_template.ts"
+    "migrate:create": "node-pg-migrate create --migrations-dir migrations --migration-file-language ts --template-file-name migrations/_template.ts",
+    "check:path-hygiene": "node scripts/checks/path-hygiene.js",
+    "check:stage-artifacts": "node scripts/checks/stage-artifacts.js",
+    "migration:preflight": "node scripts/migration/preflight-path-audit.js",
+    "migration:relocate": "bash scripts/migration/relocate-repo.sh",
+    "migration:rollback": "bash scripts/migration/rollback-repo.sh"
   },
   "engines": {
     "node": ">=18.0.0"

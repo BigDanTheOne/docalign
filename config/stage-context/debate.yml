@@ -1,0 +1,9 @@
+stage: debate_round1
+schema_version: 1
+required_inputs:
+  - signal
+required_outputs:
+  - _team/outputs/<run_id>/debate_round1/pm.md
+  - _team/outputs/<run_id>/debate_round1/tech-lead.md
+  - _team/outputs/<run_id>/debate_round1/critic.md
+  - _team/outputs/<run_id>/debate_round1/gtm.md
