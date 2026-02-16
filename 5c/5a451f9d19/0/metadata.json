@@ -1,0 +1,23 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "5c5a451f9d19",
+  "session_id": "8698195b-1f0f-4bac-9329-b78bf5c7749c",
+  "strategy": "auto-commit",
+  "created_at": "2026-02-16T22:57:32.519106Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "_team/docs/autonomous-os-diagram.drawio"
+  ],
+  "agent": "Claude Code",
+  "transcript_identifier_at_start": "04f05638-f512-4bde-8761-a0074a53ce67",
+  "checkpoint_transcript_start": 7085,
+  "transcript_lines_at_start": 7085,
+  "token_usage": {
+    "input_tokens": 3,
+    "cache_creation_tokens": 227,
+    "cache_read_tokens": 120232,
+    "output_tokens": 1,
+    "api_call_count": 1
+  }
+}
