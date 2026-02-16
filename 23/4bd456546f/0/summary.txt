@@ -1,0 +1,15 @@
+Done. I created the diagram file at `_team/docs/autonomous-os-diagram.drawio`.
+
+**To use it:**
+1. Open [app.diagrams.net](https://app.diagrams.net) in your browser
+2. File → Open From → Device → select the `.drawio` file
+3. It's a dark-themed diagram showing:
+   - **Left**: Solo Founder (Telegram) with 2 amber approval gates
+   - **Center**: "Fully Autonomous" zone with the 7-agent hierarchy (Chief → Orchestrator → 5 personas)
+   - **Middle row**: Pipeline stages as pills (Debate → Define → Spec → Plan → Build → Review → Verify → Ship)
+   - **Lower rows**: Harness features (EXEC_PLAN.md, Isolated Dev Env, Remediation Lint) and infrastructure (Worktrees, Mem0, SQLite engine)
+   - **Bottom**: "One founder. Seven agents. Ship while sleeping." + "Powered by @OpenClaw"
+
+4. Export as PNG (File → Export As → PNG, set scale to 2x for crisp Twitter display)
+
+You may want to tweak positions or colors once you see it. The layout should be close but draw.io auto-layout might shift things slightly.
