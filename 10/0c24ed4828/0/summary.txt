@@ -1,0 +1,15 @@
+No Anthropic API key configured anywhere. Only `openai-codex` is authenticated. The Chief fell back to `gpt-5.3-codex` which did work, but the intended model (`anthropic/claude-sonnet-4-5`) won't work until you add an Anthropic auth profile.
+
+Here's what happened with the greeting:
+
+**The Chief is alive and operational.** It responded — but it resumed an existing session and continued a heartbeat action (notifying you about stuck/escalated pipelines) rather than greeting back. It ran on `gpt-5.3-codex` (fallback) since Anthropic auth is missing.
+
+**To get the Chief running on Claude Sonnet as intended, you need to add Anthropic auth:**
+
+```bash
+openclaw models auth add          # Interactive
+# or
+openclaw models auth paste-token  # If you have an API key ready
+```
+
+Want me to try greeting again on a fresh session (the existing session had stale context), or do you want to set up Anthropic auth first?
