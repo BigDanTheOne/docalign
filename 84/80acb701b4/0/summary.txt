@@ -1,0 +1,24 @@
+All 9 issues are now fixed. Here's a summary:
+
+## All 9 Issues — Fixed
+
+| # | Issue | Fix |
+|---|---|---|
+| **1** | `review_loop_count` per-run bug | `complete-step` now computes `stage_rejection_count` from the steps table per-stage. Returns `escalation_recommended: true` at >= 3. Global counter kept for reporting only. |
+| **2** | Missing competitive scan cron | Added daily cron job at 7am ET — spawns researcher to scan competitor changelogs/releases, proposes features to CEO if warranted. |
+| **3** | Missing Mem0 auto-capture config | Added `mem0` plugin entry in `openclaw.json` with `autoRecall: false`, `autoCapture: true`. |
+| **4** | Chief AGENTS.md missing "handoff" | Added `handoff` to the skills list in chief's AGENTS.md. |
+| **5** | Section 8 GTM debate contradiction | Updated Section 8 to match Section 2: all 4 personas (PM, Tech Lead, Critic, GTM) participate in feature debates. Also fixed in orchestrator AGENTS.md. |
+| **6** | store.sh `--content` flag vs positional | Updated design doc Section 7 skill interface to use `--content` flag (matching implementation). |
+| **7** | Cron messages don't match design | Updated Morning Brief to mention "overnight scan results" and Afternoon Check to mention "competitive scan results". |
+| **8** | 'paused' status never used | Implemented `pause` and `resume` commands in pipeline.js. Pause frees a concurrency slot; resume respects the limit. |
+| **9** | Heartbeat interval not configured | Documented in design doc that OpenClaw auto-detects HEARTBEAT.md and triggers at platform default interval. No explicit config needed. |
+
+### Files modified:
+- `~/.openclaw/skills/pipeline/scripts/pipeline.js` — per-stage rejection tracking, pause/resume commands
+- `~/.openclaw/skills/pipeline/SKILL.md` — documented new commands + escalation behavior
+- `~/.openclaw/cron/jobs.json` — competitive scan cron + updated morning/afternoon messages
+- `~/.openclaw/openclaw.json` — Mem0 plugin config
+- `~/.openclaw/agents/chief/AGENTS.md` — added handoff skill
+- `~/.openclaw/agents/orchestrator/AGENTS.md` — escalation check, GTM in all debates
+- `~/Discovery/docalign/AUTONOMOUS-OS.md` — 7 design doc updates (Section 7, 8, 11, What We Build, Design Decisions)
