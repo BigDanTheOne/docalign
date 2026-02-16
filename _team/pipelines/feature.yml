@@ -1,0 +1,159 @@
+# Feature Pipeline — Full team process
+# Signal → Debate → Define → Spec → Spec Review → Build → Build Review → GTM Content → Content Review → Ship
+#
+# Full team process with parallel reviews.
+# Who creates: CEO (direct), competitive scan (auto), Epic decomposition.
+# Debate: PM + Tech Lead + GTM + Critic argue in parallel.
+# Define: Acceptance criteria, files affected, definition of done.
+# Spec Review: PM + Critic in parallel (rejection takes precedence).
+# Build Review: PM + Tech Lead + Critic in parallel.
+# Content Review: CEO approves GTM content.
+# Examples: new CLI command, new check type, new MCP tool.
+
+name: feature
+description: Full feature pipeline with debate, spec, build, and GTM
+
+stages:
+  - id: signal
+    description: Feature signal received and classified
+    type: entry
+    next: debate_round1
+
+  # --- DEBATE PHASE ---
+
+  - id: debate_round1
+    description: "Parallel assessment: PM, Tech Lead, Critic, GTM evaluate the signal"
+    type: review
+    reviewers:
+      - agent: pm
+      - agent: tech-lead
+      - agent: critic
+      - agent: gtm
+    parallel: true
+    parallel_group: debate_r1
+    # Each produces: VERDICT, KEY_CLAIMS, CONDITIONS, RISKS, CONFIDENCE
+    # Orchestrator checks convergence after fan-in
+    on_converge: define
+    on_diverge: debate_round2
+
+  - id: debate_round2
+    description: "Targeted resolution: only disagreeing agents re-assess with full context"
+    type: review
+    reviewers: dynamic  # Only agents who disagreed in round 1
+    parallel: true
+    parallel_group: debate_r2
+    on_converge: define
+    on_diverge: escalate_debate
+
+  - id: escalate_debate
+    description: Debate unresolved after 2 rounds — escalate to CEO
+    type: escalation
+    notify: ceo
+    # CEO decides. Decision stored in Mem0 as global precedent.
+    # After CEO decision, advance to 'define' or 'done' (if killed)
+    next_on_build: define
+    next_on_kill: done
+
+  # --- DEFINE PHASE ---
+
+  - id: define
+    description: PM defines acceptance criteria, scope boundaries, definition of done
+    type: work
+    agent: pm
+    # PM produces: acceptance criteria, files affected, scope boundaries, dependencies
+    next: spec
+
+  # --- SPEC PHASE ---
+
+  - id: spec
+    description: Tech Lead writes technical specification
+    type: work
+    agent: tech-lead
+    # Tech Lead produces: technical spec, interfaces, data flows, test strategy,
+    # files to create/modify, migration notes
+    next: spec_review
+
+  - id: spec_review
+    description: "PM + Critic review the spec in parallel"
+    type: review
+    reviewers:
+      - agent: pm
+      - agent: critic
+    parallel: true
+    parallel_group: spec_review
+    max_loops: 3
+    on_approve: build
+    on_reject: spec  # Author (Tech Lead) addresses feedback, resubmits
+    on_max_loops: escalate_spec
+
+  - id: escalate_spec
+    description: Spec review failed after 3 loops — escalate to CEO
+    type: escalation
+    notify: ceo
+    next: build  # CEO can force-approve
+
+  # --- BUILD PHASE ---
+
+  - id: build
+    description: "Implementation phase — generates handoff.md for Claude Code"
+    type: work
+    agent: tech-lead
+    # Orchestrator generates handoff.md before this stage
+    # CEO gets Telegram notification with handoff path
+    # After build complete, CEO tells Chief → pipeline advances
+    generate_handoff: true
+    next: build_review
+
+  - id: build_review
+    description: "PM + Tech Lead + Critic review the build in parallel"
+    type: review
+    reviewers:
+      - agent: pm
+      - agent: tech-lead
+      - agent: critic
+    parallel: true
+    parallel_group: build_review
+    max_loops: 3
+    on_approve: gtm_content
+    on_reject: build
+    on_max_loops: escalate_build
+
+  - id: escalate_build
+    description: Build review failed after 3 loops — escalate to CEO
+    type: escalation
+    notify: ceo
+    next: gtm_content
+
+  # --- GTM PHASE ---
+
+  - id: gtm_content
+    description: GTM creates content (blog, tweets, demo plan)
+    type: work
+    agent: gtm
+    next: content_review
+
+  - id: content_review
+    description: CEO reviews and approves GTM content
+    type: review
+    reviewers:
+      - agent: ceo  # Human review via Telegram
+    parallel: false
+    max_loops: 3
+    on_approve: ship
+    on_reject: gtm_content
+    on_max_loops: ship  # Ship anyway after 3 content loops
+
+  # --- SHIP ---
+
+  - id: ship
+    description: Feature shipped — publish content, update changelog
+    type: terminal
+    status: completed
+    actions:
+      - store_memories
+      - notify_ceo
+
+  - id: done
+    description: Feature killed or completed without shipping
+    type: terminal
+    status: completed

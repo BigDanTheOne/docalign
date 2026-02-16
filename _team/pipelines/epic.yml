@@ -1,0 +1,133 @@
+# Epic Pipeline — Multi-feature strategic initiative
+# Signal → Strategic Debate → Decompose → [Feature Pipelines...] → Integration Review → Launch Content → Ship
+#
+# Spans multiple features running concurrently.
+# Who creates: CEO only (epics are strategic bets).
+# Decompose: PM + Tech Lead break into features and tasks, each spawns its own pipeline.
+# Integration Review: After all child features complete, Tech Lead + Critic review the whole.
+# Examples: "Add semantic extraction," "Redesign PR output," "Build CLI mode"
+
+name: epic
+description: Multi-feature epic pipeline for strategic initiatives
+
+stages:
+  - id: signal
+    description: Epic signal received from CEO
+    type: entry
+    next: strategic_debate_round1
+
+  # --- STRATEGIC DEBATE ---
+
+  - id: strategic_debate_round1
+    description: "Full team strategic assessment: PM, Tech Lead, Critic, GTM"
+    type: review
+    reviewers:
+      - agent: pm
+      - agent: tech-lead
+      - agent: critic
+      - agent: gtm
+    parallel: true
+    parallel_group: strategic_debate_r1
+    on_converge: decompose
+    on_diverge: strategic_debate_round2
+
+  - id: strategic_debate_round2
+    description: "Targeted resolution for strategic disagreements"
+    type: review
+    reviewers: dynamic
+    parallel: true
+    parallel_group: strategic_debate_r2
+    on_converge: decompose
+    on_diverge: escalate_debate
+
+  - id: escalate_debate
+    description: Strategic debate unresolved — CEO decides
+    type: escalation
+    notify: ceo
+    next_on_build: decompose
+    next_on_kill: done
+
+  # --- DECOMPOSE ---
+
+  - id: decompose
+    description: PM + Tech Lead break epic into features and tasks
+    type: work
+    agents:
+      - pm
+      - tech-lead
+    parallel: true
+    parallel_group: decompose
+    # Output: list of features and tasks with dependencies
+    # Each feature spawns its own Feature pipeline
+    # Each task spawns its own Task pipeline
+    # All child pipelines reference parent_epic_id
+    next: execute_children
+
+  - id: execute_children
+    description: "Child feature/task pipelines run concurrently"
+    type: fan_out
+    # Orchestrator creates child pipeline runs via pipeline skill
+    # Tracks all children via parent_epic_id
+    # Waits for all children to complete
+    # Periodically checks child status
+    on_all_complete: integration_review
+    on_any_failed: escalate_children
+
+  - id: escalate_children
+    description: One or more child pipelines failed — escalate
+    type: escalation
+    notify: ceo
+    next: integration_review
+
+  # --- INTEGRATION REVIEW ---
+
+  - id: integration_review
+    description: "Tech Lead + Critic review the integrated whole"
+    type: review
+    reviewers:
+      - agent: tech-lead
+      - agent: critic
+    parallel: true
+    parallel_group: integration_review
+    max_loops: 3
+    on_approve: launch_content
+    on_reject: escalate_integration
+    on_max_loops: escalate_integration
+
+  - id: escalate_integration
+    description: Integration issues found — CEO decides
+    type: escalation
+    notify: ceo
+    next: launch_content
+
+  # --- LAUNCH ---
+
+  - id: launch_content
+    description: GTM creates launch content for the epic
+    type: work
+    agent: gtm
+    next: launch_review
+
+  - id: launch_review
+    description: CEO reviews launch content
+    type: review
+    reviewers:
+      - agent: ceo
+    parallel: false
+    max_loops: 2
+    on_approve: ship
+    on_reject: launch_content
+    on_max_loops: ship
+
+  - id: ship
+    description: Epic shipped — publish launch content, update roadmap
+    type: terminal
+    status: completed
+    actions:
+      - store_memories
+      - notify_ceo
+
+  - id: done
+    description: Epic killed or completed
+    type: terminal
+    status: completed

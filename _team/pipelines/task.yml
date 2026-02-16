@@ -1,0 +1,63 @@
+# Task Pipeline — Simple execution path
+# Request → [Research?] → Build → Review → Done
+#
+# No debate, no spec, no GTM content.
+# Who creates: PM, Tech Lead, CEO, or auto-spawned from an Epic.
+# Research is optional (only if task needs investigation).
+# Review: Critic only, 1 round, 1 retry max.
+# Examples: bug fix, doc update, dependency upgrade, config change.
+
+name: task
+description: Simple task pipeline for small, well-defined work items
+
+stages:
+  - id: request
+    description: Initial request received and classified
+    type: entry
+    next: research_check
+
+  - id: research_check
+    description: Determine if research is needed before building
+    type: decision
+    agent: orchestrator
+    # Orchestrator reads the task description and decides:
+    # - If task requires investigation → advance to 'research'
+    # - If task is clear enough → skip to 'build'
+    next_if_yes: research
+    next_if_no: build
+
+  - id: research
+    description: Optional investigation phase
+    type: work
+    agent: researcher
+    next: build
+
+  - id: build
+    description: Implementation phase
+    type: work
+    agent: tech-lead
+    # Tech Lead receives: task description, research findings (if any),
+    # recalled Mem0 context. Produces: implementation or code changes.
+    next: review
+
+  - id: review
+    description: Critic reviews the build output
+    type: review
+    reviewers:
+      - agent: critic
+    parallel: false
+    max_loops: 1
+    # 1 round, 1 retry max. If rejected after retry → escalate.
+    on_approve: done
+    on_reject: build
+    on_max_loops: escalate
+
+  - id: done
+    description: Task completed successfully
+    type: terminal
+    status: completed
+
+  - id: escalate
+    description: Escalated to CEO after max review loops
+    type: terminal
+    status: escalated
