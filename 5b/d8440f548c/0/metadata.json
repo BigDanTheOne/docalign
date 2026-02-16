@@ -1,0 +1,24 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "5bd8440f548c",
+  "session_id": "8698195b-1f0f-4bac-9329-b78bf5c7749c",
+  "strategy": "auto-commit",
+  "created_at": "2026-02-16T17:20:05.929908Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "_team/data/pipeline.db-shm",
+    "_team/data/pipeline.db-wal"
+  ],
+  "agent": "Claude Code",
+  "transcript_identifier_at_start": "b50293c2-2d5f-434c-ac2e-58852189f67c",
+  "checkpoint_transcript_start": 3675,
+  "transcript_lines_at_start": 3675,
+  "token_usage": {
+    "input_tokens": 11,
+    "cache_creation_tokens": 9769,
+    "cache_read_tokens": 849103,
+    "output_tokens": 513,
+    "api_call_count": 9
+  }
+}
