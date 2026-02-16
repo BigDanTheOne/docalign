@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "9d43530f12d3",
+  "strategy": "auto-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "_team/docs/autonomous-os.md",
+    "_team/docs/harness-engineering.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/9d/43530f12d3/0/metadata.json",
+      "transcript": "/9d/43530f12d3/0/full.jsonl",
+      "context": "",
+      "content_hash": "/9d/43530f12d3/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 12,
+    "cache_creation_tokens": 37261,
+    "cache_read_tokens": 951545,
+    "output_tokens": 3684,
+    "api_call_count": 10
+  }
+}

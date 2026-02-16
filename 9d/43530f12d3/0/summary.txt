@@ -1,0 +1,5 @@
+Both reports are written:
+
+1. **`_team/docs/autonomous-os.md`** — Covers the full OpenClaw infrastructure: agent hierarchy, pipeline engine (13 commands, SQLite, concurrency), 3 pipeline types with stage flows and CEO gates, git worktree isolation, skills system, Mem0 memory, Telegram CEO interface, and file inventory.
+
+2. **`_team/docs/harness-engineering.md`** — Credits the OpenAI article, documents 5 pre-existing analogs (worktrees, humans-steer-agents-execute, agent-to-agent review, external coding tools, agent hierarchy), then covers the 3 new features (EXEC_PLAN.md, agent dev environment, remediation-aware lint) with implementation details, integration points, and what we chose not to adopt with rationale.
