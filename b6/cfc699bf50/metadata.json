@@ -1,0 +1,28 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "b6cfc699bf50",
+  "strategy": "auto-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "_team/pipelines/epic.yml",
+    "_team/pipelines/feature.yml",
+    "_team/pipelines/task.yml"
+  ],
+  "sessions": [
+    {
+      "metadata": "/b6/cfc699bf50/0/metadata.json",
+      "transcript": "/b6/cfc699bf50/0/full.jsonl",
+      "context": "",
+      "content_hash": "/b6/cfc699bf50/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 19,
+    "cache_creation_tokens": 53137,
+    "cache_read_tokens": 1627646,
+    "output_tokens": 7071,
+    "api_call_count": 15
+  }
+}

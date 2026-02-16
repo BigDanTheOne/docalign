@@ -1,0 +1,23 @@
+All changes are in place. Here's a summary of what was done and the current state:
+
+**Completed:**
+- Rewrote all 3 pipeline YAMLs (feature, task, epic) with proper autonomy:
+  - Feature: CEO approves only decision doc + spec → plan → build (external tools) → code_review (automated) → verify → GTM → ship
+  - Task: Fully autonomous, no CEO involvement, build via Claude Code/Codex CLI
+  - Epic: CEO approves decision + decomposition only, everything else autonomous
+- Rewrote Orchestrator AGENTS.md with external coding tool instructions, CEO involvement rules, plan/build/verify stage details
+- Rewrote Chief AGENTS.md with minimal CEO interruption rules and filtered Telegram notifications
+- Cleared all stale sessions (Chief, Orchestrator, PM, Tech Lead, Critic, GTM)
+- Completed old pipeline run `24919391`
+
+**Current git state:**
+- 9 unpushed commits ahead of `origin/main` (from prior pipeline testing sessions, with messy commit messages)
+- Modified files include: 3 pipeline YAMLs, `pipeline.db`, and some source files changed by the old build stage (`.github/workflows/ci.yml`, `package.json`, `src/cli/commands/mcp.ts`, `src/cli/main.ts`, `src/layers/L6-mcp/local-server.ts`)
+- Untracked: build outputs from old pipeline run under `_team/outputs/`
+
+**Ready for battle-test:** The system is ready to run a new pipeline with the redesigned flow. The gateway is running and all agents have fresh sessions. To test, you can signal the Chief with a new task or feature — it should now:
+1. Minimize CEO interruptions (only decision doc + spec approval gates)
+2. Create a proper execution plan before building
+3. Use Claude Code CLI for implementation (not agent self-coding)
+4. Push to git, open PRs, run CI, iterate on failures
+5. Automated code review by agent personas, not CEO
