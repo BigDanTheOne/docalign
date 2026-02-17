@@ -114,7 +114,9 @@ describe('isValidQuickPickReason', () => {
 // DB-backed tests: E6-1 through E6-3
 // ================================================================
 
-describe('L7 Learning Service (DB-backed)', () => {
+const describeDbBacked = process.env.CI && !process.env.DATABASE_URL ? describe.skip : describe;
+
+describeDbBacked('L7 Learning Service (DB-backed)', () => {
   let pool: Pool;
   let repoId: string;
 
