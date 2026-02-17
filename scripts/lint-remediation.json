@@ -1,0 +1,98 @@
+{
+  "@typescript-eslint/no-unused-vars": {
+    "remediation": "Remove the unused variable/import. If it must exist for structural reasons (destructuring, callback signature), prefix with _ (e.g., _unusedVar).",
+    "examples": ["const { used, _unused } = obj;", "function handler(_req: Request, res: Response) {}"]
+  },
+  "@typescript-eslint/no-explicit-any": {
+    "remediation": "Replace 'any' with a specific type. Use 'unknown' if truly unknown, then narrow with type guards. For JSON data use Record<string, unknown>.",
+    "examples": ["function parse(input: unknown): Result { if (typeof input === 'string') { ... } }"]
+  },
+  "@typescript-eslint/no-require-imports": {
+    "remediation": "Replace require() with an ES import statement. This project uses TypeScript import syntax.",
+    "examples": ["import foo from './foo';  // instead of: const foo = require('./foo')"]
+  },
+  "@typescript-eslint/ban-ts-comment": {
+    "remediation": "Remove the @ts-ignore comment. Fix the underlying type error instead. If unavoidable, use @ts-expect-error with a reason: // @ts-expect-error - <reason>",
+    "examples": []
+  },
+  "@typescript-eslint/no-unused-expressions": {
+    "remediation": "Expression has no effect. Assign the result to a variable, pass as an argument, or remove the statement. Common cause: missing function call parentheses.",
+    "examples": []
+  },
+  "no-var": {
+    "remediation": "Replace 'var' with 'const' (if never reassigned) or 'let' (if reassigned).",
+    "examples": []
+  },
+  "prefer-const": {
+    "remediation": "Variable is never reassigned after initialization. Change 'let' to 'const'.",
+    "examples": []
+  },
+  "prefer-rest-params": {
+    "remediation": "Replace 'arguments' with rest parameters (...args). Rest params are typed and produce real arrays.",
+    "examples": ["function foo(...args: string[]) {}"]
+  },
+  "prefer-spread": {
+    "remediation": "Replace .apply() with spread syntax: fn(...args) instead of fn.apply(null, args).",
+    "examples": []
+  },
+  "@typescript-eslint/no-array-constructor": {
+    "remediation": "Use array literal [] instead of new Array(). For typed empty arrays: const arr: string[] = [];",
+    "examples": []
+  },
+  "@typescript-eslint/no-duplicate-enum-values": {
+    "remediation": "Each enum member must have a unique value. Remove or change the duplicate.",
+    "examples": []
+  },
+  "@typescript-eslint/no-empty-object-type": {
+    "remediation": "Replace {} with a specific type. Use Record<string, never> for empty objects, 'object' for any non-primitive, or 'unknown'.",
+    "examples": []
+  },
+  "@typescript-eslint/no-extra-non-null-assertion": {
+    "remediation": "Remove the extra '!' non-null assertion. One is sufficient: obj!.prop (not obj!!.prop).",
+    "examples": []
+  },
+  "@typescript-eslint/no-misused-new": {
+    "remediation": "Interfaces should not have a 'new' constructor signature. Use a class instead.",
+    "examples": []
+  },
+  "@typescript-eslint/no-namespace": {
+    "remediation": "Replace 'namespace' with ES modules (import/export). TypeScript namespaces are legacy.",
+    "examples": []
+  },
+  "@typescript-eslint/no-non-null-asserted-optional-chain": {
+    "remediation": "Remove '!' after optional chain '?.'. The optional chain already handles null/undefined.",
+    "examples": []
+  },
+  "@typescript-eslint/no-this-alias": {
+    "remediation": "Remove 'const self = this'. Use arrow functions to preserve 'this' context.",
+    "examples": []
+  },
+  "@typescript-eslint/no-unnecessary-type-constraint": {
+    "remediation": "Remove 'extends unknown' or 'extends any' from generic — it's the default constraint.",
+    "examples": ["function foo<T>() {}  // not: function foo<T extends unknown>() {}"]
+  },
+  "@typescript-eslint/no-unsafe-declaration-merging": {
+    "remediation": "Do not merge an interface with a class of the same name. Rename one of them.",
+    "examples": []
+  },
+  "@typescript-eslint/no-unsafe-function-type": {
+    "remediation": "Replace 'Function' type with a specific function signature: (...args: unknown[]) => unknown",
+    "examples": []
+  },
+  "@typescript-eslint/no-wrapper-object-types": {
+    "remediation": "Use primitive types (string, number, boolean) instead of wrapper objects (String, Number, Boolean).",
+    "examples": []
+  },
+  "@typescript-eslint/prefer-as-const": {
+    "remediation": "Replace type assertion with 'as const': const x = 'foo' as const;",
+    "examples": []
+  },
+  "@typescript-eslint/triple-slash-reference": {
+    "remediation": "Replace /// <reference> directives with import statements.",
+    "examples": []
+  },
+  "@typescript-eslint/prefer-namespace-keyword": {
+    "remediation": "Use 'namespace' keyword instead of 'module'. But prefer ES modules over both.",
+    "examples": []
+  }
+}
