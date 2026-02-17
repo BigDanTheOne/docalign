@@ -246,7 +246,7 @@ function createWorktree(runId) {
 // EXEC_PLAN.md assembly
 // ---------------------------------------------------------------------------
 
-const TEAM_DIR = path.join(os.homedir(), 'Discovery', 'docalign', '_team');
+const TEAM_DIR = path.join(MAIN_REPO, '_team');
 
 /**
  * Read a file, returning its content or null if it doesn't exist.
@@ -654,19 +654,25 @@ function cmdAdvance(args) {
     validateFollowupTriageForVerify(runId);
   }
 
-  db.prepare(`
-    UPDATE runs SET current_stage = ?, updated_at = datetime('now','localtime') WHERE id = ?
-  `).run(stage, runId);
-
   const result = { run_id: runId, previous_stage: run.current_stage, current_stage: stage, status: run.status };
 
-  // Auto-create worktree and assemble EXEC_PLAN.md when advancing to build stage
+  // Auto-create worktree and assemble EXEC_PLAN.md when advancing to build stage.
+  // Keep this transition atomic: only persist stage=build after setup succeeds.
   if (stage === 'build') {
     const wt = createWorktree(runId);
     const execPlanPath = assembleExecPlan(runId, wt.worktree_path);
+    db.prepare(`
+      UPDATE runs SET current_stage = ?, updated_at = datetime('now','localtime') WHERE id = ?
+    `).run(stage, runId);
     result.worktree = wt;
     result.exec_plan = execPlanPath;
+    out(result);
+    return;
   }
+
+  db.prepare(`
+    UPDATE runs SET current_stage = ?, updated_at = datetime('now','localtime') WHERE id = ?
+  `).run(stage, runId);
 
   out(result);
 }
