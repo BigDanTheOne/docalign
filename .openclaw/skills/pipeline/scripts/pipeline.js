@@ -28,9 +28,9 @@ try {
 // DB path & initialisation
 // ---------------------------------------------------------------------------
 const DB_DIR = path.join(os.homedir(), 'Discovery', 'docalign', '_team', 'data');
-const DB_PATH = path.join(DB_DIR, 'pipeline.db');
+const DB_PATH = process.env.PIPELINE_DB_PATH || path.join(DB_DIR, 'pipeline.db');
 
-fs.mkdirSync(DB_DIR, { recursive: true });
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
@@ -47,7 +47,8 @@ db.exec(`
     review_loop_count INTEGER DEFAULT 0,
     orchestrator_session TEXT,
     created_at TEXT DEFAULT (datetime('now','localtime')),
-    updated_at TEXT DEFAULT (datetime('now','localtime'))
+    updated_at TEXT DEFAULT (datetime('now','localtime')),
+    source TEXT NOT NULL DEFAULT 'pipeline'
   );
 
   CREATE TABLE IF NOT EXISTS steps (
@@ -82,6 +83,13 @@ try {
   db.prepare("SELECT worktree_path FROM runs LIMIT 0").get();
 } catch (_) {
   db.exec("ALTER TABLE runs ADD COLUMN worktree_path TEXT");
+}
+
+// Schema migration: add source column if missing
+try {
+  db.prepare("SELECT source FROM runs LIMIT 0").get();
+} catch (_) {
+  db.exec("ALTER TABLE runs ADD COLUMN source TEXT NOT NULL DEFAULT 'pipeline'");
 }
 
 // ---------------------------------------------------------------------------
@@ -486,6 +494,7 @@ function cmdCreate(args) {
   }
   const title = requireArg(args, 'title');
   const parentEpicId = args['parent-epic-id'] || null;
+  const source = args['source'] || 'pipeline';
   const id = randomUUID();
   const currentStage = INITIAL_STAGES[type];
 
@@ -497,11 +506,11 @@ function cmdCreate(args) {
   const initialStatus = activeCount >= MAX_CONCURRENT_ACTIVE ? 'queued' : 'active';
 
   db.prepare(`
-    INSERT INTO runs (id, type, title, status, current_stage, parent_epic_id)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(id, type, title, initialStatus, currentStage, parentEpicId);
+    INSERT INTO runs (id, type, title, status, current_stage, parent_epic_id, source)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(id, type, title, initialStatus, currentStage, parentEpicId, source);
 
-  const result = { run_id: id, type, title, status: initialStatus, current_stage: currentStage };
+  const result = { run_id: id, type, title, status: initialStatus, current_stage: currentStage, source };
   if (initialStatus === 'queued') {
     result.reason = `Concurrency limit reached (${MAX_CONCURRENT_ACTIVE} active). Run queued.`;
   }
@@ -910,6 +919,25 @@ function cmdEscalate(args) {
   out(result);
 }
 
+function cmdDismiss(args) {
+  const runId = resolveRunId(requireArg(args, 'run-id'));
+  const reason = args['reason'] || 'dismissed by operator';
+
+  const run = db.prepare('SELECT * FROM runs WHERE id = ?').get(runId);
+
+  db.prepare(`
+    UPDATE runs SET status = 'dismissed', updated_at = datetime('now','localtime') WHERE id = ?
+  `).run(runId);
+
+  const result = { run_id: runId, status: 'dismissed', reason, previous_status: run.status };
+
+  // Check if a queued run can now start
+  const dequeued = dequeueNext();
+  if (dequeued) result.dequeued = dequeued;
+
+  out(result);
+}
+
 function cmdPause(args) {
   const runId = resolveRunId(requireArg(args, 'run-id'));
 
@@ -960,13 +988,16 @@ function cmdResume(args) {
 
 function cmdList(args) {
   const status = args['status'];
+  const source = args['source'];
 
-  let runs;
-  if (status) {
-    runs = db.prepare('SELECT * FROM runs WHERE status = ? ORDER BY updated_at DESC').all(status);
-  } else {
-    runs = db.prepare('SELECT * FROM runs ORDER BY updated_at DESC').all();
-  }
+  const clauses = [];
+  const params = [];
+
+  if (status) { clauses.push('status = ?'); params.push(status); }
+  if (source) { clauses.push('source = ?'); params.push(source); }
+
+  const where = clauses.length ? ` WHERE ${clauses.join(' AND ')}` : '';
+  const runs = db.prepare(`SELECT * FROM runs${where} ORDER BY updated_at DESC`).all(...params);
 
   out(runs);
 }
@@ -1004,6 +1035,7 @@ const COMMANDS = {
   'complete-run': cmdCompleteRun,
   'fan-in': cmdFanIn,
   escalate: cmdEscalate,
+  dismiss: cmdDismiss,
   pause: cmdPause,
   resume: cmdResume,
   list: cmdList,

@@ -6,9 +6,15 @@ const { execFileSync } = require('child_process');
 const SCRIPT = path.join(__dirname, 'pipeline.js');
 const TEAM_DIR = path.join(os.homedir(), 'Discovery', 'docalign', '_team');
 
+// Use an isolated temp DB so tests never touch the production pipeline.db
+const TEST_DB = path.join(os.tmpdir(), `pipeline-test-${process.pid}.db`);
+
 function run(args, expectOk = true) {
   try {
-    const out = execFileSync('node', [SCRIPT, ...args], { encoding: 'utf8' }).trim();
+    const out = execFileSync('node', [SCRIPT, ...args], {
+      encoding: 'utf8',
+      env: { ...process.env, PIPELINE_DB_PATH: TEST_DB },
+    }).trim();
     return { ok: true, out: out ? JSON.parse(out) : null };
   } catch (err) {
     const stderr = String(err.stderr || '').trim();
@@ -20,6 +26,13 @@ function run(args, expectOk = true) {
 
 function mkdirp(p) { fs.mkdirSync(p, { recursive: true }); }
 function writeJson(p, obj) { fs.writeFileSync(p, JSON.stringify(obj, null, 2)); }
+
+afterAll(() => {
+  // Clean up the temp DB and its WAL/SHM files
+  for (const suffix of ['', '-wal', '-shm']) {
+    try { fs.unlinkSync(TEST_DB + suffix); } catch (_) {}
+  }
+});
 
 describe('pipeline gate + formatting', () => {
   it('enforces review window gate for verify', () => {
