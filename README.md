@@ -1,169 +1,94 @@
 # DocAlign
 
-Detects when your documentation drifts from code reality.
+Keep docs and code aligned.
 
-DocAlign scans your repo, extracts verifiable claims from documentation (file paths, dependency versions, commands, API routes, code examples, config values, URLs, and more), and checks each one against the actual codebase. Works as a CLI, as an MCP server for AI coding agents, or both.
+DocAlign detects documentation drift by extracting verifiable claims from your docs (paths, commands, versions, routes, config values, links, and more) and checking them against the real repository state.
 
-## Quick Start
+Built for open-source maintainers and teams shipping with AI coding agents.
+
+## 60-Second Quickstart
+
+Run directly with `npx` (no install required):
 
 ```bash
 npx docalign scan
 ```
 
-Check a single file with detailed output:
+Check one file in detail:
 
 ```bash
 npx docalign check README.md --verbose
 ```
 
-No configuration needed. DocAlign auto-discovers doc files and applies sensible defaults.
-
-## What It Finds
-
-**Syntactic checks** (regex-based, zero config):
-
-| Category | Examples |
-|----------|----------|
-| File paths | `src/auth.ts` referenced but doesn't exist |
-| Dependency versions | README says `express 4.17` but package.json has `4.18` |
-| CLI commands | `npm run deploy` but no `deploy` script in package.json |
-| API routes | `GET /api/users` not found in Express/Flask/FastAPI handlers |
-| Code examples | Import of `./utils/helpers` but file doesn't export that symbol |
-| Environment variables | `DATABASE_URL` documented but not in `.env` or `.env.example` |
-| Conventions | "Uses TypeScript strict mode" but `tsconfig.json` says otherwise |
-| Config values | "Defaults to port 3000" but code uses 8080 |
-| URLs | Dead links (HTTP 404) in documentation |
-| Image/asset refs | `![logo](assets/logo.png)` but file missing |
-| Table claims | Versions, paths, and commands inside markdown tables |
-
-**Cross-cutting checks:**
-
-- Anchor validation -- `[Setup](#setup)` links to a heading that doesn't exist
-- Cross-doc consistency -- `docs/setup.md` says port 3000, `docs/deploy.md` says 8080
-- Frontmatter consistency -- YAML `title:` doesn't match the first `# Heading`
-- Navigation configs -- Broken links in `mkdocs.yml`, `_sidebar.md`, `mint.json`
-- Deprecation detection -- Code has `@deprecated` but docs still reference it
-- License consistency -- README says MIT but `package.json` says Apache-2.0
-- Changelog consistency -- Latest CHANGELOG entry doesn't match package version
-- Fuzzy suggestions -- "Package 'expresss' not found. Did you mean 'express'?"
-
-**Semantic checks** (LLM-powered, optional):
-
-- Behavior claims: "Authentication uses JWT tokens" -- verified against actual auth code
-- Architecture decisions: "Services communicate via REST" -- checked against imports
-- Config assumptions: "Rate limited to 100 req/min" -- verified against middleware
-
-See [Checks Reference](docs/reference/checks.md) for all 11 claim types and 8 cross-cutting checks.
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `docalign scan` | Scan entire repository |
-| `docalign check <file>` | Check a single doc file |
-| `docalign extract [file]` | Extract semantic claims using Claude |
-| `docalign fix [file]` | Apply suggested fixes |
-| `docalign status` | Show configuration and integration status |
-| `docalign configure` | Create or update `.docalign.yml` |
-| `docalign init` | Set up Claude Code integration (MCP + skill) |
-| `docalign viz` | Generate interactive knowledge graph |
-| `docalign mcp` | Start MCP server (used by Claude Code) |
-| `docalign help` | Show help |
-
-See [CLI Reference](docs/reference/cli.md) for flags, options, and output formats.
-
-## MCP Integration
-
-DocAlign works as an MCP server, giving AI coding agents live access to documentation verification:
+If you want to contribute locally:
 
 ```bash
-docalign init    # Auto-configures MCP + installs skill for Claude Code
+npm install
+npm test
 ```
 
-Or add manually to your MCP config:
+## Works with Claude Code, Cursor, Codex (Local Skill/MCP)
 
-```json
-{
-  "mcpServers": {
-    "docalign": {
-      "command": "npx",
-      "args": ["docalign", "mcp", "--repo", "."]
+DocAlign runs locally as a CLI and can also run as a local MCP server for coding agents.
+
+- **Claude Code**: use guided setup:
+
+  ```bash
+  docalign init
+  ```
+
+- **Cursor/Codex/other MCP-capable setups**: add DocAlign as a local MCP server:
+
+  ```json
+  {
+    "mcpServers": {
+      "docalign": {
+        "command": "npx",
+        "args": ["docalign", "mcp", "--repo", "."]
+      }
     }
   }
-}
-```
+  ```
 
-10 tools available: `check_doc`, `check_section`, `get_doc_health`, `list_drift`, `get_docs_for_file`, `get_docs`, `fix_doc`, `report_drift`, `deep_check`, `register_claims`.
+This is local tooling (not a hosted cloud service).
 
-See [MCP Integration Guide](docs/guides/mcp-integration.md) for setup and workflows, or [MCP Tools Reference](docs/reference/mcp-tools.md) for tool details.
+## Core Capabilities
 
-## Semantic Extraction
+- Detects broken or stale doc claims (paths, versions, commands, routes, symbols, URLs)
+- Validates links, anchors, nav configs, and cross-doc consistency
+- Optional semantic verification for higher-level behavior/architecture claims
+- Provides CLI + MCP workflows for editor agents and automation
 
-`docalign extract` uses Claude to find claims that regex can't catch -- behavior descriptions, architecture decisions, config assumptions:
+## Essential Docs
+
+1. [Getting Started](docs/getting-started.md)
+2. [CLI Reference](docs/reference/cli.md)
+3. [MCP Integration Guide](docs/guides/mcp-integration.md)
+4. [Checks Reference](docs/reference/checks.md)
+5. [Configuration Reference](docs/reference/configuration.md)
+6. [Troubleshooting](docs/troubleshooting.md)
+
+## Common Commands
 
 ```bash
-docalign extract                    # All doc files
-docalign extract README.md          # Single file
-docalign extract README.md --force  # Re-extract even if unchanged
+docalign scan
+docalign check <file>
+docalign extract [file]
+docalign fix [file]
+docalign status
+docalign configure
+docalign init
+docalign viz
+docalign mcp
+docalign help
 ```
 
-See [Semantic Extraction Guide](docs/guides/semantic-extraction.md) for details.
+See full command details in the [CLI Reference](docs/reference/cli.md).
 
-## Configuration
+## Contributing
 
-DocAlign works with zero configuration. To customize, create `.docalign.yml`:
-
-```yaml
-doc_patterns:
-  include: ['README.md', 'docs/**/*.md']
-  exclude: ['docs/archive/**']
-
-claim_types:
-  url_reference: false  # Skip dead link checks
-
-verification:
-  min_severity: medium  # Only report medium+ issues
-
-suppress:
-  - file: 'docs/legacy.md'  # Ignore this file entirely
-  - package: 'internal-pkg'  # Ignore this package
-```
-
-See [Custom Configuration](docs/guides/custom-configuration.md) for common setups, or [Configuration Reference](docs/reference/configuration.md) for all 14 sections.
-
-## How It Works
-
-DocAlign follows a three-stage pipeline: **extract** verifiable claims from docs using regex patterns and table parsing, **verify** each claim against the codebase using deterministic checks (file existence, version comparison, AST symbol resolution), and **report** results via CLI, MCP tools, or PR comments. Optional LLM verification handles claims that can't be checked deterministically.
-
-See [How It Works](docs/explanation/how-it-works.md) for the full pipeline explanation.
-
-## Documentation
-
-| Section | Contents |
-|---------|----------|
-| **[Getting Started](docs/getting-started.md)** | Installation, first scan, reading output |
-| **Guides** | |
-| [Checking Files](docs/guides/checking-files.md) | Scan repos, check files, CI integration |
-| [Semantic Extraction](docs/guides/semantic-extraction.md) | LLM-powered claim extraction |
-| [MCP Integration](docs/guides/mcp-integration.md) | Set up for AI coding agents |
-| [Fixing Drift](docs/guides/fixing-drift.md) | Generate and apply fixes |
-| [Suppressing Findings](docs/guides/suppressing-findings.md) | Ignore files, patterns, types |
-| [Custom Configuration](docs/guides/custom-configuration.md) | Configure scans and behavior |
-| **Reference** | |
-| [CLI Reference](docs/reference/cli.md) | All commands, flags, exit codes |
-| [Configuration Reference](docs/reference/configuration.md) | All .docalign.yml fields |
-| [Checks Reference](docs/reference/checks.md) | All 11 claim types + cross-cutting |
-| [MCP Tools Reference](docs/reference/mcp-tools.md) | All 10 MCP tools |
-| **Explanation** | |
-| [How It Works](docs/explanation/how-it-works.md) | Pipeline architecture |
-| [Verification Tiers](docs/explanation/verification-tiers.md) | Tier 1-4 system |
-| **Contributing** | |
-| [Architecture](docs/contributing/architecture.md) | Layers, data flow, entry points |
-| [Design Patterns](docs/contributing/design-patterns.md) | Code conventions and patterns |
-| [Adding a Check](docs/contributing/adding-a-check.md) | Step-by-step guide |
-| [Testing](docs/contributing/testing.md) | Test structure, fixtures, coverage |
-| **Other** | |
-| [Troubleshooting](docs/troubleshooting.md) | Common issues and solutions |
+- Start here: [Contributing Architecture](docs/contributing/architecture.md)
+- Testing: [Contributing Testing](docs/contributing/testing.md)
 
 ## License
 
