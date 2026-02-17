@@ -1,0 +1,14 @@
+All done. Here's the summary:
+
+**Merge conflicts resolved and PR updated:**
+
+- All 8 conflict regions in `.openclaw/skills/pipeline/scripts/pipeline.js` were resolved by keeping HEAD (main) — the co-developer's enhanced version that includes:
+  - `resolveMainRepo()` — multi-path resolution for worktree operations
+  - `normalizeMultiline()` — fixes escaped newlines in markdown feedback
+  - `parseEpochMs()` — safe ISO date parsing for race safety
+  - Enhanced empty-followups handling (`timed_out_no_feedback` special case)
+  - Codex item source tracking and `codex_issue_count` consistency validation
+
+- One commit was dropped as "patch contents already upstream" — our branch's changes were already superseded by HEAD's enhanced version.
+
+- Branch `feat/port-followup-triage-gate` rebased onto latest `main` and force-pushed. No features lost.

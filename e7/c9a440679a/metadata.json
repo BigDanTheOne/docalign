@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "e7c9a440679a",
+  "strategy": "auto-commit",
+  "branch": "feat/port-followup-triage-gate",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".openclaw/skills/pipeline/scripts/pipeline.js",
+    "_team/data/pipeline.db-shm",
+    "_team/data/pipeline.db-wal",
+    "_team/outputs/5f0c45bd-8809-46a6-859c-999078f8570d/verify/tech-lead.md",
+    "_team/outputs/60e6bf9d-a6ed-4206-95ee-8d1868a5d559/build/evidence-checklist.md",
+    "_team/outputs/60e6bf9d-a6ed-4206-95ee-8d1868a5d559/verify/tech-lead.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/e7/c9a440679a/0/metadata.json",
+      "transcript": "/e7/c9a440679a/0/full.jsonl",
+      "context": "",
+      "content_hash": "/e7/c9a440679a/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 37,
+    "cache_creation_tokens": 54040,
+    "cache_read_tokens": 3164218,
+    "output_tokens": 4816,
+    "api_call_count": 33
+  }
+}
