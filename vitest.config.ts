@@ -10,6 +10,7 @@ export default defineConfig({
       '**/node_modules/**',
       '**/dist/**',
       '.openclaw/**',
+      '_team/**',
     ],
   },
 });
