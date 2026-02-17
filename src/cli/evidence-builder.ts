@@ -6,8 +6,7 @@
 import type { Claim, CodeEntity } from '../shared/types';
 import type { CodebaseIndexService } from '../layers/L0-codebase-index';
 
-const MAX_EVIDENCE_CHARS = 16000; // ~4000 tokens
-
+const MAX_EVIDENCE_CHARS = 16000; // ~4000 tokens ≈ ~16000 chars
 const MAX_FILES = 5;
 
 export interface EvidenceResult {
