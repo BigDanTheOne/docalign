@@ -75,6 +75,22 @@ export async function verifyPathReference(
     });
   }
 
+  // Step 1a: Resolve relative paths (../ or ./ prefix) against source file directory
+  if (claim.source_file && (path.startsWith('../') || path.startsWith('./'))) {
+    const docDir = claim.source_file.split('/').slice(0, -1).join('/');
+    const resolved = normalizePath(docDir ? `${docDir}/${path}` : path);
+    if (resolved) {
+      const resolvedExists = await index.fileExists(claim.repo_id, resolved);
+      if (resolvedExists) {
+        return makeResult(claim, {
+          verdict: 'verified',
+          evidence_files: [resolved],
+          reasoning: `Relative path '${path}' resolves to '${resolved}' from '${claim.source_file}'.`,
+        });
+      }
+    }
+  }
+
   // Step 1b: Resolve relative to doc file's directory
   // e.g., doc at "phases/foo.md" referencing "bar.md" → try "phases/bar.md"
   if (claim.source_file && !path.includes('/')) {
@@ -101,11 +117,20 @@ export async function verifyPathReference(
     const matches = fileTree.filter(
       (f) => f === basename || f.endsWith('/' + basename),
     );
-    if (matches.length > 0) {
+    if (matches.length === 1) {
       return makeResult(claim, {
         verdict: 'verified',
         evidence_files: [matches[0]],
-        reasoning: `File '${path}' found at '${matches[0]}' (basename match).`,
+        reasoning: `File '${path}' found at '${matches[0]}' (unique basename match).`,
+      });
+    }
+    if (matches.length > 1) {
+      return makeResult(claim, {
+        verdict: 'uncertain',
+        severity: null,
+        evidence_files: matches.slice(0, 5),
+        reasoning: `Bare filename '${path}' matches ${matches.length} files. Cannot determine which is intended.`,
+        specific_mismatch: `Ambiguous: ${matches.slice(0, 3).join(', ')}${matches.length > 3 ? '...' : ''}`,
       });
     }
   }
@@ -132,6 +157,24 @@ export async function verifyPathReference(
     reasoning: `File '${path}' not found.`,
     specific_mismatch: `File path '${path}' does not exist.`,
   });
+}
+
+/**
+ * Normalize a path by resolving `../` and `./` segments.
+ * Returns null if the result would escape above the root (too many `../`).
+ */
+function normalizePath(p: string): string | null {
+  const parts = p.split('/');
+  const resolved: string[] = [];
+  for (const part of parts) {
+    if (part === '..') {
+      if (resolved.length === 0) return null; // escapes root
+      resolved.pop();
+    } else if (part !== '.' && part !== '') {
+      resolved.push(part);
+    }
+  }
+  return resolved.length > 0 ? resolved.join('/') : null;
 }
 
 function levenshteinDist(a: string, b: string): number {
