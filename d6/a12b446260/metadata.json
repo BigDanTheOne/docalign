@@ -1,0 +1,44 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "d6a12b446260",
+  "strategy": "auto-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "test/corpus/matchers.ts",
+    "test/corpus/runner.ts",
+    "test/corpus/sidecar-evaluator.ts",
+    "test/corpus/types.ts",
+    "test/fixtures/corpora/synthetic-node/untagged/.env.example",
+    "test/fixtures/corpora/synthetic-node/untagged/CHANGELOG.md",
+    "test/fixtures/corpora/synthetic-node/untagged/CONTRIBUTING.md",
+    "test/fixtures/corpora/synthetic-node/untagged/README.md",
+    "test/fixtures/corpora/synthetic-node/untagged/docker-compose.yml",
+    "test/fixtures/corpora/synthetic-node/untagged/package.json",
+    "test/fixtures/corpora/synthetic-node/untagged/src/config/index.ts",
+    "test/fixtures/corpora/synthetic-node/untagged/src/db/client.ts",
+    "test/fixtures/corpora/synthetic-node/untagged/src/events/emitter.ts",
+    "test/fixtures/corpora/synthetic-node/untagged/src/middleware/auth.ts",
+    "test/fixtures/corpora/synthetic-node/untagged/src/middleware/errorHandler.ts",
+    "test/fixtures/corpora/synthetic-node/untagged/src/middleware/logger.ts",
+    "test/fixtures/corpora/synthetic-node/untagged/src/middleware/rateLimit.ts",
+    "test/fixtures/corpora/synthetic-node/untagged/src/services/UserService.ts",
+    "test/fixtures/corpora/synthetic-node/untagged/tsconfig.json"
+  ],
+  "sessions": [
+    {
+      "metadata": "/d6/a12b446260/0/metadata.json",
+      "transcript": "/d6/a12b446260/0/full.jsonl",
+      "context": "",
+      "content_hash": "/d6/a12b446260/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 9,
+    "cache_creation_tokens": 38545,
+    "cache_read_tokens": 650011,
+    "output_tokens": 1359,
+    "api_call_count": 5
+  }
+}

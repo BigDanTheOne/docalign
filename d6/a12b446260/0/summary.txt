@@ -1,0 +1,11 @@
+All 5 agents are running in parallel. Here's what each is building:
+
+| Agent | Scope | Status |
+|---|---|---|
+| Infrastructure | `test/corpus/` runner, matchers, test files, scripts | Running |
+| Code files | `untagged/src/**`, package.json, .claude/, config files | Running |
+| Docs part 1 | README, CONTRIBUTING, CHANGELOG, guides (untagged + tagged) | Running |
+| Docs part 2 | api/*, architecture/*, mcp/claude-code docs + sidecar | Running |
+| Mutations | 15 det-*.json mutation files + package.json updates | Running |
+
+Once they finish I'll run `npm run typecheck && npm run test` and fix anything that doesn't pass.
