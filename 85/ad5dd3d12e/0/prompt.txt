@@ -1,0 +1,1 @@
+No, let's try to solve this step-by-step. Let's start with the chief agent not spawning an orchestrator and instead doing all the work himself. How can we prevent this from happening?
