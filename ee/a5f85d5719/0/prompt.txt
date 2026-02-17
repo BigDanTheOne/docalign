@@ -1,0 +1,1 @@
+Okay there are a lot of tools out there that actually resolve deterministic claims in DocAlign to quadrality. Before proposing fixes please research how exactly tools out there solve these problems and only then synthesize your conclusion.
