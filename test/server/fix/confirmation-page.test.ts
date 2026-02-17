@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { buildConfirmationPage, buildErrorPage } from '../../../src/server/fix/confirmation-page';
-import type { DocFix } from '../../../src/shared/types';
 
 describe('buildConfirmationPage', () => {
   it('renders fix count, PR, and repo name', () => {

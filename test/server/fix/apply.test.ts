@@ -100,7 +100,7 @@ describe('applyFixes', () => {
       { new_text: 'Backtick $` here', label: '$`' },
     ];
 
-    for (const { new_text, label } of testCases) {
+    for (const { new_text } of testCases) {
       const fix = makeFix({ new_text });
       const getContent = vi.fn().mockResolvedValue('Uses bcrypt for password hashing.');
 
