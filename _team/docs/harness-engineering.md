@@ -200,6 +200,50 @@ record surprises and decisions. Commit EXEC_PLAN.md updates alongside code.
 
 **Integration point**: Referenced in EXEC_PLAN.md validation section and CONVENTIONS.md. Coding agents run `npm run lint:agent` after each task.
 
+## Operational Hardening (Post-Deployment)
+
+After the first real pipeline runs, we discovered three reliability gaps in the harness. Each was solved using patterns consistent with the article's philosophy: enforce structure through tooling, not instructions.
+
+### Fix 1: Role-Based Tool Scoping (Skill Split)
+
+**Problem**: The Chief agent had access to all 13 pipeline commands (including `advance`, `add-step`, `complete-step`). On a task pipeline, it decided to drive the stages itself instead of spawning an Orchestrator — acting as both dispatcher and executor. Soft instructions in AGENTS.md ("always spawn an orchestrator") were insufficient.
+
+**Solution**: Split the pipeline skill into two views of the same script:
+- `pipeline-ceo` (Chief) — 6 commands: create, status, list, complete-run, pause, resume
+- `pipeline` (Orchestrator) — all 13 commands including stage execution
+
+The Chief physically cannot call `advance` or `add-step` because those commands don't exist in its SKILL.md. This enforces the hierarchy through tool access, not through behavioral instructions that agents can ignore.
+
+**Harness principle**: The article's agent hierarchy works only when enforced structurally. Instructions are suggestions; tool boundaries are constraints.
+
+### Fix 2: Background Exec for Long-Running Builds
+
+**Problem**: OpenClaw agent turns timeout after 600 seconds (10 minutes). Claude Code CLI builds can take 5–30+ minutes. A synchronous build call would hit the turn timeout and abort.
+
+**Solution**: Use OpenClaw's native background exec pattern:
+1. Orchestrator calls the CLI via `exec`
+2. After 10 seconds, OpenClaw auto-backgrounds the command
+3. Orchestrator's turn ends naturally
+4. When the CLI finishes, `notifyOnExit` wakes the Orchestrator for a new turn
+5. Orchestrator reads the result and continues the pipeline
+
+No new infrastructure needed — purely leveraging the platform's existing async execution model.
+
+**Harness principle**: The article's "external coding tools" pattern requires the orchestration layer to handle async execution gracefully. The harness must accommodate tools that outlive a single agent turn.
+
+### Fix 3: Self-Healing Heartbeat (Auto-Recovery)
+
+**Problem**: When a pipeline gets stuck (orchestrator crash, missed notification, silent stall), the original heartbeat only notified the CEO — treating an operational failure as a decision request.
+
+**Solution**: The Chief's heartbeat now auto-recovers stuck pipelines silently:
+1. Detect stuck state (no advancement in 60+ min, no running steps)
+2. Spawn a new orchestrator for the stuck run — pipeline state is in SQLite, so the new orchestrator picks up exactly where the previous one left off
+3. Only notify CEO after 3 consecutive recovery failures on the same run
+
+CEO is interrupted only when something is fundamentally broken, not when an agent session died and needs a restart.
+
+**Harness principle**: Autonomous systems must self-heal. Human escalation should be the last resort, not the default response to operational failures. The article describes humans as product managers, not as ops engineers babysitting agent processes.
+
 ## What We Didn't Adopt
 
 ### Repository Knowledge Architecture

@@ -27,7 +27,7 @@ CEO (Telegram)
 
 | Agent | ID | Skills | Spawns |
 |---|---|---|---|
-| Chief | `chief` | content-copilot, pipeline, mem0, notify, handoff | orchestrator, researcher |
+| Chief | `chief` | content-copilot, pipeline-ceo, mem0, notify, handoff | orchestrator, researcher |
 | Orchestrator | `orchestrator` | pipeline, mem0, handoff | pm, tech-lead, critic, gtm, researcher |
 | Product Manager | `pm` | mem0 | — |
 | Tech Lead | `tech-lead` | mem0 | — |
@@ -129,11 +129,22 @@ Every build runs in an isolated git worktree. Never in the main repo.
 
 Modular tools assigned to agents via `openclaw.json`.
 
-### Pipeline Skill
+### Pipeline Skill (split into two scoped views)
+
+The pipeline skill is backed by a single script (`pipeline.js`) but exposed to agents through two different SKILL.md documents that control which commands each agent can see.
+
+**Pipeline CEO** (`pipeline-ceo`)
+- **Path**: `~/.openclaw/skills/pipeline-ceo/`
+- **Used by**: Chief
+- **Purpose**: Lifecycle management only — create runs, check status, list, complete-run, pause, resume (6 commands)
+- **Cannot see**: `advance`, `add-step`, `complete-step`, `fan-in`, `escalate`, `worktree`
+- **Why**: Prevents the Chief from executing pipeline stages itself. Chief creates runs and spawns orchestrators — it does not drive stages.
+
+**Pipeline** (`pipeline`)
 - **Path**: `~/.openclaw/skills/pipeline/`
 - **Script**: `scripts/pipeline.js` (878 lines)
-- **Used by**: Chief, Orchestrator
-- **Purpose**: All 13 pipeline state management commands
+- **Used by**: Orchestrator
+- **Purpose**: All 13 pipeline state management commands including stage execution
 
 ### Notify Skill
 - **Path**: `~/.openclaw/skills/notify/`
@@ -192,6 +203,44 @@ The Chief agent is bound to Telegram for CEO communication.
 - Can force-approve escalated reviews
 - Can kill pipelines at approval gates
 
+## Long-Running Builds (Background Exec Pattern)
+
+OpenClaw agent turns timeout after 600 seconds (10 minutes). Claude Code / Codex CLI builds can take 5–30+ minutes. The system handles this using OpenClaw's native background exec pattern:
+
+1. Orchestrator calls the CLI via `exec`. After 10 seconds, OpenClaw auto-backgrounds the command and returns a session ID.
+2. The Orchestrator's turn ends naturally (well under 600s).
+3. The background process keeps running independently (up to 1800s / 30 min exec timeout).
+4. When the CLI exits, OpenClaw's `notifyOnExit` fires a system event that wakes the Orchestrator for a new turn.
+5. The Orchestrator polls the result, checks exit code, and continues the pipeline.
+
+**Key timeouts**:
+
+| Layer | Default | Config Key |
+|---|---|---|
+| Agent turn | 600s (10 min) | `agents.defaults.timeoutSeconds` |
+| Exec command | 1800s (30 min) | `tools.exec.timeoutSec` |
+| Auto-background threshold | 10s | `tools.exec.backgroundMs` |
+
+Sessions persist across turns — only the turn has a timeout, not the session itself. The `archiveAfterMinutes: 120` setting is post-completion cleanup, not a runtime limit.
+
+## Heartbeat Auto-Recovery
+
+The Chief agent runs a heartbeat every 30 minutes that detects and **silently recovers** stuck pipelines. CEO is NOT notified for operational failures — only for decisions.
+
+**Stuck detection criteria**:
+- Pipeline has not advanced in 60+ minutes with no running steps
+- A worker step has been running for 30+ minutes
+- An orchestrator has no running workers and no advancement
+
+**Recovery action**: Spawn a new orchestrator for the stuck run. The new orchestrator reads pipeline state from SQLite and continues from the current stage. Pipeline state is deterministic — nothing is lost when an orchestrator dies.
+
+**Escalation ladder** (per run):
+1. 1st stuck detection → auto-recover silently
+2. 2nd stuck detection (same run, still stuck) → auto-recover silently
+3. 3rd stuck detection (still stuck) → notify CEO via Telegram. Something is fundamentally broken.
+
+**Queue management**: The heartbeat also checks for queued runs and spawns orchestrators when concurrency slots open (active < 8 and queued > 0).
+
 ## Output Storage
 
 All stage outputs stored at: `~/docalign/_team/outputs/<run_id>/<stage>/<agent>.md`
@@ -204,7 +253,8 @@ Decision documents (consolidated from debate): `~/docalign/_team/outputs/<run_id
 |---|---|---|
 | `~/.openclaw/openclaw.json` | 234 | Global agent registry, skills, channels, bindings |
 | `~/.openclaw/skills/pipeline/scripts/pipeline.js` | 878 | Pipeline state machine + worktree + EXEC_PLAN assembly |
-| `~/.openclaw/skills/pipeline/SKILL.md` | 31 | Pipeline skill documentation |
+| `~/.openclaw/skills/pipeline/SKILL.md` | 31 | Full pipeline skill docs (Orchestrator) — all 13 commands |
+| `~/.openclaw/skills/pipeline-ceo/SKILL.md` | 26 | CEO-scoped pipeline skill docs (Chief) — 6 lifecycle commands only |
 | `~/.openclaw/skills/notify/scripts/notify.sh` | ~30 | Telegram notification sender |
 | `~/.openclaw/skills/notify/SKILL.md` | 24 | Notify skill documentation |
 | `~/.openclaw/skills/handoff/scripts/handoff.js` | ~200 | Handoff.md generator (legacy) |
@@ -212,8 +262,11 @@ Decision documents (consolidated from debate): `~/docalign/_team/outputs/<run_id
 | `~/.openclaw/skills/mem0/scripts/recall.sh` | ~50 | Memory recall with metadata filtering |
 | `~/.openclaw/skills/mem0/scripts/store.sh` | ~50 | Memory storage with metadata tagging |
 | `~/.openclaw/skills/mem0/SKILL.md` | 40 | Mem0 skill documentation |
-| `~/.openclaw/agents/orchestrator/AGENTS.md` | 294 | Orchestrator execution playbook |
+| `~/.openclaw/agents/chief/HEARTBEAT.md` | 45 | Chief heartbeat: stuck detection + auto-recovery logic |
+| `~/.openclaw/agents/chief/AGENTS.md` | ~128 | Chief operating instructions (skills, spawning, CEO rules) |
+| `~/.openclaw/agents/orchestrator/AGENTS.md` | ~310 | Orchestrator execution playbook (incl. background exec pattern) |
 | `~/.openclaw/workspace/AGENTS.md` | 213 | Global agent framework |
+| `~/.openclaw/cron/jobs.json` | 190 | Scheduled cron jobs (morning brief, afternoon check, competitive scan) |
 | `~/docalign/_team/pipelines/task.yml` | 98 | Task pipeline definition |
 | `~/docalign/_team/pipelines/feature.yml` | 211 | Feature pipeline definition |
 | `~/docalign/_team/pipelines/epic.yml` | 175 | Epic pipeline definition |
