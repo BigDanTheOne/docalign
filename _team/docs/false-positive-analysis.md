@@ -12,7 +12,7 @@ Full scan of DocAlign's own repository: **95 drifted claims, 0 true positives** 
 
 **Root cause:** When a doc at `docs/getting-started.md` contains a markdown link `[CLI Reference](reference/cli.md)`, DocAlign checks whether `reference/cli.md` exists from the **repo root**. It doesn't. The file exists at `docs/reference/cli.md` — the link is relative to the document's directory.
 
-### Solutions
+### Solutions Considered
 
 **S1.1: Resolve from document directory (industry standard)**
 Every tool does this — markdown-link-check, remark-validate-links, Sphinx, Docusaurus. Simple `path.join(path.dirname(docFile), claimedPath)` before checking existence. Sphinx had this exact bug and fixed it in PR #8245.
@@ -21,20 +21,20 @@ Every tool does this — markdown-link-check, remark-validate-links, Sphinx, Doc
 - Precedent: All tools
 
 **S1.2: Configurable base path (markdown-link-check approach)**
-Add a `projectBaseUrl` or `doc_root` config option in `.docalign.yml` for repos where docs are rendered by a static site generator (Hugo, Jekyll, Docusaurus) that changes the resolution context. For example, Hugo renders `docs/setup.md` as `docs/setup/index.html`, which changes what `../` means.
+Add a `projectBaseUrl` or `doc_root` config option in `.docalign.yml` for repos where docs are rendered by a static site generator (Hugo, Jekyll, Docusaurus) that changes the resolution context.
 - Effort: Small (config schema + verifier change)
 - Risk: Over-engineering for now
 - Precedent: markdown-link-check `projectBaseUrl`, `replacementPatterns`
 
 **S1.3: Replacement patterns (markdown-link-check approach)**
-Regex-based link transformations applied before checking. Useful for platform-specific conventions (e.g., Hugo folder rendering).
+Regex-based link transformations applied before checking.
 - Effort: Medium
 - Risk: Over-engineering for now
 - Precedent: markdown-link-check `replacementPatterns` with named capture groups
 
-### Recommendation
+### Decision
 
-Start with **S1.1** — it's a bug fix, not a feature. Add S1.2 later if users with static site generators report issues.
+**S1.1** — bug fix in the deterministic verifier. Resolve relative paths from the document's directory. Add S1.2 later if users with static site generators report issues.
 
 ---
 
@@ -44,49 +44,35 @@ Start with **S1.1** — it's a bug fix, not a feature. Add S1.2 later if users w
 
 **Root cause:** Documentation references partial paths (omitting `src/layers/` prefix) that are unambiguous to humans but don't match any file from repo root.
 
-### Solutions
+### Solutions Considered
 
 **S2.1: Suffix matching against file index**
 Index all files in the repo. When an exact path lookup fails, check if any file's path **ends with** the claimed path. `L3-verifier/index.ts` matches `src/layers/L3-verifier/index.ts`.
-- Effort: Small-Medium (need a file index, then suffix scan)
-- Risk: Ambiguity if multiple files match the suffix. Need a tie-breaking strategy (shortest path? closest to doc file?).
-- Precedent: No documentation tool does this. Conceptually similar to module resolution fallbacks in Node.js/webpack.
+- Effort: Small-Medium
+- Risk: Ambiguity if multiple files match the suffix.
+- Precedent: No documentation tool does this. Conceptually similar to module resolution in Node.js/webpack.
 
 **S2.2: Alias/prefix configuration (webpack/TypeScript approach)**
-Let users define path mappings in `.docalign.yml`:
-```yaml
-path_aliases:
-  "L0-codebase-index/": "src/layers/L0-codebase-index/"
-  "L1-claim-extractor/": "src/layers/L1-claim-extractor/"
-```
-Or more generically with wildcards:
-```yaml
-path_aliases:
-  "L*-*/": "src/layers/L*-*/"
-```
+User-defined path mappings in `.docalign.yml`.
 - Effort: Medium
-- Risk: Configuration burden on user. Violates zero-config philosophy.
+- Risk: Configuration burden. Violates zero-config philosophy.
 - Precedent: TypeScript `paths`, webpack `resolve.alias`
 
 **S2.3: Walk-up directory search (Node.js approach)**
-From the document's directory, walk upward checking at each level. If `docs/contributing/design-patterns.md` references `L3-verifier/index.ts`, check:
-1. `docs/contributing/L3-verifier/index.ts` (no)
-2. `docs/L3-verifier/index.ts` (no)
-3. `L3-verifier/index.ts` (no)
-4. Then fall back to suffix matching
+From the document's directory, walk upward checking at each level.
 - Effort: Medium
-- Risk: Slow on large repos without caching. Might find wrong matches.
+- Risk: Slow on large repos without caching.
 - Precedent: Node.js `require()` directory walking
 
 **S2.4: Fuzzy/closest match with confidence threshold**
-When exact lookup fails, use Levenshtein distance or similar to find the closest matching path. Only accept if similarity is above a threshold.
+Levenshtein distance to find the closest matching path.
 - Effort: Medium
-- Risk: False matches. "L3-verifier/index.ts" might fuzzy-match to something unrelated.
+- Risk: False matches.
 - Precedent: DocAlign already has `close-match.ts` and `similar-path.ts` in L3
 
-### Recommendation
+### Decision
 
-**S2.1** (suffix matching) is the best starting point — simple, effective, and handles the common case where docs use abbreviated paths. Add a uniqueness check: if multiple files match, flag as "ambiguous" rather than picking one. S2.2 as a power-user escape hatch later.
+**S2.1** — suffix matching against the file index. If multiple files match, flag as "ambiguous" rather than picking one. Add S2.2 as a power-user escape hatch later.
 
 ---
 
@@ -96,189 +82,191 @@ When exact lookup fails, use Levenshtein distance or similar to find the closest
 
 **Root cause:** The L1 claim extractor treats every backtick-wrapped path, version, or route reference as a factual claim about the current repo — even when the reference appears inside a table of examples, a description of capability, or sample output.
 
-### Solutions
-
-**S3.1: AST-based scope filtering (Vale approach)**
-Parse markdown into AST. Classify each claim by its structural context:
-- **Table cells in "example" tables** — detect tables whose header/content suggests illustrative purpose (column headers like "Example", "What It Finds", "Before/After")
-- **Fenced code blocks** — already somewhat handled, but code blocks showing sample output should be excluded
-- **Sections with illustrative headings** — "What It Finds", "Examples", "Sample Output", "Scenarios"
-
-Implementation: After extracting a claim, check its AST context. If it's inside a table cell, code block, or under an illustrative heading, either skip it or mark it with reduced confidence.
-- Effort: Medium-Large
-- Risk: Heuristics will never be perfect. Some tables mix examples with real references.
-- Precedent: Vale's scope system (`table.cell`, `summary`, `heading.h2`, etc.)
-
-**S3.2: Inline comment directives (markdownlint / remark-lint approach)**
-Let authors annotate sections to skip:
-```markdown
-<!-- docalign:ignore-start -->
-| Category | Example |
-|----------|---------|
-| File paths | `src/auth.ts` referenced but doesn't exist |
-<!-- docalign:ignore-end -->
-```
-Or per-line: `<!-- docalign:ignore-next-line -->`
-- Effort: Small (extractor checks for directives before extracting)
-- Risk: Requires author discipline. New docs won't have directives. Defeats "zero config" promise.
-- Precedent: markdownlint `<!-- markdownlint-disable -->`, remark-lint `<!--lint disable-->`, phmdoctest `<!--phmdoctest-skip-->`
-
-**S3.3: Explicit coupling (Swimm approach)**
-Invert the model: instead of extracting everything and filtering, only check explicitly marked claims:
-```markdown
-<!-- docalign:track -->
-Configuration is stored in `.docalign.yml`
-```
-Or use a different signal: only check claims in sections that match configurable heading patterns (e.g., "Installation", "Configuration", "API Reference" but not "Features", "Overview", "What It Finds").
-- Effort: Medium
-- Risk: Fundamentally changes the product proposition from "zero config" to "annotation required." Misses real drift in unannotated sections.
-- Precedent: Swimm `<SwmToken>`, `<SwmPath>`, `<SwmSnippet>`
-
-**S3.4: Contextual confidence scoring**
-Don't binary include/exclude — instead, assign a confidence multiplier based on context:
-- Claim in prose paragraph under "Configuration" heading → confidence 1.0
-- Claim in table cell → confidence 0.5
-- Claim in table cell under "Examples" heading → confidence 0.1
-- Claim in fenced code block → confidence 0.2
-- Claim in blockquote → confidence 0.3
-
-Then filter output by `min_confidence` threshold (default: e.g., 0.6).
-- Effort: Medium
-- Risk: Tuning the multipliers requires empirical testing across many repos.
-- Precedent: Swimm's multi-signal histogram uses weighted confidence. DocAlign already has confidence scoring in L3.
-
-**S3.5: Table structure analysis**
-Specifically for tables (the biggest source of false positives): analyze the table header row. If headers contain words like "Example", "Sample", "Before", "Pattern", "Scenario", "Description", classify all cells as illustrative. If headers contain "Path", "File", "Dependency", "Version" without example-like qualifiers, classify as factual.
-- Effort: Small-Medium
-- Risk: Imperfect heuristic but catches the most common case.
-- Precedent: None (novel heuristic)
-
-**S3.6: Doc Detective's verb-pattern approach**
-Use regex patterns with contextual verbs to classify intent. "This tool **detects** `src/auth.ts` references" has a capability verb ("detects") → the path is illustrative. "Configuration **is stored in** `.docalign.yml`" has an assertion verb → the path is factual.
-- Effort: Medium-Large
-- Risk: English is ambiguous. Many edge cases.
-- Precedent: Doc Detective's `detectSteps` regex patterns with procedural verb matching
-
-### Recommendation
-
-Combine **S3.1 + S3.4 + S3.5** as a layered approach:
-1. S3.5 (table header analysis) for the immediate biggest win — cheap and catches 17 of 20 false positives
-2. S3.4 (contextual confidence) as the framework for all context-based decisions
-3. S3.1 (AST scope filtering) for broader coverage of code blocks, blockquotes, etc.
-4. S3.2 (comment directives) as an escape hatch for edge cases
-
----
-
 ## Problem 4: Instruction vs Assertion Detection
 
 **Impact:** ~5 false positives ("create `.docalign.yml`", "Adds DocAlign MCP server to `.claude/mcp.json`")
 
 **Root cause:** Imperative sentences ("create X", "add Y to Z") instruct the user to perform an action. They don't claim that X currently exists. The extractor treats the referenced path as a factual claim about current state.
 
-### Solutions
-
-**S4.1: Imperative verb detection (NLP research)**
-Check if the sentence containing the claim starts with or is governed by an imperative verb. Known imperative verbs in documentation: create, add, run, install, configure, set up, copy, move, delete, rename, open, save, enter, type, paste, navigate, go to, click, ensure, make sure, update, modify, edit, write, put, place.
-
-If claim is governed by an imperative verb → skip extraction or mark as "instructional."
-- Effort: Small-Medium (keyword list + sentence-level context check)
-- Risk: Some imperatives ARE assertions in disguise ("Run `npm start` to start the server on port 3000" — the port claim is verifiable even though the sentence is imperative).
-- Precedent: NLP research on imperative detection (POS tagging, ~84% accuracy). Doc Detective's procedural verb patterns.
-
-**S4.2: Section heading context**
-Sections with headings like "Getting Started", "Installation", "Setup", "Tutorial", "Quick Start", "How to..." are procedural. Claims extracted from these sections should be flagged as potentially instructional.
-- Effort: Small (heading pattern matching, already have heading extraction)
-- Risk: Some instructional sections contain factual claims mixed with instructions.
-- Precedent: Vale's scope system, Doc Detective's markup detection
-
-**S4.3: Tense/mood analysis (lightweight NLP)**
-Distinguish verb moods:
-- Imperative: "Create `.docalign.yml`" (base form verb, no subject)
-- Declarative: "The system reads from `.docalign.yml`" (third person, has subject)
-- Conditional: "If `.docalign.yml` exists, it will be loaded" (conditional clause)
-
-For conditional sentences, the claim should only be verified if the condition is about existence (not creation).
-- Effort: Medium (need basic sentence parsing)
-- Risk: English grammar is messy. Many edge cases.
-- Precedent: spaCy POS tagging (VB tag for base form), Dasha.AI sentence type classification
-
-**S4.4: "To" + infinitive detection**
-Many instructions follow the pattern "To [verb], [instruction]":
-- "To customize, create `.docalign.yml`"
-- "To start the MCP server, run `docalign mcp`"
-
-Detect this pattern and mark the referenced artifacts as instructional.
-- Effort: Small (regex pattern)
-- Risk: Narrow pattern. Misses other instruction forms.
-- Precedent: None specific
-
-### Recommendation
-
-**S4.1** (imperative verb list) is the highest-impact, lowest-effort fix. Maintain a curated list of ~30 imperative verbs. When a claim's surrounding sentence starts with or contains one of these verbs as the main verb, reduce its confidence or skip extraction. Supplement with **S4.2** (heading context) for additional signal.
-
----
-
 ## Problem 5: Prerequisite vs Dependency Confusion
 
 **Impact:** ~1 false positive ("Node.js 18+" flagged as "Package is not a dependency")
 
-**Root cause:** "Node.js 18+" is a runtime prerequisite documented for users. The version extractor matched "Node.js 18+" and looked for "node.js" in `package.json` dependencies. It's not there because Node.js is the runtime, not a dependency.
+**Root cause:** "Node.js 18+" is a runtime prerequisite documented for users. The version extractor matched "Node.js 18+" and looked for "node.js" in `package.json` dependencies.
 
-### Solutions
+### Solutions Considered for Problems 3, 4, 5
 
-**S5.1: Known-runtime allowlist**
-Maintain a list of known runtime/platform names that should not be checked against package.json: Node.js, Python, Ruby, Java, Go, Rust, .NET, PHP, Deno, Bun, Docker, etc.
-- Effort: Trivial
-- Risk: List needs maintenance. Some runtimes could appear as actual dependencies.
-- Precedent: None specific, but common sense filtering
+These three problems share a root cause: the regex-based extractor lacks contextual understanding. It cannot distinguish examples from real claims, instructions from assertions, or prerequisites from dependencies. Multiple approaches were evaluated:
 
-**S5.2: Check engines field instead**
-For Node.js version claims, check `package.json` `engines.node` field instead of `dependencies`. For Python, check `pyproject.toml` `requires-python`.
-- Effort: Small
-- Risk: Many projects don't set `engines` field.
-- Precedent: npm/yarn engine checking
+| Solution | Approach | Precedent | Limitation |
+|----------|----------|-----------|------------|
+| S3.1: AST scope filtering | Parse markdown AST, skip code blocks/tables/blockquotes | Vale's scope system | Heuristics never perfect; some tables mix examples with real refs |
+| S3.2: Inline comment directives | Authors annotate `<!-- docalign:ignore -->` | markdownlint, remark-lint | Requires author discipline; defeats "zero config" |
+| S3.3: Explicit coupling | Only check explicitly tagged claims | Swimm `<SwmToken>`, `<SwmPath>` | Changes product from "zero config" to "annotation required" |
+| S3.4: Contextual confidence scoring | Assign confidence multipliers by context | Swimm's multi-signal histogram | Requires empirical tuning |
+| S3.5: Table header analysis | Detect "Example" column headers → skip cells | Novel heuristic | Only covers tables |
+| S3.6: Verb-pattern classification | Detect capability/imperative verbs | Doc Detective | English is ambiguous |
+| S4.1: Imperative verb detection | Keyword list of ~30 imperative verbs | NLP research (~84% accuracy) | Some imperatives contain verifiable claims |
+| S4.2: Section heading context | "Getting Started" → instructional | Vale, Doc Detective | Mixed sections |
+| S5.1: Known-runtime allowlist | Skip Node.js, Python, etc. from dependency check | Common sense | List maintenance |
+| S5.2: Check engines field | Verify against `engines.node` instead of `dependencies` | npm/yarn | Many projects don't set `engines` |
 
-**S5.3: Section context — "Prerequisites" / "Requirements"**
-If the claim appears under a heading like "Prerequisites", "Requirements", "System Requirements", treat it as a runtime requirement rather than a dependency claim.
-- Effort: Small (heading pattern matching)
-- Risk: Not all prerequisite sections use these headings.
-- Precedent: Doc Detective's heading-based context detection
+### Decision: LLM-Powered Annotation with Inline Tags
 
-### Recommendation
+**Problems 3, 4, and 5 are all solved by a single architectural change**: delegate document classification to Claude during the `docalign extract` step, and persist the results as inline HTML comment tags in the document itself.
 
-**S5.1** (known-runtime allowlist) is trivial and sufficient. Combine with **S5.2** (check engines field) for repos that do specify engine versions.
+#### How It Works
+
+**During `docalign extract` (one Claude call per file):**
+
+1. Claude reads the document section
+2. Claude classifies each region — what's an example, what's an instruction, what's a real verifiable claim
+3. Claude extracts semantic claims from real content (same as today) and explores the codebase to write evidence assertions
+4. Results are written as **inline HTML comment tags** in the document and **sidecar evidence files** in `.docalign/semantic/`
+
+**The output has two parts:**
+
+**Inline tags (in the document)** — lightweight markers visible in source, invisible when rendered:
+```markdown
+<!-- docalign:skip reason="example_table" -->
+| Category | Example |
+|----------|---------|
+| File paths | `src/auth.ts` referenced but doesn't exist |
+<!-- /docalign:skip -->
+
+<!-- docalign:check type="path_reference" -->
+10 tools available: `check_doc`, `check_section`, ...
+<!-- /docalign:check -->
+
+<!-- docalign:semantic claim="Uses JWT for authentication" id="abc123" -->
+The AuthService handles authentication using JWT tokens.
+<!-- /docalign:semantic -->
+```
+
+Three tag types:
+- **`docalign:skip`** — examples, instructions, illustrations. Regex extractors skip these regions entirely.
+- **`docalign:check`** — real deterministic claims (paths, versions, commands). Regex extractors extract and verify these. No sidecar entry needed — verification is stateless.
+- **`docalign:semantic`** — semantic claims (behavior, architecture, config). Links to sidecar entry with evidence assertions and verification history.
+
+**Sidecar files (in `.docalign/semantic/`)** — heavy metadata for semantic claims only:
+```json
+{
+  "claims": [{
+    "id": "abc123",
+    "claim_text": "Uses JWT for authentication",
+    "evidence_entities": [{"symbol": "jwt.sign", "file": "src/auth.ts"}],
+    "evidence_assertions": [
+      {"pattern": "import jwt from .jsonwebtoken.", "scope": "src/auth.ts", "expect": "exists"}
+    ],
+    "last_verification": {"verdict": "verified", "confidence": 0.95}
+  }]
+}
+```
+
+**During `docalign check / scan`:**
+
+1. Load inline tags from the document
+2. Regex extractors run but **skip regions tagged `docalign:skip`**
+3. Regex extractors extract from regions tagged `docalign:check` (or untagged regions as fallback)
+4. Semantic claims are loaded from sidecar, verified via assertion staleness checks
+5. Deterministic verifiers run on extracted claims (with Problems 1 & 2 fixes applied)
+6. Results reported
+
+#### Why Inline Tags Over Sidecar-Only
+
+| Concern | Sidecar-only | Inline tags |
+|---------|-------------|-------------|
+| Visibility for Claude Code during edits | Poor — needs separate file read | Immediate — sees tags in context |
+| Visibility for humans editing docs | None — invisible metadata | Clear — right in the source |
+| Survives doc edits (line shifts) | Fragile (line numbers drift) | Robust (tags move with content) |
+| Self-contained | No — depends on `.docalign/` dir | Yes — document carries its own metadata |
+| Rendered output | N/A | Invisible (HTML comments are stripped) |
+
+Key insight: inline tags serve as **navigation aids** for both Claude Code and human developers. When Claude is editing a file, it immediately sees which regions are tracked, which are skipped, and which are semantic claims. This is especially valuable for the MCP integration story — Claude Code can make informed decisions about documentation while editing code.
+
+#### Three-Tier Priority System
+
+1. **Inline tags** (highest priority) — Claude-generated or manually added, persisted in the document
+2. **Cold-start heuristics** (fallback) — when no tags exist yet, regex extractors run unfiltered with the deterministic fixes (S1.1, S2.1, S5.1) to reduce false positives
+3. **Manual override** — users can always add/edit/remove tags by hand
+
+#### Why This Solves Problems 3, 4, and 5
+
+- **Problem 3 (examples):** Claude understands that a table showing "what the tool detects" is illustrative → tags it `docalign:skip`
+- **Problem 4 (instructions):** Claude understands "create `.docalign.yml`" is imperative → tags it `docalign:skip`
+- **Problem 5 (prerequisites):** Claude understands "Node.js 18+" is a runtime requirement → tags it `docalign:skip` or doesn't tag it as `docalign:check`
+
+No heuristics, no verb lists, no table header analysis. The LLM understands context natively. The deterministic extractors just need to respect the tags.
+
+#### Integration with Existing Architecture
+
+The change is minimal:
+- **P-EXTRACT prompt**: expanded to also output `skip_regions` alongside semantic claims. One Claude call per file, same as today.
+- **Semantic extractor**: writes inline tags to the document after extraction (new behavior).
+- **Regex extractors (L1)**: check for `<!-- docalign:skip -->` before extracting. Small change.
+- **Sidecar store**: unchanged — still stores evidence assertions and verification history for semantic claims.
+- **P-TRIAGE, P-VERIFY, P-FIX**: completely unchanged.
 
 ---
 
-## Implementation Priority
+## Implementation Priority (Final)
 
-| Priority | Problem | Fix | Impact | Effort |
-|----------|---------|-----|--------|--------|
-| 1 | Relative paths | S1.1: Resolve from doc dir | ~10 FPs eliminated | Small |
-| 2 | Examples in tables | S3.5: Table header analysis | ~17 FPs eliminated | Small |
-| 3 | Imperative verbs | S4.1: Verb detection + skip | ~5 FPs eliminated | Small |
-| 4 | Partial paths | S2.1: Suffix matching | ~5 FPs eliminated | Small-Medium |
-| 5 | Runtime allowlist | S5.1: Known-runtime list | ~1 FP eliminated | Trivial |
-| 6 | Confidence framework | S3.4: Contextual scoring | Systematic FP reduction | Medium |
-| 7 | AST scope filtering | S3.1: Full context analysis | Broad FP reduction | Medium-Large |
-| 8 | Comment directives | S3.2: Author escape hatch | Edge case coverage | Small |
+| Priority | Fix | Impact | Effort | Type |
+|----------|-----|--------|--------|------|
+| 1 | S1.1: Resolve relative paths from doc directory | ~10 FPs eliminated | Small | Bug fix in L3 verifier |
+| 2 | S2.1: Suffix matching for partial paths | ~5 FPs eliminated | Small-Medium | Enhancement in L3 verifier |
+| 3 | S5.1: Known-runtime allowlist | ~1 FP eliminated | Trivial | Enhancement in L1 extractor |
+| 4 | Inline tag system + expanded P-EXTRACT | ~20+ FPs eliminated (Problems 3, 4, 5) | Medium | New feature in L1 + extract |
+| 5 | Tag-aware regex extractors | Enables tag system | Small | Enhancement in L1 |
 
-Fixes 1-5 would eliminate approximately **38 of the 37 verified false positives** (plus likely most of the remaining 58 unverified ones). They are all small-effort changes to the existing L1 extractor and L3 verifier.
+Fixes 1-3 are independent deterministic improvements that work with or without the tag system. Fix 4 is the architectural change that solves the remaining ~80% of false positives. Fix 5 makes the regex extractors respect the tags.
+
+**Cold start path**: Fixes 1-3 improve precision immediately for users who never run `extract`. Fix 4-5 brings precision to near-100% for users who run `extract` once.
 
 ---
 
-## Competitive Positioning
+## Competitive Positioning (Updated)
 
-| Approach | Used By | DocAlign Analog |
-|----------|---------|-----------------|
-| Resolve links from doc directory | All link checkers | S1.1 (bug fix) |
-| AST-based scope filtering | Vale | S3.1 |
-| Inline comment directives | markdownlint, remark-lint | S3.2 |
-| Explicit coupling (author tags what to track) | Swimm | S3.3 |
-| Procedural verb detection | Doc Detective | S4.1 |
-| Confidence-based multi-signal | Swimm Auto-sync | S3.4 |
+| Approach | Used By | DocAlign |
+|----------|---------|----------|
+| Resolve links from doc directory | All link checkers | S1.1 (deterministic fix) |
+| Suffix matching for partial paths | No documentation tool | S2.1 (novel, deterministic) |
+| Explicit coupling via tags | Swimm (manual) | Inline tags (LLM-generated, automatic) |
+| LLM-based document classification | Mintlify Agent, DeepDocs | P-EXTRACT expansion (classification + extraction in one call) |
 | Structured spec validation | Optic, DriftLinter, Dredd | N/A (DocAlign handles prose) |
-| LLM-based judgment | Semcheck, Mintlify, DeepDocs | DocAlign's semantic tier (P-VERIFY) |
-| Fail to human when uncertain | Swimm | S3.4 with min_confidence threshold |
+| Inline comment directives | markdownlint, remark-lint | `docalign:skip/check/semantic` tags |
+| Evidence-based staleness detection | Swimm Auto-sync (histogram) | Assertion tripwires (grep patterns) |
+| Execute docs as tests | Doc Detective | N/A (different paradigm) |
 
-DocAlign's unique value: **automatic claim extraction from unstructured prose + deterministic verification**. No competitor does both. Fixing these 5 bugs would make that value real instead of theoretical.
+**DocAlign's unique position**: automatic claim extraction from unstructured prose + inline tag annotation (LLM-generated, not manual) + deterministic verification with evidence-based staleness. No competitor combines automatic classification with deterministic verification. Swimm requires manual tagging. Mintlify/DeepDocs use LLMs for everything. DocAlign uses LLM for classification and extraction, then deterministic code for verification — best of both worlds.
+
+---
+
+## Competitor Research Summary
+
+### Direct Competitors
+
+| Tool | Core Mechanism | Strengths | Weaknesses |
+|------|---------------|-----------|------------|
+| **Swimm** ($16-28/seat/mo) | Code-coupled `.sw.md` files with smart tokens. Patented auto-sync algorithm using multi-signal histogram. | Zero false positives on tracked content. Conservative fail-to-human. | Requires proprietary editor. Manual coupling. Only GitHub. Steep learning curve. |
+| **Doc Detective** (free, AGPL-3.0) | Execute documentation as browser tests. Regex patterns detect procedural verbs. | Tests actual product behavior. Annotation + auto-detect modes. | Slow (browser-based). Only tests user-facing behavior. No code structure tracking. |
+| **Mintlify Agent** ($300+/mo) | AI agent monitors code changes, proposes doc updates via PR. | Low config burden. Style-preserving edits. | No deterministic analysis. Expensive. Known false negatives on internal links. |
+| **Semcheck** (free + LLM costs) | LLM compares spec documents against code. Inline comment annotations. | Lightweight. Multi-model support. | Entirely LLM-dependent. No deterministic verification. Self-described "primitive evaluation." |
+| **DeepDocs** (GitHub App) | AI scans commits, creates PR branches with doc updates. | Fix-forward approach. Low config. | AI-dependent. File-level, not token-level. No example/reference distinction. |
+
+### Structural Validation Tools (not direct competitors)
+
+| Tool | Core Mechanism | Relevance to DocAlign |
+|------|---------------|----------------------|
+| **Writerside** (free, JetBrains) | IDE plugin with 100+ structural inspections. `include-symbol` references. | `include-lines` is brittle. Acknowledges semantic drift as unsolved. |
+| **ReadMe** ($99-2000/mo) | OpenAPI spec sync + API metrics dashboard. | API-only. Observability, not validation. |
+| **Optic** (free core) | Proxy API traffic vs OpenAPI spec. | API-only but precise. Treats traffic as source of truth. |
+| **DriftLinter** (free) | Static analysis: code vs OpenAPI 3.0+ specs. | API-only. Missing/zombie route detection. |
+| **Dredd** (free) | HTTP requests per API spec, compare responses. | API-only. Response format validation. |
+
+### Key Industry Gaps DocAlign Addresses
+
+1. **No tool automatically classifies prose document regions** (example vs real claim). Swimm requires manual tagging. Others ignore the problem or skip all code blocks.
+2. **No tool does suffix/partial path matching** for documentation references. All require exact paths.
+3. **No tool combines LLM classification with deterministic verification**. Tools are either fully deterministic (high precision, low recall on semantic claims) or fully LLM (inconsistent precision).
+4. **The general prose documentation space is underserved**. API documentation is well-covered (Optic, DriftLinter, Dredd, ReadMe). Prose docs have no equivalent.
