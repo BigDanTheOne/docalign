@@ -22,6 +22,7 @@ export function extractPaths(doc: PreProcessedDoc, docFile: string): RawExtracti
   for (const pattern of FILE_PATH_PATTERNS) {
     for (let i = 0; i < lines.length; i++) {
       if (doc.code_fence_lines.has(i)) continue;
+      if (doc.tag_lines?.has(i)) continue;
       if (exampleSections.has(i)) continue;
       const line = lines[i];
       if (isIllustrativeLine(line)) continue;
@@ -52,6 +53,7 @@ export function extractPaths(doc: PreProcessedDoc, docFile: string): RawExtracti
   // Bare anchor links: [text](#heading-slug) — self-references
   for (let i = 0; i < lines.length; i++) {
     if (doc.code_fence_lines.has(i)) continue;
+    if (doc.tag_lines?.has(i)) continue;
     if (exampleSections.has(i)) continue;
     const line = lines[i];
     const regex = new RegExp(ANCHOR_LINK_PATTERN.source, ANCHOR_LINK_PATTERN.flags);
@@ -238,6 +240,7 @@ export function extractApiRoutes(doc: PreProcessedDoc): RawExtraction[] {
   for (const pattern of ROUTE_PATTERNS) {
     for (let i = 0; i < lines.length; i++) {
       if (doc.code_fence_lines.has(i)) continue;
+      if (doc.tag_lines?.has(i)) continue;
       const line = lines[i];
       if (isIllustrativeLine(line)) continue;
       if (isExternalApiLine(line)) continue;
@@ -309,6 +312,7 @@ export function extractCommands(doc: PreProcessedDoc): RawExtraction[] {
   for (const pattern of COMMAND_INLINE_PATTERNS) {
     for (let i = 0; i < lines.length; i++) {
       if (doc.code_fence_lines.has(i)) continue;
+      if (doc.tag_lines?.has(i)) continue;
       const line = lines[i];
       if (isIllustrativeLine(line)) continue;
       const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
@@ -435,6 +439,7 @@ export function extractDependencyVersions(
   // Runtime versions first (always kept)
   const runtimeRegex = new RegExp(VERSION_PATTERNS[2].regex.source, VERSION_PATTERNS[2].regex.flags);
   for (let i = 0; i < lines.length; i++) {
+    if (doc.tag_lines?.has(i)) continue;
     const line = lines[i];
     let match;
     const regex = new RegExp(runtimeRegex.source, runtimeRegex.flags);
@@ -455,6 +460,7 @@ export function extractDependencyVersions(
   for (let p = 0; p < 2; p++) {
     const pattern = VERSION_PATTERNS[p];
     for (let i = 0; i < lines.length; i++) {
+      if (doc.tag_lines?.has(i)) continue;
       const line = lines[i];
       const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
       let match;
@@ -673,6 +679,7 @@ export function extractEnvironmentClaims(doc: PreProcessedDoc): RawExtraction[] 
   // Runtime version requirements
   for (let i = 0; i < lines.length; i++) {
     if (doc.code_fence_lines.has(i)) continue;
+    if (doc.tag_lines?.has(i)) continue;
     const line = lines[i];
     for (const pattern of ENV_RUNTIME_PATTERNS) {
       const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
@@ -694,6 +701,7 @@ export function extractEnvironmentClaims(doc: PreProcessedDoc): RawExtraction[] 
   // Environment variable documentation
   for (let i = 0; i < lines.length; i++) {
     if (doc.code_fence_lines.has(i)) continue;
+    if (doc.tag_lines?.has(i)) continue;
     const line = lines[i];
     for (const pattern of ENV_VAR_INSTRUCTION_PATTERNS) {
       const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
@@ -755,6 +763,7 @@ export function extractConventionClaims(doc: PreProcessedDoc): RawExtraction[] {
 
   for (let i = 0; i < lines.length; i++) {
     if (doc.code_fence_lines.has(i)) continue;
+    if (doc.tag_lines?.has(i)) continue;
     const line = lines[i];
 
     // Strict mode mentions
@@ -811,6 +820,7 @@ export function extractUrlReferences(doc: PreProcessedDoc): RawExtraction[] {
 
   for (let i = 0; i < lines.length; i++) {
     if (doc.code_fence_lines.has(i)) continue;
+    if (doc.tag_lines?.has(i)) continue;
     const line = lines[i];
     const regex = new RegExp(URL_PATTERN.source, URL_PATTERN.flags);
     let match;
@@ -870,6 +880,7 @@ export function extractConfigClaims(doc: PreProcessedDoc): RawExtraction[] {
 
   for (let i = 0; i < lines.length; i++) {
     if (doc.code_fence_lines.has(i)) continue;
+    if (doc.tag_lines?.has(i)) continue;
     const line = lines[i];
     if (isIllustrativeLine(line)) continue;
 
@@ -938,6 +949,7 @@ export function extractProseSignatures(doc: PreProcessedDoc): RawExtraction[] {
 
   for (let i = 0; i < lines.length; i++) {
     if (doc.code_fence_lines.has(i)) continue;
+    if (doc.tag_lines?.has(i)) continue;
     const line = lines[i];
 
     // Backtick-wrapped calls: `functionName(param1, param2)`
@@ -1027,6 +1039,7 @@ export function extractTableClaims(
 
   for (let i = 0; i < lines.length; i++) {
     if (doc.code_fence_lines.has(i)) continue;
+    if (doc.tag_lines?.has(i)) continue;
     const line = lines[i].trim();
 
     // Detect table rows: | cell | cell |
