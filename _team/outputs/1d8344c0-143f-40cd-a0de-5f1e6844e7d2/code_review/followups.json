@@ -1,0 +1,7 @@
+[
+  {
+    "id": "FU-1",
+    "status": "accepted_fixed",
+    "rationale": "Ported follow-up triage verify gate into version-controlled pipeline skill and merged PR #4"
+  }
+]
