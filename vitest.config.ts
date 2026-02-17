@@ -6,5 +6,10 @@ export default defineConfig({
     environment: 'node',
     testTimeout: 30_000,
     fileParallelism: false,
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '.openclaw/**',
+    ],
   },
 });

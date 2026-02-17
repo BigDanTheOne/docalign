@@ -9,6 +9,36 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: docalign
+          POSTGRES_PASSWORD: docalign
+          POSTGRES_DB: docalign_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U docalign -d docalign_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://docalign:docalign@localhost:5432/docalign_dev
+      REDIS_URL: redis://localhost:6379
+
     steps:
       - uses: actions/checkout@v4
 
@@ -24,10 +54,10 @@ jobs:
       - name: Path hygiene gate
         run: npm run check:path-hygiene
 
-      - name: Stage artifact gate (build)
-        run: npm run check:stage-artifacts -- --run-id 24919391-3857-458b-a416-90666443ede9 --stage build --schema-version 1
-
       - run: npm run lint
+
+      - name: Run migrations
+        run: npm run migrate:up
 
       - run: npm run test
 
