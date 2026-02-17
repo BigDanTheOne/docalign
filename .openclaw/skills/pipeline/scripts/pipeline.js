@@ -268,7 +268,9 @@ function assembleExecPlan(runId, wtPath) {
     "SELECT agent, feedback FROM steps WHERE run_id = ? AND stage = 'code_review' AND status = 'rejected' ORDER BY completed_at DESC"
   ).all(runId);
   if (rejectedSteps.length > 0) {
-    priorFeedback = rejectedSteps.map(s => `### ${s.agent}\n${s.feedback || '(no feedback)'}`).join('\n\n');
+    priorFeedback = rejectedSteps
+      .map(s => `### ${s.agent}\n${normalizeMultiline(s.feedback) || '(no feedback)'}`)
+      .join('\n\n');
   }
 
   // Build stage history from steps
@@ -276,7 +278,9 @@ function assembleExecPlan(runId, wtPath) {
     "SELECT stage, agent, status, result_summary, completed_at FROM steps WHERE run_id = ? ORDER BY started_at"
   ).all(runId);
   const stageHistory = steps.length > 0
-    ? steps.map(s => `- **${s.stage}** (${s.agent}): ${s.status}${s.result_summary ? ' — ' + s.result_summary : ''}`).join('\n')
+    ? steps
+      .map(s => `- **${s.stage}** (${s.agent}): ${s.status}${s.result_summary ? ' — ' + normalizeMultiline(s.result_summary) : ''}`)
+      .join('\n')
     : '(no prior stages recorded)';
 
   // Extract progress items from plan if available
@@ -506,8 +510,58 @@ function cmdStatus(args) {
   }
 }
 
+function parseEpochMs(value) {
+  if (typeof value !== 'string' || !value.trim()) { return null; }
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function normalizeMultiline(text) {
+  if (typeof text !== 'string') { return text; }
+  return text
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, '\t');
+}
+
 function validateFollowupTriageForVerify(runId) {
-  const followupsPath = path.join(TEAM_DIR, 'outputs', runId, 'code_review', 'followups.json');
+  const codeReviewDir = path.join(TEAM_DIR, 'outputs', runId, 'code_review');
+  const followupsPath = path.join(codeReviewDir, 'followups.json');
+  const reviewWindowPath = path.join(codeReviewDir, 'codex-review-window.json');
+
+  if (!fs.existsSync(reviewWindowPath)) {
+    fatal(`Cannot advance to verify: missing Codex review gate file at ${reviewWindowPath}`);
+  }
+
+  let reviewWindow;
+  try {
+    reviewWindow = JSON.parse(fs.readFileSync(reviewWindowPath, 'utf8'));
+  } catch (err) {
+    fatal(`Cannot advance to verify: invalid JSON in ${reviewWindowPath}: ${err.message}`);
+  }
+
+  const windowStatus = reviewWindow.status;
+  const allowedWindowStatuses = new Set(['review_observed', 'timed_out_no_feedback']);
+  if (!allowedWindowStatuses.has(windowStatus)) {
+    fatal(`Cannot advance to verify: Codex review window not satisfied (status=${windowStatus || 'missing'})`);
+  }
+
+  if (windowStatus === 'timed_out_no_feedback') {
+    const reason = typeof reviewWindow.no_feedback_reason === 'string' ? reviewWindow.no_feedback_reason.trim() : '';
+    if (!reason) {
+      fatal('Cannot advance to verify: timed_out_no_feedback requires no_feedback_reason');
+    }
+  }
+
+  const latestCommentMs = parseEpochMs(reviewWindow.latest_codex_comment_at);
+  const finalIngestMs = parseEpochMs(reviewWindow.final_ingest_at || reviewWindow.ingested_at);
+  if (latestCommentMs !== null && (finalIngestMs === null || finalIngestMs < latestCommentMs)) {
+    fatal('Cannot advance to verify: follow-up ingestion is stale; run final Codex comment ingestion before verify');
+  }
+
+  const codexIssueCount = Number.isFinite(Number(reviewWindow.codex_issue_count))
+    ? Number(reviewWindow.codex_issue_count)
+    : null;
 
   if (!fs.existsSync(followupsPath)) {
     fatal(`Cannot advance to verify: missing follow-up triage file at ${followupsPath}`);
@@ -521,16 +575,20 @@ function validateFollowupTriageForVerify(runId) {
   }
 
   if (!Array.isArray(parsed) || parsed.length === 0) {
-    fatal(`Cannot advance to verify: followups.json must be a non-empty array of follow-up items`);
+    fatal('Cannot advance to verify: followups.json must be a non-empty array of follow-up items');
   }
 
   const allowedStatuses = new Set(['accepted_fixed', 'not_real', 'not_applicable']);
   const unresolved = [];
+  let codexItems = 0;
 
   for (const item of parsed) {
     const id = item.id || item.item_id || '(missing-id)';
     const status = item.status;
     const rationale = typeof item.rationale === 'string' ? item.rationale.trim() : '';
+    const source = String(item.source || '').toLowerCase();
+
+    if (source === 'codex') { codexItems += 1; }
 
     if (!allowedStatuses.has(status)) {
       unresolved.push({ id, reason: `invalid_or_unresolved_status:${status || 'missing'}` });
@@ -540,6 +598,10 @@ function validateFollowupTriageForVerify(runId) {
     if ((status === 'not_real' || status === 'not_applicable') && !rationale) {
       unresolved.push({ id, reason: 'missing_rationale_for_non_fix_triage' });
     }
+  }
+
+  if (codexIssueCount !== null && codexIssueCount > 0 && codexItems < codexIssueCount) {
+    fatal(`Cannot advance to verify: codex_issue_count=${codexIssueCount} but triaged codex items=${codexItems}`);
   }
 
   if (unresolved.length > 0) {
