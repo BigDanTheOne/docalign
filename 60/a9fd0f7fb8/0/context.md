@@ -1,0 +1,59 @@
+# Session Context
+
+**Session ID:** 8698195b-1f0f-4bac-9329-b78bf5c7749c
+
+**Commit Message:** Try to understand why this happened, find the root cause, and make it ne
+
+## Prompt
+
+Let's try to understand why this happened, find the root cause, and make it never happen again.
+
+## Summary
+
+Now I have the full picture. Here's what happened:
+
+## Root Cause Analysis
+
+**The Chief agent did the orchestration itself instead of spawning the Orchestrator.** Looking at the gateway log:
+
+1. Line 1196: `agent.wait 74386ms` — the Chief agent handled the task directly
+2. Lines 1197-1248: The Chief ran research_check, research, and advanced to build — all by itself, no orchestrator spawned
+3. Line 1248: "Next step is executing the README rewrite in build." — the Chief's turn ended here
+4. Line 1249: `system-event` — then silence. No further activity.
+
+**No orchestrator sub-agent was spawned for this run.** The `sessions_spawn` calls in the log are from a different, earlier run. The Chief acted as a one-shot orchestrator: it advanced through research_check → research → build in a single turn, then its turn ended with "next step is executing the README rewrite in build" as a statement of intent — but nobody was left alive to execute that intent.
+
+**Why it got stuck**: The Chief's turn completed. There's no mechanism to resume. The orchestrator_session field in the runs table is `null` — confirming no persistent orchestrator was tracking this run. The pipeline state says "build" but no process exists to drive it forward.
+
+## The Deeper Problem
+
+This isn't a one-off — it's an architectural gap:
+
+1. **No persistent orchestrator session per run.** The orchestrator should stay alive for the duration of a pipeline run, or at minimum be re-spawnable with full context.
+2. **No watchdog.** Nothing detects "pipeline stuck at stage X for Y minutes with no activity."
+3. **Build requires an external tool call that spans turns.** Calling Claude Code CLI could take minutes. If the agent's turn ends before that call, the work never happens.
+
+## Potential Fixes
+
+The most practical fix given what we have:
+
+1. **Pipeline watchdog cron** — A periodic job (every 15 min) that checks for runs stuck at `build` stage with no active steps for more than N minutes. Re-triggers the orchestrator.
+
+2. **Make build step non-deferrable** — The orchestrator (or Chief) must call Claude Code CLI in the same turn it advances to build. Not "next step is..." but actually doing it.
+
+3. **Record orchestrator_session** — When a run is created, bind it to a persistent orchestrator session that can be resumed.
+
+Which direction do you want to go?
+
+## Key Actions
+
+- - **Bash**: Check OpenClaw sessions directory
+- - **Bash**: Check OpenClaw logs directory
+- - **Bash**: List active OpenClaw sessions
+- - **Bash**: List orchestrator agent sessions
+- - **Bash**: List chief agent sessions
+- - **Bash**: List all sessions including archived
+- - **Grep**: 61a91750
+- - **Grep**: 61a91750
+- - **Read**: /Users/kotkot/.openclaw/logs/gateway.log
+- - **Read**: /Users/kotkot/.openclaw/logs/gateway.log
