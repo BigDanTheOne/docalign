@@ -1,0 +1,28 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "e59cbb122e6e",
+  "strategy": "auto-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "_team/outputs/1eb99e94-5d02-48ce-871c-1fd96f32ebf4/build/evidence-checklist.md",
+    "_team/outputs/1eb99e94-5d02-48ce-871c-1fd96f32ebf4/code_review/critic.md",
+    "_team/outputs/1eb99e94-5d02-48ce-871c-1fd96f32ebf4/verify/tech-lead.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/e5/9cbb122e6e/0/metadata.json",
+      "transcript": "/e5/9cbb122e6e/0/full.jsonl",
+      "context": "",
+      "content_hash": "/e5/9cbb122e6e/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 4,
+    "cache_creation_tokens": 26227,
+    "cache_read_tokens": 107646,
+    "output_tokens": 12,
+    "api_call_count": 2
+  }
+}

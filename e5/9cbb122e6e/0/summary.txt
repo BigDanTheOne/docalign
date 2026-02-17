@@ -1,0 +1,65 @@
+Excellent findings. Here's what we now know about OpenClaw session timeouts:
+
+## Investigation Results
+
+OpenClaw has **three independent timeout layers**:
+
+| Layer | Default | Your Config |
+|-------|---------|-------------|
+| **Agent turn runtime** (`agents.defaults.timeoutSeconds`) | **600s (10 min)** | Not set (default) |
+| **Exec command timeout** (`tools.exec.timeoutSec`) | 1800s (30 min) | Not set (default) |
+| **Exec auto-background** (`tools.exec.backgroundMs`) | 10s | Not set (default) |
+
+### The critical finding
+
+**Agent turns timeout after 10 minutes by default.** This is already confirmed to have fired on your system — the error log from Feb 15 shows:
+
+```
+embedded run timeout: runId=1c8c210d-... timeoutMs=600000
+```
+
+So this isn't theoretical — it already happened.
+
+### How the designed pattern works
+
+OpenClaw's intended solution for long-running commands:
+
+1. Agent calls `exec` with a long-running command (e.g., Claude Code CLI)
+2. After 10 seconds, the command **auto-backgrounds** and returns a `sessionId`
+3. The agent's turn completes quickly (well under 600s)
+4. The background process keeps running (up to 1800s / 30 min)
+5. When the process exits, `notifyOnExit` fires a system event that **wakes the agent** for a new turn
+6. The agent polls the result and continues
+
+### What this means for Problem #2
+
+The session itself is fine — sessions persist across turns. The problem is that our Orchestrator needs to:
+
+1. Launch Claude Code CLI as a **background exec** (not foreground)
+2. Let its turn end
+3. Wake up when the CLI finishes
+4. Continue with the next pipeline stage
+
+This changes the solution landscape significantly. Let me revisit the options:
+
+**Option A (synchronous blocking) — DEAD.** A 30-minute build will hit the 600s turn timeout. We could increase it to 3600s via config, but that's fragile and wasteful if a turn hangs.
+
+**Option B (self-completing wrapper) — LESS NECESSARY.** OpenClaw already has the background + notify-on-exit pattern built in.
+
+**Option C (watchdog cron) — STILL USEFUL** as a safety net, but not the primary mechanism.
+
+**Option D (use OpenClaw's built-in background exec + notify pattern) — THE ANSWER.** This is what OpenClaw was designed for. The Orchestrator just needs to be instructed to background the build command and poll on wake.
+
+### Recommended approach
+
+Update the **Orchestrator's AGENTS.md** build stage instructions to:
+
+1. Run Claude Code CLI via `exec` with `background: true` (or just let auto-background kick in after 10s)
+2. Note the session ID of the background process
+3. Let the turn end naturally
+4. When woken by `notifyOnExit`, poll the background process result
+5. If build succeeded, advance the pipeline to the next stage
+
+This requires **zero new infrastructure** — no wrapper scripts, no cron jobs, no config changes. Just correct instructions to the Orchestrator about how to handle long-running build commands within OpenClaw's existing patterns.
+
+What do you think? Should we go with this approach — updating the Orchestrator's instructions to use OpenClaw's native background exec pattern?

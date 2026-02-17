@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "e59cbb122e6e",
+  "session_id": "8698195b-1f0f-4bac-9329-b78bf5c7749c",
+  "strategy": "auto-commit",
+  "created_at": "2026-02-17T09:26:06.13475Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "_team/outputs/1eb99e94-5d02-48ce-871c-1fd96f32ebf4/build/evidence-checklist.md",
+    "_team/outputs/1eb99e94-5d02-48ce-871c-1fd96f32ebf4/code_review/critic.md",
+    "_team/outputs/1eb99e94-5d02-48ce-871c-1fd96f32ebf4/verify/tech-lead.md"
+  ],
+  "agent": "Claude Code",
+  "transcript_identifier_at_start": "ea241736-b853-43f4-8862-40d3b72eebf8",
+  "checkpoint_transcript_start": 7490,
+  "transcript_lines_at_start": 7490,
+  "token_usage": {
+    "input_tokens": 4,
+    "cache_creation_tokens": 26227,
+    "cache_read_tokens": 107646,
+    "output_tokens": 12,
+    "api_call_count": 2,
+    "subagent_tokens": {
+      "input_tokens": 15,
+      "cache_creation_tokens": 95939,
+      "cache_read_tokens": 808094,
+      "output_tokens": 66,
+      "api_call_count": 13
+    }
+  }
+}
