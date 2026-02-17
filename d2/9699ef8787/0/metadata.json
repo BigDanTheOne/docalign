@@ -1,0 +1,24 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "d29699ef8787",
+  "session_id": "8698195b-1f0f-4bac-9329-b78bf5c7749c",
+  "strategy": "auto-commit",
+  "created_at": "2026-02-17T10:25:57.776171Z",
+  "branch": "feat/port-followup-triage-gate",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".github/workflows/ci.yml",
+    "vitest.config.ts"
+  ],
+  "agent": "Claude Code",
+  "transcript_identifier_at_start": "5f2b7e1d-af69-4be0-810c-34dd6e48ad0b",
+  "checkpoint_transcript_start": 7873,
+  "transcript_lines_at_start": 7873,
+  "token_usage": {
+    "input_tokens": 22,
+    "cache_creation_tokens": 17025,
+    "cache_read_tokens": 2265805,
+    "output_tokens": 2467,
+    "api_call_count": 20
+  }
+}
