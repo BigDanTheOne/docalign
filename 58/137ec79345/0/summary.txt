@@ -1,0 +1,31 @@
+Here's the honest picture:
+
+## What Actually Works
+
+**The CLI works right now.** The agent ran `docalign check README.md` and `docalign scan` against this very repo and got real results - 31 claims extracted from the README, 15 verified, 8 drifted. That's real behavior, not test theater.
+
+**The core logic is genuinely tested.** L0 (AST parsing) uses real tree-sitter WASM. L1 (claim extraction) tests real regex/parsing against real markdown. L3 (verification) tests real algorithms. The integration tests boot a real Express server, hit real PostgreSQL, and run real multi-layer pipelines. About 60-65% of the 1,441 tests exercise real code, not just mocks.
+
+## What's Never Been Validated in Practice
+
+Here's where your concern lands:
+
+1. **GitHub App workflow** - Nobody has installed the GitHub App, pushed a PR, and seen it post a comment. Webhooks, scan queuing, PR comment formatting - tested in isolation but never end-to-end against real GitHub.
+
+2. **GitHub Action** - `agent-action/` is a complete package but has it ever run in a real CI workflow? No evidence of that.
+
+3. **MCP server with a real client** - The server test only checks CLI arg parsing. Nobody has connected Claude Code (or any MCP client) to `docalign mcp` and run queries.
+
+4. **LLM-powered features** - Tier 3 verification, semantic extraction, fix generation all need `ANTHROPIC_API_KEY`. The prompts exist, the plumbing exists, but have they been tested against a real LLM? The tests mock the LLM responses.
+
+5. **L4 orchestration under real conditions** - The scan processors are the most mock-heavy tests (~60% mocked). The E4 integration test covers the happy path, but error handling, cancellation, rate limiting under real load? Untested.
+
+6. **Fix endpoint** - HMAC signing, confirmation pages, git tree API calls to apply fixes via GitHub - all tested in unit isolation but never tried for real.
+
+## The Gap
+
+You have ~20K lines of source code, 1,441 tests, and zero users. The unit tests prove the individual pieces work. The integration tests prove some pipes connect. But nobody has run the full loop:
+
+> PR opened → webhook fires → scan queued → claims extracted → mapped → verified → PR comment posted → developer clicks "fix" → fix applied
+
+That's the gap. The question is: what do you want to do about it?
