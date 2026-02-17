@@ -149,10 +149,13 @@ stages:
   # --- VERIFICATION (automated) ---
 
   - id: verify
-    description: "Verify all child features integrated, CI green, acceptance criteria met"
+    description: "Verify all child features integrated, CI green, acceptance criteria met, QA integration tests pass"
     type: work
     agent: tech-lead
     autonomous: true
+    # pipeline.js auto-copies QA integration tests from qa_integration_tests/files/ into ~/docalign
+    # when advancing to this stage for epic runs. Run `npm run test:qa` to execute them.
+    # DocAlign health gate: must run `npx docalign scan --json` and write docalign-health.json
     on_pass: gtm_content
     on_fail: escalate_integration
 

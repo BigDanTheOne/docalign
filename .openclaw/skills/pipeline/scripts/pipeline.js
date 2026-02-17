@@ -490,7 +490,18 @@ function copyQaTestsToWorktree(runId, wtPath) {
           walk(fullPath);
         } else {
           const relPath = path.relative(srcRoot, fullPath);
+          // Path guard: QA test files must resolve under test/qa/ in the worktree.
+          // This prevents a malicious or buggy QA stage from overwriting implementation files.
+          const normalizedRel = path.normalize(relPath);
+          if (!normalizedRel.startsWith(`test${path.sep}qa${path.sep}`) && !normalizedRel.startsWith('test/qa/')) {
+            fatal(`QA test path guard violation: "${relPath}" is outside test/qa/. QA tests must be under test/qa/.`);
+          }
           const destPath = path.join(wtPath, relPath);
+          const resolvedDest = path.resolve(destPath);
+          const allowedRoot = path.resolve(path.join(wtPath, 'test', 'qa'));
+          if (!resolvedDest.startsWith(allowedRoot + path.sep) && resolvedDest !== allowedRoot) {
+            fatal(`QA test path traversal blocked: "${relPath}" resolves outside ${allowedRoot}`);
+          }
           fs.mkdirSync(path.dirname(destPath), { recursive: true });
           fs.copyFileSync(fullPath, destPath);
           copied.push(relPath);
@@ -717,6 +728,37 @@ function validateFollowupTriageForVerify(runId) {
   }
 }
 
+/**
+ * Validate DocAlign health before allowing verify -> next stage transition.
+ * Requires a docalign-health.json artifact in _team/outputs/<runId>/verify/.
+ * The orchestrator must run `npx docalign scan --json` and record the results.
+ */
+function validateDocAlignHealth(runId) {
+  const healthPath = path.join(TEAM_DIR, 'outputs', runId, 'verify', 'docalign-health.json');
+
+  if (!fs.existsSync(healthPath)) {
+    fatal(`Cannot advance past verify: missing DocAlign health report at ${healthPath}. Run 'npx docalign scan --json' and write results to this path.`);
+  }
+
+  let health;
+  try {
+    health = JSON.parse(fs.readFileSync(healthPath, 'utf8'));
+  } catch (err) {
+    fatal(`Cannot advance past verify: invalid JSON in ${healthPath}: ${err.message}`);
+  }
+
+  const MIN_HEALTH_PCT = Number(process.env.DOCALIGN_MIN_HEALTH_PCT) || 80;
+  const healthPct = Number(health.health_pct);
+
+  if (!Number.isFinite(healthPct)) {
+    fatal(`Cannot advance past verify: docalign-health.json missing numeric health_pct field`);
+  }
+
+  if (healthPct < MIN_HEALTH_PCT) {
+    fatal(`Cannot advance past verify: DocAlign health ${healthPct}% is below minimum ${MIN_HEALTH_PCT}%. Fix drifted documentation before proceeding. Drifted: ${health.drifted || '?'}, Verified: ${health.verified || '?'}`);
+  }
+}
+
 function cmdAdvance(args) {
   const runId = resolveRunId(requireArg(args, 'run-id'));
   const stage = requireArg(args, 'stage');
@@ -727,6 +769,11 @@ function cmdAdvance(args) {
   // every follow-up item is explicitly triaged and resolved.
   if (run.current_stage === 'code_review' && stage === 'verify') {
     validateFollowupTriageForVerify(runId);
+  }
+
+  // DocAlign health gate: do not allow verify -> next stage unless health is above threshold.
+  if (run.current_stage === 'verify') {
+    validateDocAlignHealth(runId);
   }
 
   const result = { run_id: runId, previous_stage: run.current_stage, current_stage: stage, status: run.status };
@@ -745,6 +792,13 @@ function cmdAdvance(args) {
     if (qaFiles.length > 0) result.qa_test_files = qaFiles;
     out(result);
     return;
+  }
+
+  // For epic pipelines advancing to verify: copy QA integration tests into the main repo
+  // so the verify agent can run them. Epic has no build worktree — children merged to main.
+  if (stage === 'verify' && run.type === 'epic') {
+    const qaFiles = copyQaTestsToWorktree(runId, REPO_ROOT);
+    if (qaFiles.length > 0) result.qa_test_files = qaFiles;
   }
 
   db.prepare(`
