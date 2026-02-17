@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "5e62f734d370",
+  "session_id": "43d9cfa8-7fc9-4d54-b865-d78dcf9529d9",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-17T09:59:38.119987Z",
+  "branch": "feature/5d62f151",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".openclaw/skills/pipeline/scripts/pipeline.js",
+    "EXEC_PLAN.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 2871,
+    "cache_creation_tokens": 55391,
+    "cache_read_tokens": 1863644,
+    "output_tokens": 376,
+    "api_call_count": 30
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-17T09:59:38.059567Z",
+    "agent_lines": 64,
+    "human_added": 70,
+    "human_modified": 2,
+    "human_removed": 0,
+    "total_committed": 136,
+    "agent_percentage": 47.05882352941176
+  }
+}
