@@ -5,8 +5,8 @@
 #
 # Flow:
 #   Signal → Debate → Define → Spec → Spec Review → CEO Approves Spec
-#   → Plan → Build (via Claude Code / Codex CLI) → CI/CD → Code Review (automated)
-#   → Verification → GTM Content → Ship → CEO Notified
+#   → Plan → QA Tests → Build (via Claude Code / Codex CLI) → CI/CD
+#   → Code Review (automated) → Verification → GTM Content → Ship → CEO Notified
 #
 # Key design principles:
 # - CEO is NOT asked to approve build, build_review, gtm, or content.
@@ -116,6 +116,17 @@ stages:
     # Produces: tasks/feature-<id>.md with numbered tasks, dependencies, files affected,
     # test criteria per task, and session groupings (like tasks/EXECUTION-PLAN.md pattern).
     # Build stage follows this plan task-by-task.
+    next: qa_tests
+
+  # --- QA TEST STAGE (pre-build test writing) ---
+
+  - id: qa_tests
+    description: "QA writes acceptance/contract tests based on spec, plan, and acceptance criteria"
+    type: work
+    agent: qa
+    autonomous: true
+    # Inputs: define/pm.md, spec/tech-lead.md, plan/tech-lead.md, decision.md
+    # Outputs: outputs/<run_id>/qa_tests/qa.md (manifest) + qa_tests/files/test/qa/<slug>/...
     next: build
 
   # --- BUILD PHASE (fully autonomous from here) ---

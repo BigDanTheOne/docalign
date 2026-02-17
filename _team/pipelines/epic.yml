@@ -6,7 +6,7 @@
 #
 # Flow:
 #   Signal → Strategic Debate → CEO Approves Decision
-#   → Decompose → CEO Approves Decomposition
+#   → Decompose → CEO Approves Decomposition → QA Integration Tests
 #   → Execute Children (autonomous) → Integration Review (automated)
 #   → Verification → GTM Content → Ship → CEO Notified
 #
@@ -88,9 +88,21 @@ stages:
     type: approval
     approver: ceo
     notify: ceo
-    on_approve: execute_children
+    on_approve: qa_integration_tests
     on_reject: decompose
     on_kill: done
+
+  # --- QA INTEGRATION TESTS (pre-execution test writing) ---
+
+  - id: qa_integration_tests
+    description: "QA writes integration tests verifying child features work together"
+    type: work
+    agent: qa
+    autonomous: true
+    # Inputs: decompose/pm.md, decompose/tech-lead.md, decision.md
+    # Outputs: outputs/<run_id>/qa_integration_tests/qa.md + files/test/qa/integration/...
+    # Focus: cross-feature contracts, shared interfaces, data flow between children
+    next: execute_children
 
   # --- EXECUTE CHILDREN (fully autonomous from here) ---
 
