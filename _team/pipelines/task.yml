@@ -4,8 +4,9 @@
 # Tasks are fully autonomous from start to finish.
 #
 # Flow:
-#   Request → [Research?] → Build (via Claude Code / Codex CLI)
-#   → CI/CD → Code Review (automated) → Verify → Done → CEO Notified
+#   Request → [Research?] → Task Define → QA Tests
+#   → Build (via Claude Code / Codex CLI) → CI/CD → Code Review (automated)
+#   → Verify → Done → CEO Notified
 #
 # Key design principles:
 # - Build uses external coding tools (claude CLI or codex CLI), NOT agent self-coding.
@@ -30,12 +31,32 @@ stages:
     type: decision
     agent: orchestrator
     next_if_yes: research
-    next_if_no: build
+    next_if_no: task_define
 
   - id: research
     description: Optional investigation phase
     type: work
     agent: researcher
+    next: task_define
+
+  # --- TASK DEFINE + QA TESTS ---
+
+  - id: task_define
+    description: "Orchestrator writes brief acceptance criteria from task request"
+    type: work
+    agent: orchestrator
+    autonomous: true
+    # Produces: outputs/<run_id>/task_define/orchestrator.md
+    # Lightweight: 3-5 bullet-point acceptance criteria derived from the task title + research
+    next: qa_tests
+
+  - id: qa_tests
+    description: "QA writes lightweight acceptance tests for the task"
+    type: work
+    agent: qa
+    autonomous: true
+    # Inputs: outputs/<run_id>/task_define/orchestrator.md, optional research output
+    # Outputs: outputs/<run_id>/qa_tests/qa.md (manifest) + qa_tests/files/test/qa/...
     next: build
 
   # --- BUILD PHASE ---

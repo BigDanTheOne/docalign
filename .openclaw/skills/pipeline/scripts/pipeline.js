@@ -378,6 +378,21 @@ function assembleExecPlan(runId, wtPath) {
     sections.push(plan);
   }
 
+  // QA Test Requirements
+  const qaManifest = readArtifact(path.join(outputsDir, 'qa_tests', 'qa.md'));
+  const qaIntManifest = readArtifact(path.join(outputsDir, 'qa_integration_tests', 'qa.md'));
+  if (qaManifest || qaIntManifest) {
+    sections.push(`\n## QA Test Requirements (MUST PASS)\n`);
+    sections.push(`Pre-written QA tests have been placed in this worktree under \`test/qa/\`.`);
+    sections.push(`These tests validate design contracts — they will FAIL until implementation is correct.\n`);
+    sections.push(`**Your implementation MUST make all QA tests pass. Do NOT modify QA test files.**`);
+    sections.push(`If a QA test is impossible to satisfy, add \`.skip()\` with a \`// QA-DISPUTE: <reason>\` comment`);
+    sections.push(`and document it in the Surprises & Discoveries section.\n`);
+    sections.push(`Run QA tests: \`npm run test:qa\`\n`);
+    if (qaManifest) sections.push(`### QA Test Manifest\n\n${qaManifest}`);
+    if (qaIntManifest) sections.push(`### QA Integration Test Manifest\n\n${qaIntManifest}`);
+  }
+
   // Specification (feature/epic only)
   if (spec && (isFeature || isEpic)) {
     sections.push(`\n## Specification\n`);
@@ -402,11 +417,13 @@ function assembleExecPlan(runId, wtPath) {
   sections.push(`For each task:`);
   sections.push(`1. Run \`npm run typecheck\` — must pass with 0 errors`);
   sections.push(`2. Run \`npm run test\` — must pass with 0 failures`);
-  sections.push(`3. Run \`npm run lint:agent\` — must produce 0 errors (includes remediation hints)\n`);
+  sections.push(`3. Run \`npm run lint:agent\` — must produce 0 errors (includes remediation hints)`);
+  sections.push(`4. Run \`npm run test:qa\` — QA acceptance tests must pass (0 failures)\n`);
   sections.push(`Final validation:`);
   sections.push(`1. Run \`npm run typecheck && npm run test && npm run lint\``);
   sections.push(`2. Verify all acceptance criteria above are met`);
-  sections.push(`3. Verify no regressions in existing tests\n`);
+  sections.push(`3. Verify no regressions in existing tests`);
+  sections.push(`4. Run \`npm run test:qa\` separately to confirm design contracts\n`);
   sections.push(`### Integration Testing (optional, for complex features)`);
   sections.push(`1. \`npm run build\``);
   sections.push(`2. \`bash ~/.openclaw/skills/pipeline/scripts/agent-dev.sh --run-id ${runId}\``);
@@ -436,6 +453,55 @@ function assembleExecPlan(runId, wtPath) {
   fs.writeFileSync(execPlanPath, sections.join('\n'), 'utf8');
 
   return execPlanPath;
+}
+
+/**
+ * Copy QA-authored test files from staging area into the worktree.
+ * Called during advance --stage build, before assembleExecPlan.
+ *
+ * Checks two source directories:
+ *   - _team/outputs/<runId>/qa_tests/files/       (feature/task QA tests)
+ *   - _team/outputs/<runId>/qa_integration_tests/files/  (epic integration QA tests)
+ *
+ * Files are copied preserving relative paths (e.g., test/qa/slug/foo.qa.test.ts).
+ *
+ * @param {string} runId
+ * @param {string} wtPath - Worktree root path
+ * @returns {string[]} List of copied file paths (relative to worktree)
+ */
+function copyQaTestsToWorktree(runId, wtPath) {
+  const outputsDir = path.join(TEAM_DIR, 'outputs', runId);
+  const sources = [
+    path.join(outputsDir, 'qa_tests', 'files'),
+    path.join(outputsDir, 'qa_integration_tests', 'files'),
+  ];
+
+  const copied = [];
+
+  for (const srcRoot of sources) {
+    if (!fs.existsSync(srcRoot)) continue;
+
+    // Recursive walk
+    const walk = (dir) => {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(fullPath);
+        } else {
+          const relPath = path.relative(srcRoot, fullPath);
+          const destPath = path.join(wtPath, relPath);
+          fs.mkdirSync(path.dirname(destPath), { recursive: true });
+          fs.copyFileSync(fullPath, destPath);
+          copied.push(relPath);
+        }
+      }
+    };
+
+    walk(srcRoot);
+  }
+
+  return copied;
 }
 
 /**
@@ -669,12 +735,14 @@ function cmdAdvance(args) {
   // Keep this transition atomic: only persist stage=build after setup succeeds.
   if (stage === 'build') {
     const wt = createWorktree(runId);
+    const qaFiles = copyQaTestsToWorktree(runId, wt.worktree_path);
     const execPlanPath = assembleExecPlan(runId, wt.worktree_path);
     db.prepare(`
       UPDATE runs SET current_stage = ?, updated_at = datetime('now','localtime') WHERE id = ?
     `).run(stage, runId);
     result.worktree = wt;
     result.exec_plan = execPlanPath;
+    if (qaFiles.length > 0) result.qa_test_files = qaFiles;
     out(result);
     return;
   }

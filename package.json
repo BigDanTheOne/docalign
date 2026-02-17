@@ -23,6 +23,8 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:qa": "vitest run test/qa/",
+    "test:builder": "vitest run --exclude 'test/qa/**'",
     "test:watch": "vitest",
     "migrate:up": "node-pg-migrate up --migrations-dir migrations --tsconfig tsconfig.json --ignore-pattern \"_|^\\.\"",
     "migrate:down": "node-pg-migrate down --count 1 --migrations-dir migrations --tsconfig tsconfig.json --ignore-pattern \"_|^\\.\"",
