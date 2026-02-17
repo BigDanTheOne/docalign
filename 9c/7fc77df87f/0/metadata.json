@@ -1,0 +1,23 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "9c7fc77df87f",
+  "session_id": "55286b63-9acd-4da9-9efc-391273de6a31",
+  "strategy": "auto-commit",
+  "created_at": "2026-02-17T15:15:03.872472Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "_team/docs/false-positive-analysis.md"
+  ],
+  "agent": "Claude Code",
+  "transcript_identifier_at_start": "306b993e-1099-4186-819f-56232280b1e4",
+  "checkpoint_transcript_start": 780,
+  "transcript_lines_at_start": 780,
+  "token_usage": {
+    "input_tokens": 5,
+    "cache_creation_tokens": 10268,
+    "cache_read_tokens": 472592,
+    "output_tokens": 4702,
+    "api_call_count": 3
+  }
+}
