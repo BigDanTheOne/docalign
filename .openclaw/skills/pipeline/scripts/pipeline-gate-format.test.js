@@ -1,7 +1,3 @@
-#!/usr/bin/env node
-'use strict';
-
-const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -25,77 +21,65 @@ function run(args, expectOk = true) {
 function mkdirp(p) { fs.mkdirSync(p, { recursive: true }); }
 function writeJson(p, obj) { fs.writeFileSync(p, JSON.stringify(obj, null, 2)); }
 
-function testReviewWindowGate() {
-  const runId = run(['create', '--type', 'feature', '--title', `gate-test-${Date.now()}`]).out.run_id;
-  run(['advance', '--run-id', runId, '--stage', 'code_review']);
+describe('pipeline gate + formatting', () => {
+  it('enforces review window gate for verify', () => {
+    const runId = run(['create', '--type', 'feature', '--title', `gate-test-${Date.now()}`]).out.run_id;
+    run(['advance', '--run-id', runId, '--stage', 'code_review']);
 
-  const dir = path.join(TEAM_DIR, 'outputs', runId, 'code_review');
-  mkdirp(dir);
+    const dir = path.join(TEAM_DIR, 'outputs', runId, 'code_review');
+    mkdirp(dir);
 
-  writeJson(path.join(dir, 'followups.json'), [
-    { id: 'fx-1', source: 'codex', status: 'accepted_fixed', rationale: 'fixed' },
-  ]);
+    writeJson(path.join(dir, 'followups.json'), [
+      { id: 'fx-1', source: 'codex', status: 'accepted_fixed', rationale: 'fixed' },
+    ]);
 
-  // 1) Missing review window blocks verify.
-  const missing = run(['advance', '--run-id', runId, '--stage', 'verify'], false);
-  assert(missing.err.includes('missing Codex review gate file'));
+    const missing = run(['advance', '--run-id', runId, '--stage', 'verify'], false);
+    expect(missing.err).toContain('missing Codex review gate file');
 
-  // 2) Pending window blocks verify.
-  writeJson(path.join(dir, 'codex-review-window.json'), {
-    status: 'pending_review_window',
-    codex_issue_count: 1,
-    latest_codex_comment_at: '2026-02-17T10:00:00Z',
-    final_ingest_at: '2026-02-17T10:00:00Z',
+    writeJson(path.join(dir, 'codex-review-window.json'), {
+      status: 'pending_review_window',
+      codex_issue_count: 1,
+      latest_codex_comment_at: '2026-02-17T10:00:00Z',
+      final_ingest_at: '2026-02-17T10:00:00Z',
+    });
+    const pending = run(['advance', '--run-id', runId, '--stage', 'verify'], false);
+    expect(pending.err).toContain('review window not satisfied');
+
+    writeJson(path.join(dir, 'codex-review-window.json'), {
+      status: 'review_observed',
+      codex_issue_count: 1,
+      latest_codex_comment_at: '2026-02-17T10:10:00Z',
+      final_ingest_at: '2026-02-17T10:00:00Z',
+    });
+    const stale = run(['advance', '--run-id', runId, '--stage', 'verify'], false);
+    expect(stale.err).toContain('ingestion is stale');
+
+    writeJson(path.join(dir, 'codex-review-window.json'), {
+      status: 'review_observed',
+      codex_issue_count: 1,
+      latest_codex_comment_at: '2026-02-17T10:10:00Z',
+      final_ingest_at: '2026-02-17T10:12:00Z',
+    });
+    const ok = run(['advance', '--run-id', runId, '--stage', 'verify']);
+    expect(ok.out.current_stage).toBe('verify');
   });
-  const pending = run(['advance', '--run-id', runId, '--stage', 'verify'], false);
-  assert(pending.err.includes('review window not satisfied'));
 
-  // 3) Stale ingestion blocks verify.
-  writeJson(path.join(dir, 'codex-review-window.json'), {
-    status: 'review_observed',
-    codex_issue_count: 1,
-    latest_codex_comment_at: '2026-02-17T10:10:00Z',
-    final_ingest_at: '2026-02-17T10:00:00Z',
+  it('normalizes escaped newlines in EXEC_PLAN summaries', () => {
+    const runId = run(['create', '--type', 'feature', '--title', `format-test-${Date.now()}`]).out.run_id;
+
+    const step = run(['add-step', '--run-id', runId, '--stage', 'define', '--agent', 'pm']).out;
+    run([
+      'complete-step',
+      '--step-id', step.id,
+      '--result', 'completed',
+      '--summary',
+      'Line one\\nLine two',
+    ]);
+
+    const advanced = run(['advance', '--run-id', runId, '--stage', 'build']).out;
+    const content = fs.readFileSync(advanced.exec_plan, 'utf8');
+
+    expect(content).toContain('Line one\nLine two');
+    expect(content).not.toContain('Line one\\nLine two');
   });
-  const stale = run(['advance', '--run-id', runId, '--stage', 'verify'], false);
-  assert(stale.err.includes('ingestion is stale'));
-
-  // 4) Satisfied window + fresh ingestion allows verify.
-  writeJson(path.join(dir, 'codex-review-window.json'), {
-    status: 'review_observed',
-    codex_issue_count: 1,
-    latest_codex_comment_at: '2026-02-17T10:10:00Z',
-    final_ingest_at: '2026-02-17T10:12:00Z',
-  });
-  const ok = run(['advance', '--run-id', runId, '--stage', 'verify']);
-  assert.equal(ok.out.current_stage, 'verify');
-}
-
-function testExecPlanNewlineNormalization() {
-  const runId = run(['create', '--type', 'feature', '--title', `format-test-${Date.now()}`]).out.run_id;
-
-  // Add a completed step with escaped literal newline in summary.
-  const step = run(['add-step', '--run-id', runId, '--stage', 'define', '--agent', 'pm']).out;
-  run([
-    'complete-step',
-    '--step-id', step.id,
-    '--result', 'completed',
-    '--summary',
-    'Line one\\nLine two',
-  ]);
-
-  const advanced = run(['advance', '--run-id', runId, '--stage', 'build']).out;
-  const execPlanPath = advanced.exec_plan;
-  const content = fs.readFileSync(execPlanPath, 'utf8');
-
-  assert(content.includes('Line one\nLine two'));
-  assert(!content.includes('Line one\\nLine two'));
-}
-
-function main() {
-  testReviewWindowGate();
-  testExecPlanNewlineNormalization();
-  process.stdout.write('pipeline gate + formatting tests passed\n');
-}
-
-main();
+});
