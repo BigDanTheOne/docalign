@@ -1,0 +1,70 @@
+# Session Context
+
+**Session ID:** f72936a6-196a-4d29-ad28-c6a9a02f5405
+
+**Commit Message:** <task-notification>
+<task-id>af4bc45</task-id>
+<status>completed</status
+
+## Prompt
+
+<task-notification>
+<task-id>af4bc45</task-id>
+<status>completed</status>
+<summary>Agent "Write corpus mutations and package.json updates" completed</summary>
+<result>Everything is in place. Here is a summary of all files created and changes made:
+
+---
+
+## Summary
+
+### Mutation files created (15 files)
+
+All files are in `/Users/kotkot/docalign/test/fixtures/corpora/synthetic-node/mutations/`:
+
+| File | Target file | Operation | Breaks claims |
+|---|---|---|---|
+| `det-001-bump-express.json` | `package.json` | `set_json_field` `dependencies.express` → `4.19.0` | C01 |
+| `det-002-bump-zod.json` | `package.json` | `set_json_field` `dependencies.zod` → `3.23.0` | C02 |
+| `det-003-rename-dev-script.json` | `package.json` | `replace_line_matching` `"dev":` → `"start:dev":` | C03, C08 |
+| `det-004-rename-config-file.json` | — | `rename_file` `src/config/index.ts` → `src/config/config.ts` | C04, C14 |
+| `det-005-rename-create-user.json` | `src/services/UserService.ts` | `replace_line_matching` `createUser` → `addUser` | C29 |
+| `det-006-remove-get-users.json` | `src/routes/users.ts` | `delete_line_matching` `router.get('/','` | C23 |
+| `det-007-change-post-to-put.json` | `src/routes/users.ts` | `replace_line_matching` `router.post` → `router.put` | C25 |
+| `det-008-remove-delete-users.json` | `src/routes/users.ts` | `delete_line_matching` `router.delete('/:id',` | C27 |
+| `det-009-remove-get-tasks.json` | `src/routes/tasks.ts` | `delete_line_matching` `router.get('/','` | C30 |
+| `det-010-remove-migrate-script.json` | `package.json` | `replace_line_matching` `"migrate":` → `"db:migrate":` | C17 |
+| `det-011-delete-env-example.json` | `.env.example` | `delete_file` | C09 |
+| `det-012-bump-pino.json` | `package.json` | `set_json_field` `dependencies.pino` → `9.0.0` | C40 |
+| `det-013-rename-complete-task-tool.json` | `src/mcp/server.ts` | `replace_line_matching` `complete_task` → `finish_task` | C51, C54 |
+| `det-014-delete-mcp-json.json` | `.claude/mcp.json` | `delete_file` | C50, C57 |
+| `det-015-delete-agents-file.json` | `.claude/agents/taskflow.md` | `delete_file` | C55, C56, C58 |
+
+### Expected findings file created
+
+`/Users/kotkot/docalign/test/fixtures/corpora/synthetic-node/expected/cold-start-clean.json` — contains `[]` (empty array, no findings expected on clean cold start).
+
+### package.json updated
+
+Four script entries inserted after `"test:qa"` at `/Users/kotkot/docalign/package.json`:
+
+```json
+"test:corpus": "vitest run test/corpus/",
+"corpus:record": "tsx test/corpus/scripts/record.ts",
+"corpus:tag": "tsx test/corpus/scripts/tag.ts",
+"corpus:gen-mutations": "tsx test/corpus/scripts/gen-mutations.ts",
+```
+
+The scripts use `tsx` (already present in `devDependencies`) consistent with the existing `tsx` devDependency. The spec listed `ts-node` in Section 10.1, but the task instructions specify `tsx` — `tsx` was used as instructed, and it is already installed in the project.</result>
+<usage>total_tokens: 40347
+tool_uses: 24
+duration_ms: 115198</usage>
+</task-notification>
+Full transcript available at: /private/tmp/claude-501/-Users-kotkot-docalign/tasks/af4bc45.output
+
+## Summary
+
+Mutations agent done — 15 det-*.json files + package.json scripts added. Waiting for the other 4 agents.
+
+## Key Actions
+

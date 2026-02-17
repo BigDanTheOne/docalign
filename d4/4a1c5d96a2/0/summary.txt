@@ -1,0 +1,1 @@
+Mutations agent done — 15 det-*.json files + package.json scripts added. Waiting for the other 4 agents.
