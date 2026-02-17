@@ -1,0 +1,24 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "be9efbf45b92",
+  "session_id": "8698195b-1f0f-4bac-9329-b78bf5c7749c",
+  "strategy": "auto-commit",
+  "created_at": "2026-02-17T09:35:14.650731Z",
+  "branch": "feat/port-followup-triage-gate",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "_team/outputs/1d8344c0-143f-40cd-a0de-5f1e6844e7d2/code_review/critic.md",
+    "_team/outputs/1d8344c0-143f-40cd-a0de-5f1e6844e7d2/code_review/followups.json"
+  ],
+  "agent": "Claude Code",
+  "transcript_identifier_at_start": "b76e7aa1-99bf-46f0-9219-13c0c10a295a",
+  "checkpoint_transcript_start": 7624,
+  "transcript_lines_at_start": 7624,
+  "token_usage": {
+    "input_tokens": 3,
+    "cache_creation_tokens": 14,
+    "cache_read_tokens": 77932,
+    "output_tokens": 1,
+    "api_call_count": 1
+  }
+}

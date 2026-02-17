@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "be9efbf45b92",
+  "strategy": "auto-commit",
+  "branch": "feat/port-followup-triage-gate",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "_team/outputs/1d8344c0-143f-40cd-a0de-5f1e6844e7d2/code_review/critic.md",
+    "_team/outputs/1d8344c0-143f-40cd-a0de-5f1e6844e7d2/code_review/followups.json"
+  ],
+  "sessions": [
+    {
+      "metadata": "/be/9efbf45b92/0/metadata.json",
+      "transcript": "/be/9efbf45b92/0/full.jsonl",
+      "context": "",
+      "content_hash": "/be/9efbf45b92/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 3,
+    "cache_creation_tokens": 14,
+    "cache_read_tokens": 77932,
+    "output_tokens": 1,
+    "api_call_count": 1
+  }
+}
