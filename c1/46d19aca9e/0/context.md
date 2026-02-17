@@ -1,0 +1,30 @@
+# Session Context
+
+**Session ID:** 55286b63-9acd-4da9-9efc-391273de6a31
+
+**Commit Message:** Okay please write an epic task description with all the decisions we mad
+
+## Prompt
+
+Okay please write an epic task description with all the decisions we made.
+
+## Summary
+
+Written to `tasks/epic-false-positive-elimination.md`.
+
+The epic captures everything we decided:
+
+- **Problem**: 95 false positives, 0% precision, 5 root causes
+- **Competitive research**: Swimm's tags, Doc Detective's verb detection, Vale's scoping, what nobody solves
+- **Architecture**: Inline HTML comment tags (skip / check / semantic) + sidecar for evidence
+- **Extraction**: Single Claude call, two-phase prompt (classify document structure, then explore code)
+- **Three-tier priority**: Inline tags > sidecar > unfiltered regex (cold start)
+- **Verifier fixes**: Relative paths, suffix matching, runtime allowlist (independent of tags)
+- **10 tasks across 4 waves**: verifier fixes first, then tag system, then prompt enhancement, then validation
+- **Success criteria**: >90% precision on own repo, >70% on external repos
+
+Want to adjust anything, or start execution?
+
+## Key Actions
+
+- - **Write**: /Users/kotkot/docalign/tasks/epic-false-positive-elimination.md
