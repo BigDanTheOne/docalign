@@ -12,7 +12,7 @@ Task: DocAlign README final polish for GitHub skimmability and first-screen conv
 ## Progress
 
 - [x] Complete all build tasks (2026-02-17T09:00)
-- [ ] Push branch and open PR
+- [x] Push branch and open PR → https://github.com/BigDanTheOne/docalign/pull/2 (2026-02-17T09:01)
 - [x] All tests pass (`npm run typecheck && npm run test`) (2026-02-17T09:00)
 
 ## Context and Orientation
