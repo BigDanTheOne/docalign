@@ -30,12 +30,30 @@ export async function gracefulShutdown(deps: ShutdownDependencies): Promise<void
     logger.error({ err }, 'Error closing BullMQ queue');
   }
 
-  // 3. Disconnect Redis (force close, wait for connection end)
+  // 3. Disconnect Redis gracefully; tolerate already-closed race during shutdown
   try {
+    try {
+      await deps.redis.quit();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message !== 'Connection is closed.') {
+        throw err;
+      }
+    }
+
     await new Promise<void>((resolve) => {
-      deps.redis.on('end', resolve);
+      const onEnd = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
+      const timeout = setTimeout(() => {
+        deps.redis.off('end', onEnd);
+        resolve();
+      }, 300);
+      deps.redis.once('end', onEnd);
       deps.redis.disconnect();
     });
+
     logger.info('Redis disconnected');
   } catch (err) {
     logger.error({ err }, 'Error disconnecting Redis');
