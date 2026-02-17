@@ -1,0 +1,8 @@
+# Session Context
+
+## User Prompts
+
+### Prompt 1
+
+Read EXEC_PLAN.md in the current directory. It contains your full task list, specification, acceptance criteria, and validation instructions. Follow it exactly: 1. Work through each task in the Progress section in order 2. After completing each task, check it off in EXEC_PLAN.md with a timestamp 3. Run validation after each task as specified in the Validation section 4. Record any unexpected findings in the Surprises & Discoveries section 5. Record design decisions in the Decision Log section 6....
+
