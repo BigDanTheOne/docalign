@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "c0bca46daa21",
+  "strategy": "auto-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "_team/outputs/d11e8689-52d7-4ebf-86f9-3305f3b82213/verify/docalign-health.json",
+    "_team/outputs/d11e8689-52d7-4ebf-86f9-3305f3b82213/verify/test-results.json",
+    "_team/outputs/d2be1682-71c0-4894-bee4-777ed8801d33/code_review/codex-review-window.json",
+    "_team/outputs/d2be1682-71c0-4894-bee4-777ed8801d33/code_review/followups.json",
+    "_team/outputs/e1c078ae-9e67-45a6-9159-c844c3760797/verify/docalign-health.json"
+  ],
+  "sessions": [
+    {
+      "metadata": "/c0/bca46daa21/0/metadata.json",
+      "transcript": "/c0/bca46daa21/0/full.jsonl",
+      "context": "",
+      "content_hash": "/c0/bca46daa21/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 6,
+    "cache_creation_tokens": 7766,
+    "cache_read_tokens": 210258,
+    "output_tokens": 27,
+    "api_call_count": 2
+  }
+}
