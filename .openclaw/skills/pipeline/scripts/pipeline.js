@@ -749,11 +749,103 @@ function validateFollowupTriageForVerify(runId) {
 }
 
 /**
+ * Validate one-time bootstrap exception policy for verify health gate.
+ * This is intentionally narrow: a temporary path for "health paradox" runs where
+ * the work itself targets false-positive reduction causing an initially low score.
+ *
+ * Required artifact when health < threshold:
+ *   _team/outputs/<runId>/verify/bootstrap-verify-policy.json
+ */
+function validateBootstrapVerifyPolicy(run, healthPct, minHealthPct) {
+  const runId = run.id;
+  const policyPath = path.join(TEAM_DIR, 'outputs', runId, 'verify', 'bootstrap-verify-policy.json');
+
+  if (!fs.existsSync(policyPath)) {
+    fatal(`Cannot advance past verify: DocAlign health ${healthPct}% is below minimum ${minHealthPct}% and no bootstrap policy found at ${policyPath}.`);
+  }
+
+  let policy;
+  try {
+    policy = JSON.parse(fs.readFileSync(policyPath, 'utf8'));
+  } catch (err) {
+    fatal(`Cannot advance past verify: invalid JSON in ${policyPath}: ${err.message}`);
+  }
+
+  const required = ['exception_id', 'approved_by', 'reason', 'created_at', 'expires_at', 'scope', 'baseline', 'rollback_plan'];
+  for (const key of required) {
+    if (!policy[key]) fatal(`Cannot advance past verify: bootstrap policy missing required field '${key}'.`);
+  }
+
+  if (policy.scope.run_id !== runId) {
+    fatal(`Cannot advance past verify: bootstrap policy scope.run_id (${policy.scope.run_id}) does not match run (${runId}).`);
+  }
+
+  if (policy.scope.run_type && policy.scope.run_type !== run.type) {
+    fatal(`Cannot advance past verify: bootstrap policy scope.run_type (${policy.scope.run_type}) does not match run type (${run.type}).`);
+  }
+
+  if (policy.scope.parent_epic_id && run.parent_epic_id && policy.scope.parent_epic_id !== run.parent_epic_id) {
+    fatal(`Cannot advance past verify: bootstrap policy parent_epic_id (${policy.scope.parent_epic_id}) does not match run parent_epic_id (${run.parent_epic_id}).`);
+  }
+
+  const expiresAt = Date.parse(policy.expires_at);
+  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+    fatal('Cannot advance past verify: bootstrap policy is expired or has invalid expires_at.');
+  }
+
+  const baseline = Number(policy.baseline.health_pct);
+  if (!Number.isFinite(baseline)) {
+    fatal('Cannot advance past verify: bootstrap policy baseline.health_pct must be numeric.');
+  }
+
+  const minFloor = Number(policy.min_health_floor_pct ?? 50);
+  if (!Number.isFinite(minFloor)) {
+    fatal('Cannot advance past verify: bootstrap policy min_health_floor_pct must be numeric when provided.');
+  }
+
+  const requiredDelta = Number(policy.min_delta_pct ?? 0);
+  if (!Number.isFinite(requiredDelta)) {
+    fatal('Cannot advance past verify: bootstrap policy min_delta_pct must be numeric when provided.');
+  }
+
+  const delta = healthPct - baseline;
+  if (healthPct < minFloor) {
+    fatal(`Cannot advance past verify: bootstrap policy floor violated (${healthPct}% < ${minFloor}%).`);
+  }
+
+  if (delta < requiredDelta) {
+    fatal(`Cannot advance past verify: bootstrap policy requires delta >= ${requiredDelta}%, actual delta=${delta}%.`);
+  }
+
+  if (Number(policy.rollback_plan.restore_min_health_pct) !== 80) {
+    fatal('Cannot advance past verify: rollback_plan.restore_min_health_pct must be 80.');
+  }
+
+  const consumedPath = path.join(TEAM_DIR, 'outputs', runId, 'verify', 'bootstrap-verify-policy.consumed.json');
+  if (fs.existsSync(consumedPath)) {
+    fatal(`Cannot advance past verify: bootstrap policy already consumed for run ${runId}. One-time use only.`);
+  }
+
+  const consumed = {
+    exception_id: policy.exception_id,
+    consumed_at: new Date().toISOString(),
+    health_pct_at_use: healthPct,
+    min_health_pct: minHealthPct,
+    baseline_health_pct: baseline,
+    delta_pct: delta,
+    approved_by: policy.approved_by,
+    rollback_plan: policy.rollback_plan,
+  };
+  fs.writeFileSync(consumedPath, `${JSON.stringify(consumed, null, 2)}\n`);
+}
+
+/**
  * Validate DocAlign health before allowing verify -> next stage transition.
  * Requires a docalign-health.json artifact in _team/outputs/<runId>/verify/.
  * The orchestrator must run `npx docalign scan --json` and record the results.
  */
-function validateDocAlignHealth(runId) {
+function validateDocAlignHealth(run) {
+  const runId = run.id;
   const healthPath = path.join(TEAM_DIR, 'outputs', runId, 'verify', 'docalign-health.json');
 
   if (!fs.existsSync(healthPath)) {
@@ -775,7 +867,7 @@ function validateDocAlignHealth(runId) {
   }
 
   if (healthPct < MIN_HEALTH_PCT) {
-    fatal(`Cannot advance past verify: DocAlign health ${healthPct}% is below minimum ${MIN_HEALTH_PCT}%. Fix drifted documentation before proceeding. Drifted: ${health.drifted || '?'}, Verified: ${health.verified || '?'}`);
+    validateBootstrapVerifyPolicy(run, healthPct, MIN_HEALTH_PCT);
   }
 }
 
@@ -793,7 +885,7 @@ function cmdAdvance(args) {
 
   // DocAlign health gate: do not allow verify -> next stage unless health is above threshold.
   if (run.current_stage === 'verify') {
-    validateDocAlignHealth(runId);
+    validateDocAlignHealth(run);
   }
 
   const result = { run_id: runId, previous_stage: run.current_stage, current_stage: stage, status: run.status };
