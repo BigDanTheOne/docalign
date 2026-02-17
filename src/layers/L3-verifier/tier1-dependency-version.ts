@@ -5,6 +5,26 @@ import { findCloseMatch } from './close-match';
 import { makeResult } from './result-helpers';
 
 /**
+ * Known Node.js builtins and runtime modules that won't appear in package.json.
+ * Data-driven: each entry has explicit test coverage.
+ */
+export const RUNTIME_ALLOWLIST = new Set([
+  // Node.js builtins
+  'assert', 'buffer', 'child_process', 'cluster', 'console', 'constants',
+  'crypto', 'dgram', 'dns', 'domain', 'events', 'fs', 'http', 'http2',
+  'https', 'module', 'net', 'os', 'path', 'perf_hooks', 'process',
+  'punycode', 'querystring', 'readline', 'repl', 'stream', 'string_decoder',
+  'sys', 'timers', 'tls', 'tty', 'url', 'util', 'v8', 'vm', 'worker_threads',
+  'zlib',
+  // Node.js prefixed builtins
+  'node:assert', 'node:buffer', 'node:child_process', 'node:crypto',
+  'node:events', 'node:fs', 'node:http', 'node:https', 'node:net',
+  'node:os', 'node:path', 'node:process', 'node:stream', 'node:url',
+  'node:util', 'node:worker_threads', 'node:zlib',
+  'node:test',
+]);
+
+/**
  * Tier 1: Verify dependency_version claims.
  * TDD-3 Appendix A.3.
  */
@@ -19,6 +39,15 @@ export async function verifyDependencyVersion(
   // Step 1: Lookup actual version
   const dep = await index.getDependencyVersion(claim.repo_id, pkgName);
   if (!dep) {
+    // Check if this is a known runtime/builtin that won't appear in package.json
+    if (RUNTIME_ALLOWLIST.has(pkgName)) {
+      return makeResult(claim, {
+        verdict: 'verified',
+        evidence_files: [],
+        reasoning: `Package '${pkgName}' is a known Node.js builtin/runtime module.`,
+      });
+    }
+
     // Fuzzy suggestion: find similar package names from manifests
     const manifest = await index.getManifestMetadata(claim.repo_id);
     const allDeps = manifest
