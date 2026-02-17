@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "b1c8be3c579f",
+  "strategy": "auto-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "_team/data/pipeline.db-shm",
+    "_team/data/pipeline.db-wal",
+    "_team/outputs/6477922d-5027-4465-b4ef-b850e811b943/code_review/codex-review-window.json",
+    "_team/outputs/6477922d-5027-4465-b4ef-b850e811b943/code_review/followups.json",
+    "_team/outputs/6e69d50b-a095-406f-b4d3-faedb3f44202/build/evidence-checklist.md",
+    "_team/outputs/721a31a6-cc2a-4f70-a7ab-a0fe9cbc8abb/code_review/codex-review-window.json",
+    "_team/outputs/721a31a6-cc2a-4f70-a7ab-a0fe9cbc8abb/code_review/followups.json",
+    "_team/outputs/73ab6eee-e6e5-47aa-9783-0ab1a037ad6c/code_review/codex-review-window.json",
+    "_team/outputs/73ab6eee-e6e5-47aa-9783-0ab1a037ad6c/code_review/followups.json"
+  ],
+  "sessions": [
+    {
+      "metadata": "/b1/c8be3c579f/0/metadata.json",
+      "transcript": "/b1/c8be3c579f/0/full.jsonl",
+      "context": "",
+      "content_hash": "/b1/c8be3c579f/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 31,
+    "cache_creation_tokens": 11891,
+    "cache_read_tokens": 2435115,
+    "output_tokens": 592,
+    "api_call_count": 29
+  }
+}

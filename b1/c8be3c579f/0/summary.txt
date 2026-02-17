@@ -1,0 +1,1 @@
+PR #7 merged. Local main is synced with the squash-merge commit `af27496` ("Feat/port followup triage gate (#7)") from GitHub plus a local sync merge. Both CI checks (build-and-test + docalign-scan) passed. Branch deleted on remote.
