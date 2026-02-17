@@ -157,7 +157,27 @@ const INITIAL_STAGES = {
 // ---------------------------------------------------------------------------
 // Git worktree config
 // ---------------------------------------------------------------------------
-const MAIN_REPO = path.join(os.homedir(), 'docalign');
+/**
+ * Resolve the main git repository path.
+ * Checks ~/docalign first (primary), then ~/Discovery/docalign (fallback).
+ * This ensures worktree git commands use the same checkout that actually exists,
+ * matching the DB_DIR / TEAM_DIR paths when only the Discovery checkout is present.
+ */
+function resolveMainRepo() {
+  const candidates = [
+    path.join(os.homedir(), 'docalign'),
+    path.join(os.homedir(), 'Discovery', 'docalign'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(path.join(candidate, '.git'))) {
+      return candidate;
+    }
+  }
+  // Last resort: return first candidate and let git commands fail with a clear error
+  return candidates[0];
+}
+
+const MAIN_REPO = resolveMainRepo();
 const WORKTREE_ROOT = path.join(os.homedir(), 'docalign-worktrees');
 
 function shortId(uuid) {
@@ -574,8 +594,18 @@ function validateFollowupTriageForVerify(runId) {
     fatal(`Cannot advance to verify: invalid JSON in ${followupsPath}: ${err.message}`);
   }
 
-  if (!Array.isArray(parsed) || parsed.length === 0) {
-    fatal('Cannot advance to verify: followups.json must be a non-empty array of follow-up items');
+  if (!Array.isArray(parsed)) {
+    fatal(`Cannot advance to verify: followups.json must be an array`);
+  }
+
+  if (parsed.length === 0) {
+    if (windowStatus === 'timed_out_no_feedback') {
+      return;
+    }
+    fatal(
+      `Cannot advance to verify: followups.json is empty but review status is "${windowStatus || 'unknown'}". ` +
+      `Empty triage is only allowed when status is "timed_out_no_feedback".`
+    );
   }
 
   const allowedStatuses = new Set(['accepted_fixed', 'not_real', 'not_applicable']);
