@@ -193,6 +193,8 @@ export interface PreProcessedDoc {
   file_size_bytes: number;
   /** Set of cleaned-content line indices (0-based) that are inside code fence blocks. */
   code_fence_lines: Set<number>;
+  /** Set of cleaned-content line indices (0-based) that are docalign tag lines (metadata, not content). */
+  tag_lines: Set<number>;
 }
 
 export interface RawExtraction {

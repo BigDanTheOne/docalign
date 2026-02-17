@@ -43,8 +43,10 @@ export function preProcess(content: string, format: DocFormat): PreProcessedDoc 
     }
   }
 
-  // Step 2: Strip HTML tags
+  // Step 2: Strip HTML tags (preserve docalign tags — they are metadata, not HTML)
+  const DOCALIGN_TAG_PATTERN = /^\s*<!--\s*docalign:\w+\s+.*?-->\s*$/;
   for (let i = 0; i < lines.length; i++) {
+    if (DOCALIGN_TAG_PATTERN.test(lines[i])) continue; // preserve docalign tags
     lines[i] = lines[i].replace(/<[^>]+>/g, '');
   }
 
@@ -135,12 +137,22 @@ export function preProcess(content: string, format: DocFormat): PreProcessedDoc 
     }
   }
 
+  // Step 8: Detect docalign tag lines (metadata, not content for extraction)
+  const tagLines = new Set<number>();
+  const TAG_LINE_PATTERN = /^\s*<!--\s*docalign:\w+\s+.*?-->\s*$/;
+  for (let i = 0; i < lines.length; i++) {
+    if (TAG_LINE_PATTERN.test(lines[i])) {
+      tagLines.add(i);
+    }
+  }
+
   return {
     cleaned_content: lines.join('\n'),
     original_line_map: originalLineMap,
     format,
     file_size_bytes: fileSizeBytes,
     code_fence_lines: codeFenceLines,
+    tag_lines: tagLines,
   };
 }
 

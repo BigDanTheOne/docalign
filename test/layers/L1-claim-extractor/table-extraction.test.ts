@@ -10,6 +10,7 @@ function makeDoc(markdown: string): PreProcessedDoc {
     format: 'markdown',
     file_size_bytes: Buffer.byteLength(markdown, 'utf8'),
     code_fence_lines: new Set(),
+    tag_lines: new Set<number>(),
   };
 }
 

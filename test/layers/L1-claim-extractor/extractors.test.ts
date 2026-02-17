@@ -22,6 +22,7 @@ function makeDoc(content: string): PreProcessedDoc {
     format: 'markdown',
     file_size_bytes: content.length,
     code_fence_lines: new Set<number>(),
+    tag_lines: new Set<number>(),
   };
 }
 
@@ -853,6 +854,7 @@ describe('extractors', () => {
         format: 'markdown',
         file_size_bytes: content.length,
         code_fence_lines: codeFenceLines,
+        tag_lines: new Set<number>(),
       };
     }
 
