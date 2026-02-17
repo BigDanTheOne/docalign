@@ -558,6 +558,26 @@ function removeWorktree(runId) {
   return { worktree_path: wt, removed: true };
 }
 
+/**
+ * Pull latest changes from remote into the main repository.
+ * Best-effort: failures are reported but do not block pipeline completion.
+ * This ensures the main checkout picks up merged PR changes.
+ *
+ * @returns {{ success: boolean, error?: string }}
+ */
+function pullMainRepo() {
+  try {
+    execSync(`git -C "${MAIN_REPO}" pull --ff-only`, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 30000,
+    });
+    return { success: true };
+  } catch (err) {
+    const stderr = err.stderr?.toString().trim() || err.message;
+    return { success: false, error: stderr };
+  }
+}
+
 const MAX_CONCURRENT_ACTIVE = 8;
 
 // ---------------------------------------------------------------------------
@@ -1013,6 +1033,12 @@ function cmdCompleteRun(args) {
   // Auto-cleanup worktree on completion
   if (run.worktree_path) {
     result.worktree_cleanup = removeWorktree(runId);
+  }
+
+  // Pull latest changes into main repo after successful completion
+  // (picks up the merged PR changes so the main checkout is not stale)
+  if (status === 'completed' && run.worktree_path) {
+    result.main_repo_pull = pullMainRepo();
   }
 
   // Check if a queued run can now start
