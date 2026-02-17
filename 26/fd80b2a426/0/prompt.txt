@@ -1,0 +1,4 @@
+concerned about both equally. Do not suspect any specific claim types to be honest. Ready to consider any option to battle-test everything. We only want to note that obviously it's much easier to track and treat false positives because we can simply take a big repo and dock it to our system, then take a look at all claims that are marked as drifted and check if it's true. If it's not, this is a false positive.
+On the other hand false negatives are actually two different problems that might be rooted in two different problems:
+1. Incorrect claim verification
+2. Incorrect claim extraction, like we simply skipped the claim
