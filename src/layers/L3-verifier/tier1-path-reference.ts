@@ -91,7 +91,25 @@ export async function verifyPathReference(
     }
   }
 
-  // Step 1b: Resolve relative to doc file's directory
+  // Step 1b: Resolve paths with sub-directory components relative to doc file's directory
+  // e.g., doc at "docs/getting-started.md" referencing "guides/mcp-integration.md"
+  // → try "docs/guides/mcp-integration.md"
+  if (claim.source_file && path.includes('/') && !path.startsWith('./') && !path.startsWith('../')) {
+    const docDir = claim.source_file.split('/').slice(0, -1).join('/');
+    if (docDir) {
+      const resolvedPath = `${docDir}/${path}`;
+      const resolvedExists = await index.fileExists(claim.repo_id, resolvedPath);
+      if (resolvedExists) {
+        return makeResult(claim, {
+          verdict: 'verified',
+          evidence_files: [resolvedPath],
+          reasoning: `File '${path}' resolves to '${resolvedPath}' relative to doc file directory.`,
+        });
+      }
+    }
+  }
+
+  // Step 1c: Resolve relative to doc file's directory
   // e.g., doc at "phases/foo.md" referencing "bar.md" → try "phases/bar.md"
   if (claim.source_file && !path.includes('/')) {
     const docDir = claim.source_file.split('/').slice(0, -1).join('/');
@@ -108,7 +126,7 @@ export async function verifyPathReference(
     }
   }
 
-  // Step 1c: Basename search for bare filenames (no directory component).
+  // Step 1d: Basename search for bare filenames (no directory component).
   // If docs say "containing HOOK.md and handler.ts", the file likely exists
   // somewhere in the repo even if not at the doc-relative path.
   if (!path.includes('/')) {

@@ -25,11 +25,11 @@ function extractPathReferences(line: string, lineNumber: number, context: Extrac
 - Uses regex matching with named groups
 - Never throws -- returns empty array on no match
 
-The syntactic pipeline in `L1-claim-extractor/syntactic.ts` calls all extractors in sequence: preprocess → extract → filter → dedup → convert to `Claim[]`.
+The syntactic pipeline in `src/layers/L1-claim-extractor/syntactic.ts` calls all extractors in sequence: preprocess → extract → filter → dedup → convert to `Claim[]`.
 
 ## Verifier Pattern
 
-Each claim type has a verifier function in `src/layers/L3-verifier/`. The main router in `L3-verifier/index.ts` switches on `claim.claim_type` and dispatches to the appropriate verifier.
+Each claim type has a verifier function in `src/layers/L3-verifier/`. The main router in `src/layers/L3-verifier/index.ts` switches on `claim.claim_type` and dispatches to the appropriate verifier.
 
 ```typescript
 function verifyPathReference(claim: Claim, index: CodebaseIndex): VerificationResult | null

@@ -445,6 +445,7 @@ export function extractDependencyVersions(
   for (let i = 0; i < lines.length; i++) {
     if (doc.tag_lines?.has(i)) continue;
     const line = lines[i];
+    if (isIllustrativeLine(line)) continue;
     let match;
     const regex = new RegExp(runtimeRegex.source, runtimeRegex.flags);
     while ((match = regex.exec(line)) !== null) {
@@ -466,6 +467,7 @@ export function extractDependencyVersions(
     for (let i = 0; i < lines.length; i++) {
       if (doc.tag_lines?.has(i)) continue;
       const line = lines[i];
+      if (isIllustrativeLine(line)) continue;
       const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
       let match;
       while ((match = regex.exec(line)) !== null) {
