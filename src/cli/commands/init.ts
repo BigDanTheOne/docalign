@@ -168,6 +168,7 @@ export async function runInit(
   // 3. Read skill content from package files
   const skillMd = readSkillFile("skills/docalign/SKILL.md");
   const setupSkillMd = readSkillFile("skills/docalign-setup/SKILL.md");
+  const docProcessorMd = readSkillFile("skills/docalign-setup/document-processor.md");
 
   // 4. Write skills to BOTH project-level AND user-level (~/.claude/skills/)
   //    Project-level: available when Claude Code opens in this directory
@@ -185,12 +186,15 @@ export async function runInit(
     const setupSkillDir = path.join(baseDir, "skills", "docalign-setup");
     fs.mkdirSync(setupSkillDir, { recursive: true });
     fs.writeFileSync(path.join(setupSkillDir, "SKILL.md"), setupSkillMd);
+    fs.writeFileSync(path.join(setupSkillDir, "document-processor.md"), docProcessorMd);
   }
 
   write("  \u2713 .claude/skills/docalign/SKILL.md (daily usage skill)");
   write("  \u2713 .claude/skills/docalign-setup/SKILL.md (setup wizard)");
+  write("  \u2713 .claude/skills/docalign-setup/document-processor.md (sub-agent spec)");
   write("  \u2713 ~/.claude/skills/docalign/SKILL.md (user-level, global)");
   write("  \u2713 ~/.claude/skills/docalign-setup/SKILL.md (user-level, global)");
+  write("  \u2713 ~/.claude/skills/docalign-setup/document-processor.md (user-level, global)");
 
   // 5. Write setup trigger to CLAUDE.md so setup starts automatically on next Claude Code launch
   const claudeMdPath = path.join(cwd, "CLAUDE.md");
@@ -199,7 +203,7 @@ export async function runInit(
 <!-- /docalign:setup-pending -->
 
 `;
-  let claudeMdContent = fs.existsSync(claudeMdPath)
+  const claudeMdContent = fs.existsSync(claudeMdPath)
     ? fs.readFileSync(claudeMdPath, "utf-8")
     : "";
   if (!claudeMdContent.includes("docalign:setup-pending")) {

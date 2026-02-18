@@ -24,8 +24,8 @@ Skip regions contain **illustrative content, not factual claims about the curren
 | `example_table` | Tables showing hypothetical tool output (invented paths, names, routes) |
 | `sample_output` | Code blocks showing what CLI output *looks like* with invented file names |
 | `illustrative_example` | Code blocks with hypothetical usage, not the project's actual code |
-| `user_instruction` | Text telling the reader to create files, run commands, fill in values |
-| `capability_description` | Prose listing what the product *can* detect, using example paths/names |
+| `user_instruction` | Text telling the reader to create files, run commands, fill in values — e.g. "Create `.docalign.yml` in your project root", "Add the following to `package.json`". Tag these even when they mention real file paths: the path is a *target for the reader to create*, not a claim about the current codebase. |
+| `capability_description` | Prose listing what the product *can* detect, using example paths/names. Also use this for operational policy text that contains all-caps acronyms (SLA, SLO, SLI, TTL) followed by values — e.g. "SLA: 7 days" — because these look like environment-variable references to the syntactic extractor but are not. |
 | `tutorial_example` | Step-by-step guides with placeholder names (`YourNewType`, `MockIndex`, `addYourExtractor`) |
 
 **Conservative rule**: when uncertain whether a region is illustrative, do NOT mark it as skip. Only skip regions you are confident about.
@@ -71,6 +71,10 @@ From the non-skipped content, find claims that are **specific, falsifiable, and 
 - Tool capability summaries: "DocAlign uses Claude for extraction" — spans many modules, no single entity proves it
 - External system behavior: "GitHub sends webhooks" — third-party, can't verify
 - Tautologies: "The scan command scans the repository"
+
+**Important distinction for README and overview files**: A claim is a "capability summary" only if no single function or module implements it. If a README or overview doc names a specific mechanism — e.g., "Posts a PR comment with a health score when drift is found" or "Reports findings as GitHub Check Run annotations" — it IS extractable as a `behavior` or `architecture` claim, because a specific formatter or reporter function implements it. Do not over-apply the capability-summary rule to README-style feature descriptions; apply it only when the claim spans the entire system with no single verifiable entry point.
+
+**Config defaults in reference tables**: A table row like `| extraction_model | claude-sonnet-4-20250514 |` is a valid `config` claim — the default value is documented and verifiable. Extract these as `config` claims with the key and value, the same as a prose statement like "Default extraction model is claude-sonnet-4-20250514".
 
 **Quality bar**: ask for each candidate claim — "If a developer changed the code in a plausible way, would this claim become wrong AND would it matter?" If no to either, skip it.
 

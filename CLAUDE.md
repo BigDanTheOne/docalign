@@ -1,7 +1,3 @@
-<!-- docalign:setup-pending -->
-**DocAlign Setup Required:** Immediately invoke the `/docalign-setup` skill to begin interactive configuration of documentation monitoring. (This notice is removed automatically when setup completes.)
-<!-- /docalign:setup-pending -->
-
 ---
 title: "DocAlign Implementation Instructions"
 summary: "Project instructions for Claude Code agents working on the DocAlign implementation: commands, rules, tech stack, and key spec/task file locations."

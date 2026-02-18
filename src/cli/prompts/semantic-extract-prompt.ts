@@ -118,6 +118,10 @@ Also SKIP:
 - **Aspirational statements**: "Designed for scale" — not falsifiable
 - **Tool capability summaries**: "DocAlign uses Claude for extraction", "The extract command finds behavior claims using Claude", "docalign works with zero config" — these describe the tool's own high-level features. They span multiple modules, no single code entity proves them, and extraction sub-agents tend to invent entity names that don't exist. Skip them.
 
+**Important distinction for README and overview files**: A claim is a "capability summary" only if no single function or module implements it. If a claim in a README names a specific mechanism — e.g., "Posts a PR comment with a health score when drift is found" or "Reports findings as GitHub Check Run annotations" — it IS extractable as a \`behavior\` or \`architecture\` claim, because a specific formatter or reporter function implements it. Do not over-apply the capability-summary rule to README-style feature descriptions; apply it only when the claim spans the entire system with no single verifiable entry point.
+
+**Config defaults in reference tables**: A table row like \`| extraction_model | claude-sonnet-4-20250514 |\` is a valid \`config\` claim — the default value is documented and verifiable. Extract these as config claims with the key and value. They are as falsifiable as any prose config statement.
+
 ### Quality bar
 
 Ask yourself for each potential claim: "If a developer changed the code in a plausible way, would this claim become wrong, AND would it matter?"

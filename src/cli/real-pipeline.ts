@@ -31,6 +31,9 @@ import {
 } from '../layers/L1-claim-extractor/extractors';
 import { rawToClaim } from '../layers/L1-claim-extractor/claim-store';
 
+// L5: Cross-document consistency
+import { findCrossDocInconsistencies } from '../layers/L5-reporter/cross-doc-consistency';
+
 // L3: Verification (exported tier functions)
 import { verifyPathReference } from '../layers/L3-verifier/tier1-path-reference';
 import { verifyApiRoute } from '../layers/L3-verifier/tier1-api-route';
@@ -320,6 +323,19 @@ export class LocalPipeline implements CliPipeline {
       }
 
       files.push({ file: docFile, claims, results, fixes });
+    }
+
+    // Cross-document consistency: flag when the same config key, dependency,
+    // env var, or command is documented with conflicting values across files.
+    const allClaims = files.flatMap((f) => f.claims);
+    const crossDocFindings = findCrossDocInconsistencies(allClaims, []);
+    for (const finding of crossDocFindings) {
+      const fileResult = files.find((f) => f.file === finding.claim.source_file);
+      if (!fileResult) continue;
+      fileResult.results.push(finding.result);
+      if (finding.result.verdict === 'drifted') totalDrifted++;
+      else if (finding.result.verdict === 'verified') totalVerified++;
+      else totalUncertain++;
     }
 
     const durationMs = Date.now() - startTime;
@@ -658,7 +674,11 @@ ${failureList}
 
 ## Instructions
 
-1. For each failed assertion, Grep the scope file to find what pattern ACTUALLY matches
+1. For each failed assertion:
+   a. If the scope is a specific file path (not a glob), use Glob first to confirm the file exists.
+      - If the file does NOT exist, the claim has genuinely drifted — the code was deleted or moved.
+        Return the assertion unchanged (same pattern, same scope, same expect). Do NOT search other files.
+   b. If the file exists (or the scope is a glob), Grep the scope to find what pattern ACTUALLY matches.
 2. If the claim is genuinely drifted (the code really doesn't support it), keep expect: "exists" with a pattern describing what SHOULD exist
 3. Return ONLY the corrected assertions, keyed by their index number
 

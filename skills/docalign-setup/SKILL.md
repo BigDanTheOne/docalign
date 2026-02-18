@@ -255,7 +255,10 @@ Default to 5 if the user skips the question.
 **Step 3.2: Prepare context, then spawn sub-agents**
 
 Before spawning, do this once:
-1. Read the sub-agent spec: `skills/docalign-setup/document-processor.md`
+1. Read the sub-agent spec. Check these locations in order and use the first that exists:
+   - `.claude/skills/docalign-setup/document-processor.md` (project-level, installed by `docalign init`)
+   - `~/.claude/skills/docalign-setup/document-processor.md` (user-level, installed by `docalign init`)
+   - `skills/docalign-setup/document-processor.md` (repo-relative fallback for docalign dev repo)
 2. Create the output directory so sub-agents don't race to create it:
    ```bash
    mkdir -p .docalign/semantic
@@ -264,7 +267,7 @@ Before spawning, do this once:
 Then spawn one Task sub-agent per document. Use the context you already have from Phase 2 (you read each document when writing its YAML header) to populate the dynamic context block:
 
 ```
-Read the Document Processor spec at: {absolute_path_to_repo}/skills/docalign-setup/document-processor.md
+Read the Document Processor spec at: {absolute_path_to_document_processor_md}
 
 Then process this document according to that spec.
 
