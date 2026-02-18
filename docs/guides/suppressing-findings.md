@@ -1,5 +1,10 @@
 ---
 title: "Suppressing Findings"
+summary: "Ignore specific files, patterns, claim types, or packages in DocAlign scan results"
+read_when:
+  - Suppressing a known false positive in scan results
+  - Excluding specific files, packages, or claim types from findings
+  - Understanding the limits of suppression rules
 description: "Use when you need to ignore specific files, patterns, claim types, or packages in DocAlign results."
 category: "guide"
 related:
@@ -11,6 +16,7 @@ related:
 
 Not every finding is actionable. Suppress rules let you ignore specific files, patterns, claim types, or packages.
 
+<!-- docalign:skip reason="illustrative_example" description="YAML block showing all four suppress rule fields together as a combined syntax example, not the project's own config" -->
 ## Add suppress rules
 
 In `.docalign.yml`:
@@ -23,6 +29,8 @@ suppress:
   - pattern: 'internal-.*-service'
 ```
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="YAML block showing suppress-by-file syntax with example paths (docs/legacy.md, docs/archive/**, docs/examples/*.md)" -->
 ## Suppress by file
 
 Ignore all findings in a file or file pattern:
@@ -34,6 +42,7 @@ suppress:
   - file: 'docs/examples/*.md'        # All examples
 ```
 
+<!-- /docalign:skip -->
 ## Suppress by claim type
 
 Ignore all findings of a specific type:
@@ -46,6 +55,7 @@ suppress:
 
 Valid claim types: `path_reference`, `dependency_version`, `command`, `api_route`, `code_example`, `behavior`, `architecture`, `config`, `convention`, `environment`, `url_reference`.
 
+<!-- docalign:skip reason="illustrative_example" description="YAML block showing suppress-by-package syntax with example package names (@internal/private-pkg, legacy-lib)" -->
 ## Suppress by package
 
 Ignore findings about a specific package:
@@ -56,6 +66,8 @@ suppress:
   - package: 'legacy-lib'
 ```
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="YAML block showing suppress-by-pattern syntax with example regex patterns" -->
 ## Suppress by pattern
 
 Ignore findings matching a regex pattern:
@@ -66,6 +78,7 @@ suppress:
   - pattern: 'localhost:\d+'          # Local URLs
 ```
 
+<!-- /docalign:skip -->
 ## Combine rules
 
 Multiple fields in one rule are AND-combined:

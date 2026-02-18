@@ -40,7 +40,7 @@ Use fix_doc with file="README.md"
 
 Fix suggestions come in two forms:
 
-<!-- docalign:skip reason="illustrative_example" description="Deterministic fixes section shows hypothetical examples of fix suggestions (version numbers, script names, paths) that illustrate what the tool produces, not real claims about this project's code" -->
+<!-- docalign:skip reason="illustrative_example" description="Deterministic fixes section showing hypothetical fix examples with invented paths and package versions" -->
 ### Deterministic fixes
 
 For claims with clear correct values, DocAlign suggests exact replacements:
@@ -76,7 +76,6 @@ verification:
 
 Auto-fix applies changes directly to your documentation files. Only deterministic fixes (version numbers, paths) with confidence above the threshold are applied. LLM suggestions are never auto-applied.
 
-<!-- docalign:skip reason="illustrative_example" description="Report drift manually section shows a hypothetical MCP usage example with invented file/claim values, not a factual claim about the current codebase" -->
 ## Report drift manually
 
 If you notice a doc error during work that DocAlign didn't catch:
@@ -90,5 +89,3 @@ Use report_drift via MCP:
 ```
 
 Reports are stored in `.docalign/reports/` for tracking.
-
-<!-- /docalign:skip -->

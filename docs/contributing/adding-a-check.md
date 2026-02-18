@@ -41,7 +41,6 @@ export type ClaimType =
 
 In `src/config/schema.ts`, add it to the `claimTypeEnum` and `claim_types` config section so it can be enabled/disabled.
 
-<!-- docalign:skip reason="user_instruction" description="Step 2 code block showing a hypothetical extractor function template (extractYourNewType) — this is instructional scaffolding, not a factual claim about existing code" -->
 ## Step 2: Write the Extractor
 
 Add a function in `src/layers/L1-claim-extractor/extractors.ts`:
@@ -71,9 +70,7 @@ export function extractYourNewType(
 ```
 
 Register it in the extraction pipeline in `src/layers/L1-claim-extractor/syntactic.ts`.
-<!-- /docalign:skip -->
 
-<!-- docalign:skip reason="user_instruction" description="Step 3 code blocks showing a hypothetical verifier function template (verifyYourNewType) and router registration — instructional scaffolding, not existing code" -->
 ## Step 3: Write the Verifier
 
 Add a verification function. Follow the verifier pattern:
@@ -116,11 +113,10 @@ Register it in the verifier router in `src/layers/L3-verifier/index.ts`:
 case 'your_new_type':
   return verifyYourNewType(claim, index);
 ```
-<!-- /docalign:skip -->
 
 ## Step 4: Write Tests
 
-<!-- docalign:skip reason="illustrative_example" description="Extraction test scaffolding showing hypothetical test structure for extractYourNewType — illustrative template, not a real test" -->
+<!-- docalign:skip reason="illustrative_example" description="Template extraction test code block using hypothetical extractYourNewType function" -->
 ### Extraction tests
 
 In `test/layers/L1-claim-extractor/`:
@@ -142,7 +138,7 @@ describe('extractYourNewType', () => {
 ```
 
 <!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="Verification test scaffolding showing hypothetical test structure for verifyYourNewType — illustrative template, not a real test" -->
+<!-- docalign:skip reason="illustrative_example" description="Template verification test code block using hypothetical verifyYourNewType function" -->
 ### Verification tests
 
 In `test/layers/L3-verifier/`:
@@ -176,6 +172,7 @@ describe('verifyYourNewType', () => {
 ```
 
 <!-- /docalign:skip -->
+<!-- docalign:skip reason="user_instruction" description="Step 5 instruction telling contributor to run typecheck and test commands" -->
 ## Step 5: Verify
 
 ```bash
@@ -184,6 +181,7 @@ npm run typecheck && npm run test
 
 Both must pass before the change is complete.
 
+<!-- /docalign:skip -->
 ## Checklist
 
 - [ ] Claim type added to `ClaimType` union (if new type)

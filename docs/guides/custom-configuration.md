@@ -16,7 +16,6 @@ related:
 
 DocAlign works with zero configuration. All settings have sensible defaults. To customize, create `.docalign.yml` at your repo root.
 
-<!-- docalign:skip reason="user_instruction" description="Interactive setup section showing CLI commands for users to run — instructions, not factual claims about current codebase behavior" -->
 ## Interactive setup
 
 ```bash
@@ -31,12 +30,11 @@ docalign configure --min-severity=medium
 docalign configure --reset    # Reset to defaults
 ```
 
-<!-- /docalign:skip -->
 ## Common configurations
 
-<!-- docalign:skip reason="illustrative_example" description="YAML config example showing how to configure doc_patterns — illustrative template, not a factual claim about current project state" -->
 ### Scan only specific directories
 
+<!-- docalign:skip reason="illustrative_example" description="YAML snippet showing example doc_patterns include/exclude configuration for user's repo" -->
 ```yaml
 doc_patterns:
   include:
@@ -46,11 +44,11 @@ doc_patterns:
     - 'docs/archive/**'
     - 'docs/internal/**'
 ```
-
 <!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="YAML config example for min_severity and min_severity_to_block — illustrative template" -->
+
 ### Focus on important issues only
 
+<!-- docalign:skip reason="illustrative_example" description="YAML snippet showing example verification.min_severity and check.min_severity_to_block configuration" -->
 ```yaml
 verification:
   min_severity: medium
@@ -58,22 +56,22 @@ verification:
 check:
   min_severity_to_block: high    # CI fails only on high severity
 ```
-
 <!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="YAML config example for disabling claim_types — illustrative template" -->
+
 ### Disable specific check types
 
+<!-- docalign:skip reason="illustrative_example" description="YAML snippet showing example claim_types boolean disable configuration" -->
 ```yaml
 claim_types:
   url_reference: false     # Skip dead link checks
   environment: false       # Skip env var checks
   convention: false        # Skip convention claims
 ```
-
 <!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="YAML config example for suppress rules — illustrative template" -->
+
 ### Suppress specific findings
 
+<!-- docalign:skip reason="illustrative_example" description="YAML snippet showing example suppress rules configuration" -->
 ```yaml
 suppress:
   - file: 'docs/legacy.md'
@@ -82,12 +80,12 @@ suppress:
   - pattern: 'localhost:\d+'
 ```
 
+<!-- /docalign:skip -->
 See [Suppressing Findings](suppressing-findings.md) for the full suppress reference.
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="YAML config example for url_check settings — illustrative template" -->
 ### Configure URL checking
 
+<!-- docalign:skip reason="illustrative_example" description="YAML snippet showing example url_check configuration with timeout and domain exclusions" -->
 ```yaml
 url_check:
   timeout_ms: 10000              # Longer timeout
@@ -96,30 +94,27 @@ url_check:
     - 'internal.company.com'
     - 'flaky-ci.example.com'
 ```
-
 <!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="YAML config example for LLM model names — illustrative template" -->
+
 ### Change LLM models
 
+<!-- docalign:skip reason="illustrative_example" description="YAML snippet showing example llm model configuration" -->
 ```yaml
 llm:
   verification_model: claude-sonnet-4-20250514
   extraction_model: claude-sonnet-4-20250514
 ```
-
 <!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="YAML config example for check.min_severity_to_block — illustrative template" -->
+
 ### Set up CI blocking
 
 ```yaml
 check:
-<!-- /docalign:skip -->
   min_severity_to_block: medium
 ```
 
 When set, `docalign check` exits 0 for low-severity drift and exits 1 only for medium or high.
 
-<!-- docalign:skip reason="user_instruction" description="View current config section showing docalign status command — user instruction" -->
 ## View current config
 
 ```bash
@@ -128,7 +123,6 @@ docalign status
 
 Shows the active config file path, enabled claim types, and any warnings.
 
-<!-- /docalign:skip -->
 ## Full reference
 
 See [Configuration Reference](../reference/configuration.md) for all 14 sections with every field, type, default, and example.

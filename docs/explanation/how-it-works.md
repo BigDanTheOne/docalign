@@ -16,7 +16,7 @@ related:
 
 DocAlign follows a three-stage pipeline: **extract** claims from documentation, **verify** each claim against the codebase, and **report** the results.
 
-<!-- docalign:skip reason="illustrative_example" description="ASCII pipeline diagram showing high-level architecture flow — illustrative visualization, not a falsifiable claim about code structure" -->
+<!-- docalign:skip reason="illustrative_example" description="ASCII pipeline diagram showing the flow between L0/L1/L3/L5 layers — illustrative architecture diagram, not a falsifiable code claim" -->
 ## Pipeline Overview
 
 ```
@@ -51,7 +51,6 @@ DocAlign follows a three-stage pipeline: **extract** claims from documentation, 
 ## Stage 1: Extract
 
 DocAlign scans each documentation file and extracts **claims** -- verifiable statements about the codebase.
-<!-- docalign:skip reason="capability_description" description="Bullet list of what syntactic extraction 'finds' — uses example paths, commands, env vars, etc. as illustrations of the tool's capabilities, not factual claims about this codebase" -->
 
 **Syntactic extraction** uses regex patterns to find:
 - File paths: `src/auth.ts`, `![logo](assets/logo.png)`
@@ -63,7 +62,6 @@ DocAlign scans each documentation file and extracts **claims** -- verifiable sta
 - Convention claims: "Uses TypeScript strict mode"
 - Config values: "defaults to port 3000"
 - URLs: `https://docs.example.com/guide`
-<!-- /docalign:skip -->
 
 **Table extraction** parses markdown tables and recognizes column semantics (package/version/path/command columns).
 
@@ -90,7 +88,6 @@ Results flow to multiple outputs:
 - **Health Score:** 0-100 based on verified / (verified + drifted) ratio
 - **Viz:** `docalign viz` generates an interactive knowledge graph
 
-<!-- docalign:skip reason="example_table" description="Verdicts table defining verified/drifted/uncertain — vocabulary definition, not a claim about code behavior" -->
 ## Verdicts
 
 Each claim gets one of three verdicts:
@@ -101,7 +98,6 @@ Each claim gets one of three verdicts:
 | **drifted** | Claim contradicts the codebase (with severity: low/medium/high) |
 | **uncertain** | Not enough evidence to determine |
 
-<!-- /docalign:skip -->
 ## Cross-Cutting Analysis
 
 After individual claims are verified, DocAlign runs cross-cutting checks:

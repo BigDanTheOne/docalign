@@ -31,7 +31,6 @@ npm run typecheck      # TypeScript type checking (run before tests)
 Tests mirror the `src/` directory:
 
 ```
-<!-- docalign:skip reason="tutorial_example" description="Illustrative test directory tree showing aspirational/target structure, not current actual layout (only L1-claim-extractor exists under test/layers/)" -->
 test/
   layers/
     L0-codebase-index/    # Index building, AST parsing
@@ -47,10 +46,9 @@ test/
   shared/                 # Utility tests
 ```
 
-<!-- /docalign:skip -->
 ## Test Fixtures
 
-<!-- docalign:skip reason="illustrative_example" description="makeClaim() usage example — shows hypothetical import and call with example values, not a factual claim about current codebase" -->
+<!-- docalign:skip reason="illustrative_example" description="makeClaim() fixture usage example showing hypothetical test setup code" -->
 ### makeClaim()
 
 Creates a test `Claim` object with sensible defaults. Override only what matters for your test:
@@ -67,7 +65,7 @@ const claim = makeClaim({
 ```
 
 <!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="makeMockIndex() usage example — shows hypothetical import and call with example field values" -->
+<!-- docalign:skip reason="illustrative_example" description="makeMockIndex() fixture usage example showing hypothetical mock codebase setup" -->
 ### makeMockIndex()
 
 Creates a mock `CodebaseIndex` that verifiers use to check claims:
@@ -99,7 +97,7 @@ const index = makeMockIndex({
 
 Not a test fixture -- this is the production helper used to build `VerificationResult` objects. Tests use it to verify that verifiers produce expected outputs.
 
-<!-- docalign:skip reason="illustrative_example" description="Writing Extraction Tests — code block shows hypothetical test cases with example paths and values, not actual test code" -->
+<!-- docalign:skip reason="illustrative_example" description="Writing Extraction Tests section showing example test patterns for extractors" -->
 ## Writing Extraction Tests
 
 Extraction tests verify that regex patterns correctly identify claims in documentation lines:
@@ -135,7 +133,7 @@ describe('extractPathReferences', () => {
 - Test that claim_type, value, and line_number are correct
 
 <!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="Writing Verification Tests — code block shows hypothetical test cases for verifyPathReference with example data" -->
+<!-- docalign:skip reason="illustrative_example" description="Writing Verification Tests section showing example test patterns for verifiers" -->
 ## Writing Verification Tests
 
 Verification tests check that claims are correctly verified against the codebase:
@@ -177,7 +175,7 @@ describe('verifyPathReference', () => {
 - Test edge cases (empty index, null values)
 
 <!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="Config Tests section — code block shows hypothetical parseConfig test with example assertion values" -->
+<!-- docalign:skip reason="illustrative_example" description="Config Tests section showing example test patterns for parseConfig" -->
 ## Config Tests
 
 Config tests verify YAML parsing, default merging, and validation:
@@ -205,8 +203,10 @@ Coverage targets vary by layer:
 - **Config**: Full coverage of parsing, defaults, and error paths
 - **CLI**: Integration-level tests for command dispatch
 
+<!-- docalign:skip reason="sample_output" description="npm run test --coverage command block — handled by regex" -->
 Run coverage report:
 
 ```bash
 npm run test -- --coverage
 ```
+<!-- /docalign:skip -->

@@ -1,5 +1,10 @@
 ---
 title: "Semantic Extraction"
+summary: "Extract behavior, architecture, and config claims from docs using LLM-powered semantic extraction"
+read_when:
+  - Enabling or running LLM-powered semantic extraction
+  - Understanding what claim types semantic extraction finds beyond regex
+  - Configuring or troubleshooting the extract command
 description: "Use when you want to extract behavior, architecture, and config claims from docs using Claude (LLM-powered extraction)."
 category: "guide"
 related:
@@ -12,6 +17,7 @@ related:
 
 DocAlign's regex extraction catches structural claims (file paths, versions, commands), but documentation often contains natural language claims that regex can't extract. Semantic extraction uses Claude to find these.
 
+<!-- docalign:skip reason="capability_description" description="Illustrative list of claim types the tool can detect — hypothetical examples, not factual claims about the current codebase" -->
 ## What it catches
 
 Claims that regex misses:
@@ -22,6 +28,7 @@ Claims that regex misses:
 - **Implicit contracts**: "All API endpoints return JSON with an `error` field on failure"
 - **Design decisions**: "Database migrations are run automatically on startup"
 
+<!-- /docalign:skip -->
 ## Extract all doc files
 
 ```bash
@@ -30,12 +37,15 @@ docalign extract
 
 Processes every doc file matched by `doc_patterns` config. Skips files and sections whose content hasn't changed since last extraction.
 
+<!-- docalign:skip reason="user_instruction" description="CLI command example showing how to extract a single file — instruction to user, not a factual claim" -->
 ## Extract a single file
 
 ```bash
 docalign extract README.md
 ```
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="user_instruction" description="CLI command example for --force flag with prose explanation — user instruction" -->
 ## Force re-extraction
 
 ```bash
@@ -44,6 +54,8 @@ docalign extract --force
 
 Re-extracts all sections even if content hasn't changed. Useful after updating the extraction model or wanting fresh analysis.
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="user_instruction" description="CLI command example for --dry-run flag — user instruction" -->
 ## Preview without saving
 
 ```bash
@@ -52,6 +64,7 @@ docalign extract --dry-run
 
 Shows what would be extracted without writing to `.docalign/semantic/`.
 
+<!-- /docalign:skip -->
 ## How it works
 
 1. DocAlign splits each doc file into sections (by headings)
@@ -77,6 +90,7 @@ Extracted claims are saved to `.docalign/semantic/`:
 
 Each file contains the source file, extraction timestamp, and an array of claims with their assertion patterns and verification results.
 
+<!-- docalign:skip reason="user_instruction" description="CLI command examples showing how to run check/scan — user instructions, not factual claims" -->
 ## Verification
 
 Semantic claims are verified automatically on every check and scan:
@@ -86,6 +100,7 @@ docalign check README.md    # Includes semantic claims
 docalign scan               # Includes semantic claims for all files
 ```
 
+<!-- /docalign:skip -->
 ## MCP integration
 
 Two MCP tools work with semantic claims:

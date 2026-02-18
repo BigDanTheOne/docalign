@@ -1,5 +1,11 @@
 ---
 title: "MCP Integration"
+summary: "Step-by-step guide for connecting DocAlign as an MCP server to Claude Code, Cursor, and other AI coding agents."
+read_when:
+  - Setting up DocAlign as an MCP server for Claude Code or Cursor
+  - Enabling AI coding agents to query and verify documentation
+  - Looking up which MCP tools DocAlign exposes and what each does
+  - Troubleshooting why an agent cannot access DocAlign documentation tools
 description: "Use when setting up DocAlign as an MCP server for Claude Code, Cursor, or other AI coding agents."
 category: "guide"
 related:
@@ -42,6 +48,7 @@ Add to your MCP config (`.claude/mcp.json` for Claude Code, or equivalent for ot
 
 With MCP integration, your AI agent can:
 
+<!-- docalign:skip reason="illustrative_example" description="Example of using get_docs_for_file with a hypothetical file path 'src/auth/middleware.ts' — this is a tutorial usage example, not a factual claim about the codebase" -->
 ### Find docs affected by code changes
 
 After changing `src/auth/middleware.ts`:
@@ -51,6 +58,7 @@ Use get_docs_for_file with file_path="src/auth/middleware.ts"
 ```
 
 Returns all doc claims that reference that file, showing which docs might need updating.
+<!-- /docalign:skip -->
 
 ### Check if documentation is accurate
 
@@ -61,6 +69,7 @@ Use deep_check with file="README.md" for a thorough audit
 
 `check_doc` runs syntactic checks. `deep_check` adds semantic claims and shows unchecked sections.
 
+<!-- docalign:skip reason="illustrative_example" description="Example of using get_docs with query='authentication' — illustrative tutorial invocation, not a factual claim" -->
 ### Search documentation by topic
 
 ```
@@ -68,13 +77,16 @@ Use get_docs with query="authentication"
 ```
 
 Returns doc sections about authentication ranked by relevance, with verification status.
+<!-- /docalign:skip -->
 
+<!-- docalign:skip reason="user_instruction" description="Step-by-step instructions telling the reader how to use list_drift and fix_doc — imperative user instructions, not factual claims" -->
 ### Fix stale documentation
 
 ```
 1. Use list_drift to see which files have drift
 2. Use fix_doc on each file to get fix suggestions
 ```
+<!-- /docalign:skip -->
 
 ### Report a doc error found during work
 

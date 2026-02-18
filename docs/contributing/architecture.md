@@ -16,7 +16,6 @@ related:
 
 DocAlign is organized into 8 layers (L0-L7), each with a single responsibility. Data flows through the layers as a pipeline.
 
-<!-- docalign:skip reason="illustrative_example" description="Layer Overview code block describes planned architecture with all 8 layers; the Layer Overview table is a high-level diagram, not a claim about implemented code" -->
 ## Layer Overview
 
 ```
@@ -30,8 +29,7 @@ L6  MCP                MCP server (10 tools, stdio transport)
 L7  Learning           Feedback, suppression, learning loop
 ```
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="Directory Structure code block shows the target/planned file layout, many directories of which do not yet exist (src/config/, src/shared/, src/storage/, L2-L7 layers, etc.)" -->
+<!-- docalign:skip reason="tutorial_example" description="Directory structure listing reflects target layout, not necessarily current state — extraction notes explicitly call this out" -->
 ## Directory Structure
 
 ```
@@ -54,7 +52,6 @@ src/
 <!-- /docalign:skip -->
 ## Data Flow
 
-<!-- docalign:skip reason="illustrative_example" description="Full scan pipeline numbered list describes intended data-flow through all 8 layers, most of which are not yet implemented" -->
 ### Full scan pipeline
 
 ```
@@ -86,7 +83,6 @@ src/
    - PR: GitHub comments (server mode)
 ```
 
-<!-- /docalign:skip -->
 ### CLI mode vs Server mode
 
 DocAlign runs in two modes:

@@ -22,7 +22,6 @@ This guide walks you through installing DocAlign, running your first scan, and u
 - Node.js 18+
 - A repository with markdown documentation
 
-<!-- docalign:skip reason="user_instruction" description="Install instructions telling the reader to run npm install or npx — instructions for the end-user, not factual claims about the project" -->
 ## Install
 
 ```bash
@@ -35,8 +34,6 @@ Or run directly without installing:
 npx docalign scan
 ```
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="user_instruction" description="Run Your First Scan tutorial section: instructions directing the user to navigate and run docalign scan" -->
 ## Run Your First Scan
 
 Navigate to your repository root and run:
@@ -47,8 +44,7 @@ docalign scan
 
 DocAlign automatically finds documentation files (`README.md`, `docs/**/*.md`, `CONTRIBUTING.md`, and more) and scans them for verifiable claims.
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="sample_output" description="Sample CLI output block showing invented file paths, package versions, and command names as illustrative examples of drift detection" -->
+<!-- docalign:skip reason="sample_output" description="Sample CLI output block showing hypothetical scan results with invented file paths, dependency versions, and health scores" -->
 ### Sample Output
 
 ```
@@ -67,7 +63,6 @@ Health score: 80/100
 ```
 
 <!-- /docalign:skip -->
-<!-- docalign:skip reason="user_instruction" description="Check a Single File section: user instruction to run docalign check with a flag" -->
 ## Check a Single File
 
 For detailed results on one file:
@@ -78,7 +73,6 @@ docalign check README.md --verbose
 
 The `--verbose` flag shows all claims, including verified ones. Without it, only drifted claims appear.
 
-<!-- /docalign:skip -->
 ## Understanding Results
 
 Each finding has three parts:
@@ -97,7 +91,6 @@ score = 100 * verified / (verified + drifted)
 
 Uncertain claims don't count. A score of 100 means every checkable claim matches the code.
 
-<!-- docalign:skip reason="user_instruction" description="MCP setup section: user instruction to run docalign init" -->
 ## Set Up for AI Agents (MCP)
 
 If you use Claude Code, Cursor, or another MCP client:
@@ -108,8 +101,6 @@ docalign init
 
 This configures the MCP server so your AI agent can query documentation health, find stale docs, and get fix suggestions. See [MCP Integration](guides/mcp-integration.md).
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="user_instruction" description="Optional semantic extraction section: user instruction to run docalign extract" -->
 ## Optional: Semantic Extraction
 
 For deeper analysis, extract behavior and architecture claims using Claude:
@@ -120,8 +111,7 @@ docalign extract
 
 This finds claims that regex can't catch, like "Authentication uses JWT tokens" or "Services communicate via REST." See [Semantic Extraction](guides/semantic-extraction.md).
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="user_instruction" description="Optional configuration section: user instruction to run docalign configure or create a config file" -->
+<!-- docalign:skip reason="user_instruction" description="Instructions telling the reader to run 'docalign configure' or create .docalign.yml — imperative steps, not factual claims about the current codebase" -->
 ## Optional: Configuration
 
 DocAlign works with zero configuration, but you can customize what it scans:
@@ -133,7 +123,7 @@ docalign configure
 Or create `.docalign.yml` manually. See [Custom Configuration](guides/custom-configuration.md).
 
 <!-- /docalign:skip -->
-<!-- docalign:skip reason="user_instruction" description="Next Steps section: links directing the user to other guides" -->
+<!-- docalign:skip reason="user_instruction" description="Next Steps section listing links for further reading — navigation instructions, not factual claims" -->
 ## Next Steps
 
 - [Checking Files](guides/checking-files.md) -- Scan repos, check files, interpret results
