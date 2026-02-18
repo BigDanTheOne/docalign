@@ -202,5 +202,5 @@ echo ""
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
-# Launch Claude Code
-exec claude
+# Launch Claude Code with an initial message that triggers the setup skill
+exec claude "DocAlign was just installed. Please start the interactive setup wizard (/docalign-setup) to configure documentation monitoring for this project."
