@@ -10,7 +10,7 @@
  * - Output format (JSON with claims array)
  */
 
-export const SEMANTIC_EXTRACT_SYSTEM_PROMPT = `You analyze documentation in two phases: first classify which regions are illustrative/instructional (not factual claims about the current codebase), then extract specific falsifiable semantic claims from the real content. You are ruthlessly selective: skip vague descriptions, skip anything regex can catch (commands, paths, versions, env vars), skip marketing language. Only extract claims where you can find concrete code evidence. Return valid JSON.`;
+export const SEMANTIC_EXTRACT_SYSTEM_PROMPT = `You analyze documentation in two phases: first classify which regions are illustrative/instructional (not factual claims about the current codebase), then extract specific falsifiable semantic claims from the real content. For Phase 2 evidence gathering, use the Task tool to investigate multiple claims in parallel — launch all sub-agents simultaneously in a single message, not one-by-one. You are ruthlessly selective: skip vague descriptions, skip anything regex can catch (commands, paths, versions, env vars), skip marketing language. Only extract claims where you can find concrete code evidence. Return valid JSON.`;
 
 /**
  * Build the extraction prompt for one doc file's changed sections.
@@ -58,9 +58,21 @@ Be conservative: when uncertain whether a region is illustrative, do NOT mark it
 
 ---
 
-## PHASE 2 — Semantic Claim Extraction (use Read, Glob, Grep tools)
+## PHASE 2 — Semantic Claim Extraction (use Task, Read, Glob, Grep tools)
 
 From the remaining content (excluding skip regions from Phase 1), extract specific falsifiable claims.
+
+### Speed: use parallel sub-agents
+
+You have access to the **Task tool**. Use it to investigate evidence for multiple claims in parallel — this is much faster than sequential tool calls.
+
+**Workflow:**
+1. Read the document sections and identify all candidate claims (5–15 typical per file)
+2. Launch one Task sub-agent per claim simultaneously — do NOT investigate claims one-by-one
+3. Each sub-agent prompt should be: "Search the codebase at [repoPath] for evidence of the claim: '[claim_text]'. Use Grep and Read to find the relevant source file and exact code pattern. Return JSON: { entities: [{symbol, file}], assertions: [{pattern, scope, expect, description}] }"
+4. Collect all sub-agent results, then assemble the final output JSON
+
+**Important:** launch all Task agents in a single message (parallel invocations), not sequentially. If a claim has no evidence after one round of search, mark it as already-drifted (see below) rather than exploring further.
 
 ### What to extract
 
@@ -95,16 +107,20 @@ Ask yourself for each potential claim: "If a developer changed the code in a pla
 
 If the answer is no to either question, skip it.
 
-### Evidence — READ THE CODE FIRST, THEN ASSERT
+### Evidence — PARALLEL SEARCH, THEN ASSERT
 
-**CRITICAL WORKFLOW**: You have Read, Glob, and Grep tools. For each claim:
+**PREFERRED WORKFLOW** (fast): Use Task to investigate all claims at once.
 
-1. **Find the implementation**: Use Glob/Grep to locate the relevant source file(s)
-2. **Read the actual code**: Use Read to see the exact implementation
-3. **Write assertions based on what you actually see** — not what you imagine the code looks like
-4. **Verify each assertion**: Use Grep to test your pattern against the scope file BEFORE including it. If \`expect: "exists"\` but Grep finds nothing — your pattern is wrong, fix it. If \`expect: "absent"\` but Grep finds matches — fix it. Only include assertions that pass.
+Spawn sub-agents in parallel — one per claim. Each sub-agent:
+1. Grepping for keywords in \`src/\`
+2. Reading the relevant file
+3. Returning verified pattern + scope
 
-**DO NOT GUESS code patterns.** Every assertion must be derived from code you actually read AND verified with Grep.
+**FALLBACK WORKFLOW** (if Task not available): Use Read, Glob, Grep directly but still investigate claims in parallel where possible (multiple tool calls in one message).
+
+**Quality rule**: Every assertion must be derived from code you actually read AND verified with Grep. DO NOT guess patterns.
+
+If a pattern \`expect: "exists"\` but Grep finds nothing — fix it or mark the claim as already-drifted. If \`expect: "absent"\` but Grep finds matches — fix it. Only include assertions that pass.
 
 ### evidence_entities
 Specific symbols you found in the code that implement the claimed behavior. Only include symbols you actually located via the tools.

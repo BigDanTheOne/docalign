@@ -221,7 +221,7 @@ line 6`;
         expect.any(String),
         expect.anything(),
         expect.objectContaining({
-          allowedTools: ['Read', 'Glob', 'Grep'],
+          allowedTools: ['Read', 'Glob', 'Grep', 'Task'],
           cwd: '/my/repo',
         }),
       );

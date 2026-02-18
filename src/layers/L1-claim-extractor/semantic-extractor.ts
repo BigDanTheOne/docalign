@@ -139,7 +139,7 @@ export async function extractSemanticClaims(
     prompt,
     SemanticExtractionOutputSchema,
     {
-      allowedTools: ['Read', 'Glob', 'Grep'],
+      allowedTools: ['Read', 'Glob', 'Grep', 'Task'],
       appendSystemPrompt: SEMANTIC_EXTRACT_SYSTEM_PROMPT,
       cwd: repoPath,
       // Normalize common Claude output quirks before Zod validation:

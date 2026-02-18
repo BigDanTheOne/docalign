@@ -12,12 +12,14 @@ related:
 These patterns are used consistently throughout the codebase.
 
 ## Extractor Pattern
+<!-- docalign:skip reason="illustrative_example" description="Code block showing hypothetical extractor function signature — this is a contract illustration, not a real function in the codebase with this exact signature" -->
 
 Each claim type has an extractor function in `src/layers/L1-claim-extractor/extractors.ts`. Every extractor follows the same signature:
 
 ```typescript
 function extractPathReferences(line: string, lineNumber: number, context: ExtractionContext): RawExtraction[]
 ```
+<!-- /docalign:skip -->
 
 **Contract:**
 - Takes a single line, its number, and extraction context
@@ -41,6 +43,7 @@ function verifyPathReference(claim: Claim, index: CodebaseIndex): VerificationRe
 - Uses `makeResult()` helper to construct results
 
 ## makeResult() Helper
+<!-- docalign:skip reason="illustrative_example" description="Code block showing example makeResult() call with hypothetical arguments — illustrative API usage pattern" -->
 
 All verification results are built using `makeResult()` from `src/layers/L3-verifier/result-helpers.ts`:
 
@@ -50,6 +53,7 @@ makeResult(verdict, {
   severity: 'high',
   evidence_files: ['src/auth.ts'],
   suggestion: 'Did you mean src/auth/index.ts?',
+<!-- /docalign:skip -->
 })
 ```
 
@@ -57,10 +61,12 @@ This ensures consistent result structure. Sets `tier: 1` and `confidence: 1.0` b
 
 ## Close Match / Fuzzy Suggestions
 
+<!-- docalign:skip reason="illustrative_example" description="Code block showing example findCloseMatch() call with hypothetical 'expresss' input — illustrative usage pattern" -->
 When a claim references something that doesn't exist, `findCloseMatch()` from `src/layers/L3-verifier/close-match.ts` finds the nearest alternative using Levenshtein distance:
 
 ```typescript
 const match = findCloseMatch('expresss', packageNames);
+<!-- /docalign:skip -->
 // { match: 'express', distance: 1 }
 ```
 
@@ -79,12 +85,14 @@ The configuration schema in `src/config/schema.ts` uses Zod with:
 
 ## Structured Logging with Pino
 
+<!-- docalign:skip reason="illustrative_example" description="Code block showing example logger calls with hypothetical claimType and field values — illustrative logging pattern" -->
 All logging uses Pino (`src/shared/logger.ts`):
 
 ```typescript
 import { logger } from '../shared/logger';
 logger.info({ claimType, file }, 'Verifying claim');
 logger.warn({ code: 'E502', field }, 'Invalid config field');
+<!-- /docalign:skip -->
 ```
 
 Error codes follow a numbering convention: E5xx for config errors, E4xx for pipeline errors.
@@ -92,6 +100,7 @@ Error codes follow a numbering convention: E5xx for config errors, E4xx for pipe
 ## Test Fixture Patterns
 
 ### makeClaim()
+<!-- docalign:skip reason="illustrative_example" description="Code block showing example makeClaim() call — illustrative test helper usage pattern" -->
 
 Tests use `makeClaim()` to create test claim objects:
 
@@ -101,10 +110,12 @@ const claim = makeClaim({
   value: 'src/auth.ts',
   source_file: 'README.md',
   line_number: 15,
+<!-- /docalign:skip -->
 });
 ```
 
 ### makeMockIndex()
+<!-- docalign:skip reason="illustrative_example" description="Code block showing example makeMockIndex() call with hypothetical file lists and packages — illustrative test helper usage pattern" -->
 
 Tests use `makeMockIndex()` to create mock codebase indexes:
 
@@ -114,6 +125,7 @@ const index = makeMockIndex({
   packages: { express: '^4.18.0' },
   scripts: { build: 'tsc', test: 'vitest' },
 });
+<!-- /docalign:skip -->
 ```
 
 This pattern keeps tests focused on the verifier logic without needing real file systems.
