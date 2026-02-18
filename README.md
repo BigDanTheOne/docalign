@@ -10,13 +10,15 @@ DocAlign extracts verifiable claims from your docs — file paths, dependency ve
 
 ## Setup
 
+Run this from the root of your project:
+
 ```bash
-npx docalign init
+curl -fsSL https://raw.githubusercontent.com/BigDanTheOne/docalign/main/scripts/install.sh | bash
 ```
 
-This configures the MCP server and installs the DocAlign skill into Claude Code. Restart Claude Code when prompted — that's it.
+The script checks prerequisites (Node 18+, git), installs DocAlign globally, runs `docalign init` to configure the MCP server and skills, then launches Claude Code. Claude walks you through selecting which docs to monitor and runs the initial extraction — one sub-agent per document, in parallel.
 
-After restart, Claude automatically checks documentation after code changes and answers "are my docs accurate?" directly. No further configuration required.
+After setup, Claude automatically checks documentation after code changes and answers "are my docs accurate?" directly. No further configuration required.
 
 ## How It Works
 
@@ -71,12 +73,12 @@ See [MCP Tools Reference](docs/reference/mcp-tools.md) for parameters and return
 
 ## CLI
 
-For one-off checks or CI use:
+For one-off checks, CI use, or manual setup:
 
 ```bash
+npx docalign init              # Manual setup (alternative to install.sh)
 npx docalign scan              # Scan entire repository
 npx docalign check README.md   # Check a single file
-npx docalign init              # Set up Claude Code integration
 ```
 
 See [CLI Reference](docs/reference/cli.md) for all commands and flags.
