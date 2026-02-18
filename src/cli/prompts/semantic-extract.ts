@@ -100,6 +100,7 @@ Also SKIP:
 - **Obvious tautologies**: "The scan command scans the repository" — restating the name
 - **External claims**: "GitHub sends webhooks" — we can't verify third-party behavior
 - **Aspirational statements**: "Designed for scale" — not falsifiable
+- **Tool capability summaries**: "DocAlign uses Claude for extraction", "The extract command finds behavior claims using Claude", "docalign works with zero config" — these describe the tool's own high-level features. They span multiple modules, no single code entity proves them, and extraction sub-agents tend to invent entity names that don't exist. Skip them.
 
 ### Quality bar
 
