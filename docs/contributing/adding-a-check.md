@@ -75,6 +75,7 @@ Register it in the extraction pipeline in `src/layers/L1-claim-extractor/syntact
 
 Add a verification function. Follow the verifier pattern:
 
+<!-- docalign:skip reason="illustrative_example" description="Template verifier function using hypothetical verifyYourNewType, someCheck, makeResult, and findCloseMatch placeholders" -->
 ```typescript
 export function verifyYourNewType(
   claim: Claim,
@@ -106,13 +107,16 @@ export function verifyYourNewType(
   });
 }
 ```
+<!-- /docalign:skip -->
 
 Register it in the verifier router in `src/layers/L3-verifier/index.ts`:
 
+<!-- docalign:skip reason="illustrative_example" description="Template router snippet using hypothetical your_new_type and verifyYourNewType placeholders" -->
 ```typescript
 case 'your_new_type':
   return verifyYourNewType(claim, index);
 ```
+<!-- /docalign:skip -->
 
 ## Step 4: Write Tests
 

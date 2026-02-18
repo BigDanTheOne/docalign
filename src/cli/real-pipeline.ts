@@ -64,7 +64,7 @@ import {
   buildDocSections,
   extractSemanticClaims,
 } from '../layers/L1-claim-extractor/semantic-extractor';
-import { writeSkipTagsToFile, stripSkipTags, blankSkipRegionContent } from '../tags/writer';
+import { writeSkipTagsToFile, blankSkipRegionContent } from '../tags/writer';
 import type { DocAlignConfig } from '../shared/types';
 import {
   loadDocMap,
@@ -490,11 +490,11 @@ export class LocalPipeline implements CliPipeline {
         return;
       }
 
-      // Strip existing skip tags so Claude always sees clean line numbers.
-      // Skip tags shift line indices; without stripping, re-runs produce
-      // duplicate or misaligned tags because Claude's output is relative to
-      // the tagged (shifted) content rather than the original content.
-      const cleanContent = stripSkipTags(content);
+      // Blank content inside docalign:skip regions so Claude does not extract
+      // claims from illustrative examples, sample output, or skipped sections.
+      // blankSkipRegionContent preserves line count (skip tag lines remain),
+      // so line numbers Claude reports match the current tagged file exactly.
+      const cleanContent = blankSkipRegionContent(content);
       const allSections = buildDocSections(docFile, cleanContent);
       const stored = this.getCachedSemanticStore(docFile);
 
@@ -534,8 +534,13 @@ export class LocalPipeline implements CliPipeline {
           }
         }
 
-        // Write skip tags to the document file (Phase 1 classification output)
-        if (result.skipRegions.length > 0) {
+        // Write skip tags to the document file (Phase 1 classification output).
+        // Only write on --force OR when the file has no existing skip tags
+        // (first-time tagging). This preserves manually-placed or corrected tags
+        // on incremental runs, preventing Phase 1 from overwriting them.
+        const hasExistingSkipTags = /<!--\s*docalign:skip\b/.test(content);
+        const shouldWriteSkipTags = options?.force === true || !hasExistingSkipTags;
+        if (result.skipRegions.length > 0 && shouldWriteSkipTags) {
           const absDocPath = path.join(this.repoRoot, docFile);
           try {
             const tagResult = await writeSkipTagsToFile(absDocPath, result.skipRegions);
