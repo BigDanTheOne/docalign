@@ -180,21 +180,21 @@ describe('writeSkipTags', () => {
     expect(lines[5]).toBe('Line 3');
   });
 
-  it('is idempotent: wrapping an already-tagged region does nothing', () => {
-    const content = [
-      '# Title',
-      '<!-- docalign:skip reason="example_table" -->',
-      'Example content',
-      '<!-- /docalign:skip -->',
-      'After.',
-    ].join('\n');
+  it('is idempotent: second write with same clean-line regions produces identical content', () => {
+    // Regions are always expressed relative to CLEAN (untagged) content.
+    // The strip-then-rewrite approach means tagsWritten > 0 on each call,
+    // but the final content is identical — true content idempotency.
+    const cleanContent = '# Title\nExample content\nAfter.';
     const regions: SkipRegion[] = [
-      { start_line: 2, end_line: 4, reason: 'example_table' },
+      { start_line: 2, end_line: 2, reason: 'example_table' },
     ];
-    const result = writeSkipTags(content, regions);
-    expect(result.tagsWritten).toBe(0);
-    expect(result.tagsPreserved).toBe(1);
-    expect(result.content).toBe(content);
+    const result1 = writeSkipTags(cleanContent, regions);
+    const result2 = writeSkipTags(result1.content, regions);
+    // Content must be byte-for-byte identical after both writes
+    expect(result2.content).toBe(result1.content);
+    // Strip-then-rewrite always counts as written (no preservation counter)
+    expect(result2.tagsWritten).toBe(1);
+    expect(result2.tagsPreserved).toBe(0);
   });
 
   it('handles multiple non-overlapping regions (bottom-to-top)', () => {

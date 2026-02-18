@@ -64,7 +64,7 @@ import {
   buildDocSections,
   extractSemanticClaims,
 } from '../layers/L1-claim-extractor/semantic-extractor';
-import { writeSkipTagsToFile } from '../tags/writer';
+import { writeSkipTagsToFile, stripSkipTags } from '../tags/writer';
 
 const MAX_FILE_SIZE = 100 * 1024; // 100KB
 const DEFAULT_VERIFY_MODEL = 'claude-sonnet-4-5-20250929';
@@ -318,12 +318,19 @@ export class LocalPipeline implements CliPipeline {
     const fileTree = await this.index.getFileTree('local');
     let docFiles = options?.files ?? discoverDocFiles(fileTree);
 
-    // If specific files provided, validate they exist
     if (options?.files) {
+      // Explicit file list: validate they exist
       docFiles = docFiles.filter((f) => {
         const absPath = path.join(this.repoRoot, f);
         return fs.existsSync(absPath);
       });
+    } else {
+      // Default: restrict to docs/ directory only.
+      // Root-level planning/ops docs (EXEC_PLAN.md, PRD.md, etc.) and hidden
+      // directories (.openclaw/, .entire/, etc.) are excluded — they contain
+      // large planning content with lots of code examples that produce FPs and
+      // take a long time to process with Claude.
+      docFiles = docFiles.filter((f) => f.startsWith('docs/'));
     }
 
     let totalExtracted = 0;
@@ -348,7 +355,12 @@ export class LocalPipeline implements CliPipeline {
         continue;
       }
 
-      const allSections = buildDocSections(docFile, content);
+      // Strip existing skip tags so Claude always sees clean line numbers.
+      // Skip tags shift line indices; without stripping, re-runs produce
+      // duplicate or misaligned tags because Claude's output is relative to
+      // the tagged (shifted) content rather than the original content.
+      const cleanContent = stripSkipTags(content);
+      const allSections = buildDocSections(docFile, cleanContent);
       const stored = this.getCachedSemanticStore(docFile);
 
       // Determine which sections need re-extraction

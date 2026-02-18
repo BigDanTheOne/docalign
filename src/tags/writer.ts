@@ -46,36 +46,42 @@ function formatSkipOpenTag(region: SkipRegion): string {
   return parts.join(' ');
 }
 
-/** Parse all existing docalign:skip block regions from line array (1-based). */
-function parseExistingSkipRegions(lines: string[]): Array<{ startLine: number; endLine: number }> {
-  const regions: Array<{ startLine: number; endLine: number }> = [];
-  let openLine: number | null = null;
-  for (let i = 0; i < lines.length; i++) {
-    if (SKIP_OPEN_RE.test(lines[i])) {
-      openLine = i + 1; // 1-based
-    } else if (SKIP_CLOSE_RE.test(lines[i]) && openLine !== null) {
-      regions.push({ startLine: openLine, endLine: i + 1 }); // close tag line (1-based, inclusive)
-      openLine = null;
-    }
-  }
-  return regions;
+/**
+ * Strip all docalign:skip block tags from a content string.
+ * Returns the cleaned content (no skip open/close tags).
+ * Use this before sending content to Claude so line numbers are always
+ * relative to clean (untagged) content.
+ */
+export function stripSkipTags(content: string): string {
+  const lines = content.split('\n');
+  stripExistingSkipTags(lines);
+  return lines.join('\n');
 }
 
-/** Returns true if the requested region is already fully covered by an existing tagged region. */
-function isCoveredByExisting(
-  region: SkipRegion,
-  existing: Array<{ startLine: number; endLine: number }>,
-): boolean {
-  return existing.some(
-    (e) => e.startLine <= region.start_line && e.endLine >= region.end_line,
-  );
+/**
+ * Remove all existing docalign:skip block tags from a line array (in-place).
+ * Returns the number of tag pairs removed.
+ */
+function stripExistingSkipTags(lines: string[]): number {
+  let removed = 0;
+  let i = 0;
+  while (i < lines.length) {
+    if (SKIP_OPEN_RE.test(lines[i]) || SKIP_CLOSE_RE.test(lines[i])) {
+      lines.splice(i, 1);
+      removed++;
+    } else {
+      i++;
+    }
+  }
+  return removed;
 }
 
 /**
  * Wrap skip regions with <!-- docalign:skip --> block tags.
  *
- * Idempotent: regions already surrounded by skip tags are preserved.
- * Insertions are applied bottom-to-top so line numbers stay stable.
+ * Replaces any existing skip tags before inserting — this handles force
+ * re-extraction where line numbers would have shifted from the previous write.
+ * Insertions are applied bottom-to-top so indices stay stable.
  */
 export function writeSkipTags(content: string, skipRegions: SkipRegion[]): SkipWriteResult {
   if (skipRegions.length === 0) {
@@ -83,20 +89,18 @@ export function writeSkipTags(content: string, skipRegions: SkipRegion[]): SkipW
   }
 
   const lines = content.split('\n');
-  const existing = parseExistingSkipRegions(lines);
+
+  // Strip any existing skip tags so we rewrite from clean line numbers.
+  // This avoids duplicate/malformed tags when extract is re-run (--force).
+  stripExistingSkipTags(lines);
 
   let tagsWritten = 0;
-  let tagsPreserved = 0;
+  const tagsPreserved = 0;
 
   // Sort descending so we can splice bottom-to-top without shifting earlier indices
   const sorted = [...skipRegions].sort((a, b) => b.start_line - a.start_line);
 
   for (const region of sorted) {
-    if (isCoveredByExisting(region, existing)) {
-      tagsPreserved++;
-      continue;
-    }
-
     // Clamp to document bounds
     const endIdx = Math.min(region.end_line, lines.length); // splice position for close tag (after end_line)
     const startIdx = Math.max(region.start_line - 1, 0);   // splice position for open tag (before start_line)
