@@ -389,7 +389,12 @@ export class InMemoryIndex implements CodebaseIndexService {
         encoding: 'utf-8',
         maxBuffer: 50 * 1024 * 1024,
       });
-      return output.trim().split('\n').filter(Boolean);
+      const tracked = output.trim().split('\n').filter(Boolean);
+      // Supplement with walkDir to catch untracked files (e.g. new files not yet committed).
+      // Use a Set to deduplicate.
+      const walked = this.walkDir('');
+      const merged = new Set([...tracked, ...walked]);
+      return [...merged];
     } catch {
       return this.walkDir('');
     }
