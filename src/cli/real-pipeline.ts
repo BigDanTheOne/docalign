@@ -338,8 +338,24 @@ export class LocalPipeline implements CliPipeline {
     let totalTagsWritten = 0;
     const errors: Array<{ file: string; message: string }> = [];
 
-    for (let i = 0; i < docFiles.length; i++) {
-      const docFile = docFiles[i];
+    // Process files concurrently with a bounded semaphore.
+    // Each file spawns a Claude subprocess; limiting concurrency avoids
+    // overwhelming the system while still cutting wall-clock time to ~1/N.
+    const CONCURRENCY = 5;
+    let semCount = CONCURRENCY;
+    const semQueue: Array<() => void> = [];
+    const acquireSem = (): Promise<void> => {
+      if (semCount > 0) { semCount--; return Promise.resolve(); }
+      return new Promise(resolve => semQueue.push(resolve));
+    };
+    const releaseSem = (): void => {
+      const next = semQueue.shift();
+      if (next) { next(); } else { semCount++; }
+    };
+
+    let completedCount = 0;
+
+    await Promise.all(docFiles.map(async (docFile, i) => {
       if (onProgress) onProgress(i + 1, docFiles.length, docFile, 'analyzing');
 
       let content: string;
@@ -347,12 +363,12 @@ export class LocalPipeline implements CliPipeline {
         content = fs.readFileSync(path.join(this.repoRoot, docFile), 'utf-8');
       } catch {
         totalSkipped++;
-        continue;
+        return;
       }
 
       if (content.length === 0 || content.length > MAX_FILE_SIZE) {
         totalSkipped++;
-        continue;
+        return;
       }
 
       // Strip existing skip tags so Claude always sees clean line numbers.
@@ -373,87 +389,93 @@ export class LocalPipeline implements CliPipeline {
         if (changed.length === 0) {
           totalSkipped++;
           if (onProgress) onProgress(i + 1, docFiles.length, docFile, 'skipped');
-          continue;
+          return;
         }
         sectionsToExtract = allSections.filter((s) =>
           changed.some((c) => c.toLowerCase() === s.heading.toLowerCase()),
         );
       }
 
+      // Acquire semaphore before spawning Claude subprocess
+      await acquireSem();
       if (onProgress) onProgress(i + 1, docFiles.length, docFile, 'extracting');
 
-      const result = await extractSemanticClaims(
-        docFile,
-        sectionsToExtract,
-        this.repoRoot,
-      );
-
-      if (result.errors.length > 0) {
-        for (const err of result.errors) {
-          errors.push({ file: err.file, message: err.error.message });
-        }
-      }
-
-      // Write skip tags to the document file (Phase 1 classification output)
-      if (result.skipRegions.length > 0) {
-        const absDocPath = path.join(this.repoRoot, docFile);
-        try {
-          const tagResult = await writeSkipTagsToFile(absDocPath, result.skipRegions);
-          totalTagsWritten += tagResult.tagsWritten;
-        } catch (tagErr) {
-          // Tag writing failure is non-fatal — semantic claims still persist
-          errors.push({
-            file: docFile,
-            message: `Failed to write skip tags: ${tagErr instanceof Error ? tagErr.message : String(tagErr)}`,
-          });
-        }
-      }
-
-      if (result.claims.length > 0 || sectionsToExtract.length > 0) {
-        // Upsert into store
-        const currentData = stored ?? {
-          version: 1 as const,
-          source_file: docFile,
-          last_extracted_at: new Date().toISOString(),
-          claims: [],
-        };
-
-        const updated = upsertClaims(
-          currentData,
-          result.claims,
-          sectionsToExtract.map((s) => s.heading),
+      try {
+        const result = await extractSemanticClaims(
+          docFile,
+          sectionsToExtract,
+          this.repoRoot,
         );
 
-        // Test assertions and let Claude correct failures
-        const failedAssertions = this.findFailedAssertions(updated.claims);
-        if (failedAssertions.length > 0) {
-          if (onProgress) onProgress(i + 1, docFiles.length, docFile, 'correcting');
-          await this.correctFailedAssertions(updated.claims, failedAssertions);
-        }
-
-        // Run initial evidence verification for newly extracted claims
-        // Claude just explored the codebase, so we can verify immediately
-        for (const claim of updated.claims) {
-          if (!claim.last_verification) {
-            const evidenceResult = await verifyWithEvidence(claim, this.index, this.repoRoot);
-            claim.last_verification = evidenceResult.verification;
-            for (const entity of claim.evidence_entities) {
-              const key = `${entity.symbol}:${entity.file}`;
-              const newHash = evidenceResult.entityContentHashes.get(key);
-              if (newHash) {
-                entity.content_hash = newHash;
-              }
-            }
+        if (result.errors.length > 0) {
+          for (const err of result.errors) {
+            errors.push({ file: err.file, message: err.error.message });
           }
         }
 
-        saveClaimsForFile(this.repoRoot, docFile, updated);
-        this.semanticStoreCache.set(docFile, updated);
-        totalExtracted += result.claims.length;
-      }
+        // Write skip tags to the document file (Phase 1 classification output)
+        if (result.skipRegions.length > 0) {
+          const absDocPath = path.join(this.repoRoot, docFile);
+          try {
+            const tagResult = await writeSkipTagsToFile(absDocPath, result.skipRegions);
+            totalTagsWritten += tagResult.tagsWritten;
+          } catch (tagErr) {
+            // Tag writing failure is non-fatal — semantic claims still persist
+            errors.push({
+              file: docFile,
+              message: `Failed to write skip tags: ${tagErr instanceof Error ? tagErr.message : String(tagErr)}`,
+            });
+          }
+        }
 
-      if (onProgress) onProgress(i + 1, docFiles.length, docFile, 'done');
-    }
+        if (result.claims.length > 0 || sectionsToExtract.length > 0) {
+          // Upsert into store
+          const currentData = stored ?? {
+            version: 1 as const,
+            source_file: docFile,
+            last_extracted_at: new Date().toISOString(),
+            claims: [],
+          };
+
+          const updated = upsertClaims(
+            currentData,
+            result.claims,
+            sectionsToExtract.map((s) => s.heading),
+          );
+
+          // Test assertions and let Claude correct failures
+          const failedAssertions = this.findFailedAssertions(updated.claims);
+          if (failedAssertions.length > 0) {
+            if (onProgress) onProgress(i + 1, docFiles.length, docFile, 'correcting');
+            await this.correctFailedAssertions(updated.claims, failedAssertions);
+          }
+
+          // Run initial evidence verification for newly extracted claims
+          // Claude just explored the codebase, so we can verify immediately
+          for (const claim of updated.claims) {
+            if (!claim.last_verification) {
+              const evidenceResult = await verifyWithEvidence(claim, this.index, this.repoRoot);
+              claim.last_verification = evidenceResult.verification;
+              for (const entity of claim.evidence_entities) {
+                const key = `${entity.symbol}:${entity.file}`;
+                const newHash = evidenceResult.entityContentHashes.get(key);
+                if (newHash) {
+                  entity.content_hash = newHash;
+                }
+              }
+            }
+          }
+
+          saveClaimsForFile(this.repoRoot, docFile, updated);
+          this.semanticStoreCache.set(docFile, updated);
+          totalExtracted += result.claims.length;
+        }
+      } finally {
+        releaseSem();
+        completedCount++;
+        if (onProgress) onProgress(completedCount, docFiles.length, docFile, 'done');
+      }
+    }));
 
     return { totalFiles: docFiles.length, totalExtracted, totalSkipped, totalTagsWritten, errors };
   }
