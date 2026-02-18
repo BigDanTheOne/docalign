@@ -64,7 +64,7 @@ import {
   buildDocSections,
   extractSemanticClaims,
 } from '../layers/L1-claim-extractor/semantic-extractor';
-import { writeSkipTagsToFile, stripSkipTags } from '../tags/writer';
+import { writeSkipTagsToFile, stripSkipTags, blankSkipRegionContent } from '../tags/writer';
 import type { DocAlignConfig } from '../shared/types';
 import {
   loadDocMap,
@@ -724,7 +724,11 @@ If an assertion is correct and the code genuinely doesn't match (real drift), re
     const format = detectFormat(docFile);
     if (format === 'rst') return [];
 
-    const preprocessed = preProcess(content, format);
+    // Blank out content inside <!-- docalign:skip --> regions so L1 regex
+    // extractors do not pick up illustrative/template code from skip-tagged
+    // blocks. Line numbers are preserved (blanked lines stay as empty strings).
+    const blanked = blankSkipRegionContent(content);
+    const preprocessed = preProcess(blanked, format);
 
     const rawExtractions = [
       ...extractPaths(preprocessed, docFile),

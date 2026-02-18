@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { writeTags, writeSkipTags } from '../../src/tags/writer';
+import { writeTags, writeSkipTags, blankSkipRegionContent } from '../../src/tags/writer';
 import { parseTags } from '../../src/tags/parser';
 import type { TaggableClaim, SkipRegion } from '../../src/tags/writer';
 
@@ -222,5 +222,76 @@ describe('writeSkipTags', () => {
     const openTag = result.content.split('\n').find((l) => l.includes('docalign:skip'));
     expect(openTag).toBeDefined();
     expect(openTag).not.toContain('description=');
+  });
+});
+
+describe('blankSkipRegionContent', () => {
+  it('blanks lines inside skip regions, preserving line count', () => {
+    const content = [
+      '# Title',
+      '<!-- docalign:skip reason="illustrative_example" description="example" -->',
+      'function extractYourNewType() {}',
+      'const result = [];',
+      '<!-- /docalign:skip -->',
+      'Real content here.',
+    ].join('\n');
+
+    const result = blankSkipRegionContent(content);
+    const lines = result.split('\n');
+
+    expect(lines).toHaveLength(6);
+    // Tag lines are kept
+    expect(lines[1]).toContain('docalign:skip');
+    expect(lines[4]).toContain('/docalign:skip');
+    // Content inside is blanked
+    expect(lines[2]).toBe('');
+    expect(lines[3]).toBe('');
+    // Content outside is preserved
+    expect(lines[0]).toBe('# Title');
+    expect(lines[5]).toBe('Real content here.');
+  });
+
+  it('handles multiple skip regions', () => {
+    const content = [
+      'Line 1',
+      '<!-- docalign:skip reason="example_table" -->',
+      'Template A',
+      '<!-- /docalign:skip -->',
+      'Line 5',
+      '<!-- docalign:skip reason="sample_output" -->',
+      'Template B',
+      '<!-- /docalign:skip -->',
+      'Line 9',
+    ].join('\n');
+
+    const result = blankSkipRegionContent(content);
+    const lines = result.split('\n');
+
+    expect(lines[2]).toBe(''); // blanked
+    expect(lines[6]).toBe(''); // blanked
+    expect(lines[0]).toBe('Line 1');
+    expect(lines[4]).toBe('Line 5');
+    expect(lines[8]).toBe('Line 9');
+    expect(lines).toHaveLength(9);
+  });
+
+  it('is a no-op when no skip tags are present', () => {
+    const content = '# Title\n\nSome prose.\n\n```ts\nconst x = 1;\n```\n';
+    expect(blankSkipRegionContent(content)).toBe(content);
+  });
+
+  it('preserves line numbers so claims report correct positions', () => {
+    const content = [
+      'Line 1',
+      '<!-- docalign:skip reason="illustrative_example" -->',
+      'skipped',
+      '<!-- /docalign:skip -->',
+      'Line 5 — real claim here',
+    ].join('\n');
+
+    const result = blankSkipRegionContent(content);
+    const lines = result.split('\n');
+    // Line 5 (index 4) still contains the real claim
+    expect(lines[4]).toBe('Line 5 — real claim here');
   });
 });

@@ -59,6 +59,34 @@ export function stripSkipTags(content: string): string {
 }
 
 /**
+ * Blank out content inside docalign:skip regions, preserving line count.
+ *
+ * The tag lines themselves are kept (they're HTML comments, harmless to
+ * syntactic extractors). The content between open and close tags is replaced
+ * with empty strings so that regex-based L1 extractors do not pick up
+ * illustrative/template code from skip-tagged blocks.
+ *
+ * Use this before running L1 syntactic extraction on a file that already
+ * has skip tags written to it.
+ */
+export function blankSkipRegionContent(content: string): string {
+  const lines = content.split('\n');
+  let inSkip = false;
+  const result = lines.map((line) => {
+    if (SKIP_OPEN_RE.test(line)) {
+      inSkip = true;
+      return line; // Keep the opening tag
+    }
+    if (SKIP_CLOSE_RE.test(line)) {
+      inSkip = false;
+      return line; // Keep the closing tag
+    }
+    return inSkip ? '' : line; // Blank content inside skip regions
+  });
+  return result.join('\n');
+}
+
+/**
  * Remove all existing docalign:skip block tags from a line array (in-place).
  * Returns the number of tag pairs removed.
  */
