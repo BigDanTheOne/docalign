@@ -1,0 +1,41 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "7cb46bdecfd6",
+  "strategy": "auto-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "_team/data/pipeline.db-shm",
+    "_team/data/pipeline.db-wal",
+    "_team/outputs/1e3398d8-907b-46a2-afc3-5f424e413951/code_review/.expect",
+    "_team/outputs/bba6e4be-45e5-415f-94c3-23293853a6e9/build/worktree-path.txt",
+    "_team/outputs/e4fc8c93-c526-4c49-8af1-8b111854ef26/code_review/.expect.done",
+    "_team/outputs/e4fc8c93-c526-4c49-8af1-8b111854ef26/code_review/codex-review-window.json",
+    "_team/outputs/e4fc8c93-c526-4c49-8af1-8b111854ef26/code_review/followups.json",
+    "_team/outputs/e4fc8c93-c526-4c49-8af1-8b111854ef26/verify/docalign-health.json",
+    "_team/outputs/e4fc8c93-c526-4c49-8af1-8b111854ef26/verify/evidence.md",
+    "_team/outputs/e4fc8c93-c526-4c49-8af1-8b111854ef26/verify/test-results.json",
+    "src/cli/commands/extract.ts",
+    "src/cli/prompts/semantic-extract.ts",
+    "src/cli/real-pipeline.ts",
+    "src/layers/L1-claim-extractor/semantic-extractor.ts",
+    "src/tags/writer.ts",
+    "test/tags/writer.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/7c/b46bdecfd6/0/metadata.json",
+      "transcript": "/7c/b46bdecfd6/0/full.jsonl",
+      "context": "",
+      "content_hash": "/7c/b46bdecfd6/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 45,
+    "cache_creation_tokens": 78177,
+    "cache_read_tokens": 3561076,
+    "output_tokens": 6870,
+    "api_call_count": 41
+  }
+}

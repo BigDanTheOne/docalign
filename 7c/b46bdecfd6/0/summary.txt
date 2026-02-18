@@ -1,0 +1,20 @@
+1535 tests pass (up from 1530 — the 5 new `writeSkipTags` tests). T7+T8 are fully implemented.
+
+## Summary
+
+Here's what was implemented across 5 files:
+
+**`src/tags/writer.ts`** — Added `SkipRegion` interface, `SkipWriteResult`, `writeSkipTags()`, and `writeSkipTagsToFile()`. The logic inserts `<!-- docalign:skip reason="..." -->` / `<!-- /docalign:skip -->` block pairs around identified regions, applying insertions bottom-to-top to keep line numbers stable. Idempotent: regions already tagged are detected and preserved.
+
+**`src/cli/prompts/semantic-extract.ts`** — Expanded from single-phase to two-phase prompt:
+- **Phase 1** (no tools): Classify skip regions — example tables, sample output, illustrative examples, user instructions, capability descriptions
+- **Phase 2** (with tools): Extract semantic claims from the remaining real content
+- Output schema extended to `{ skip_regions: [...], claims: [...] }`
+
+**`src/layers/L1-claim-extractor/semantic-extractor.ts`** — Added `SkipRegionSchema` / `SkipRegion` type, updated `SemanticExtractionOutputSchema` to include `skip_regions`, updated `ExtractionResult` to expose `skipRegions: SkipRegion[]`, updated `preprocess` normalizer to always ensure `skip_regions` is an array.
+
+**`src/cli/real-pipeline.ts`** — Wired `writeSkipTagsToFile` into `extractSemantic()`: after each Claude call, if skip regions were returned, they're stamped into the doc file. Tag-writing failures are non-fatal (errors logged, semantic claims still saved). Added `totalTagsWritten` to `ExtractSemanticResult`.
+
+**`src/cli/commands/extract.ts`** — Updated output to show "Skip tags written: N" when tags are stamped.
+
+Now when `docalign extract` runs, it will automatically stamp `<!-- docalign:skip -->` blocks into documentation files, causing the regex extractors to skip those regions on subsequent `docalign scan` runs — eliminating the illustrative-example false positives without any manual tagging.
