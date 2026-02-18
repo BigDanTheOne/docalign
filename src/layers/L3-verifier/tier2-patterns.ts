@@ -221,8 +221,13 @@ function extractEnvVarFromText(text: string): string | null {
   const match = text.match(ENV_VAR_PATTERN);
   if (!match) return null;
   const candidate = match[1];
-  // Filter out common false positives
-  if (['README', 'TODO', 'NOTE', 'API', 'URL', 'HTTP', 'HTTPS', 'JSON', 'HTML', 'CSS'].includes(candidate)) {
+  // Filter out common false positives — domain/tech acronyms that appear naturally
+  // in docs but are never environment variable names.
+  if ([
+    'README', 'TODO', 'NOTE', 'API', 'URL', 'HTTP', 'HTTPS', 'JSON', 'HTML', 'CSS',
+    'SLA', 'SLO', 'SLI', 'TBD', 'MCP', 'CLI', 'SDK', 'JWT', 'TLS', 'SSL',
+    'DNS', 'SQL', 'ORM', 'AWS', 'GCP', 'LLM', 'AST',
+  ].includes(candidate)) {
     return null;
   }
   return candidate;

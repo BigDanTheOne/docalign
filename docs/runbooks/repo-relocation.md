@@ -1,3 +1,17 @@
+---
+title: "Repo Relocation Runbook"
+summary: "Operational runbook for relocating the DocAlign repository, including rollback triggers and compatibility symlink governance."
+description: "Defines the owner and on-call role for repo relocation, hard rollback trigger thresholds (smoke failures, check failures, resolver errors, P1 incidents), compatibility symlink policy with 7-day sunset SLA, and the build-exit evidence checklist."
+category: reference
+read_when:
+  - You are executing or verifying a repo relocation
+  - You need to know the rollback triggers
+related: []
+docalign:
+  setup_date: "2026-02-19T00:00:00Z"
+  monitored: true
+---
+
 # Repo Relocation Runbook
 
 ## Owner / on-call

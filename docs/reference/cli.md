@@ -1,3 +1,21 @@
+---
+title: "CLI Reference"
+summary: "Complete reference for all DocAlign CLI commands, flags, environment variables, and exit codes."
+description: "Documents all 9 CLI commands: scan (full repo scan, --json, --exclude), check (single file, --verbose), extract (semantic claims, --force, --dry-run), fix (drift fixes), status (config and MCP status), configure (interactive config, --exclude, --min-severity, --reset), init (Claude Code MCP setup), viz (knowledge graph, --output, --no-open, --exclude), mcp (start MCP server, --repo). Also covers ANTHROPIC_API_KEY environment variable and exit codes (0/1/2)."
+category: reference
+read_when:
+  - You need the exact syntax for a docalign command
+  - You need to know what flags a command accepts
+  - You want to understand exit codes
+related:
+  - docs/getting-started.md
+  - docs/reference/configuration.md
+  - docs/guides/checking-files.md
+docalign:
+  setup_date: "2026-02-19T00:00:00Z"
+  monitored: true
+---
+
 # CLI Reference
 
 ## Installation
@@ -59,6 +77,7 @@ docalign extract --dry-run          # Preview without saving
 
 **Requirements:** `claude` CLI installed and authenticated (Claude Code).
 
+<!-- docalign:semantic id="sem-e23ce2967fee2194" claim="Extracted claims saved to .docalign/semantic/" -->
 **Storage:** Extracted claims saved to `.docalign/semantic/`, included in future `check` and `scan` runs.
 
 ### docalign fix [file]
@@ -70,6 +89,7 @@ docalign fix                # Fix all files with drift
 docalign fix README.md      # Fix a specific file
 ```
 
+<!-- docalign:semantic id="sem-88b10afe24b64a20" claim="Without ANTHROPIC_API_KEY, only deterministic suggestions (version replacements, path corrections) are available for fix" -->
 **Requirements:** `ANTHROPIC_API_KEY` for LLM-powered fixes. Without it, only deterministic suggestions (version replacements, path corrections) are available.
 
 ### docalign status
@@ -80,6 +100,7 @@ Show current configuration, MCP integration status, and environment info.
 docalign status
 ```
 
+<!-- docalign:semantic id="sem-81de6b5b50c968d5" claim="docalign status outputs active config file path, enabled claim types, MCP server status, ANTHROPIC_API_KEY presence, and any config warnings" -->
 **Output:** Active config file path, enabled claim types, MCP server status, `ANTHROPIC_API_KEY` presence, and any config warnings.
 
 ### docalign configure
@@ -108,7 +129,9 @@ docalign init
 ```
 
 **What it does:**
+<!-- docalign:semantic id="sem-e04ddc09ca6c89f1" claim="docalign init adds DocAlign MCP server to .claude/mcp.json" -->
 1. Adds DocAlign MCP server to `.claude/mcp.json`
+<!-- docalign:semantic id="sem-ab882ee276c75146" claim="docalign init installs the docalign skill for Claude Code" -->
 2. Installs the `docalign` skill for Claude Code
 
 ### docalign viz
@@ -128,6 +151,7 @@ docalign viz --exclude=docs/internal/**
 | `--no-open` | Don't auto-open in browser |
 | `--exclude=FILE[,FILE]` | Comma-separated files to exclude |
 
+<!-- docalign:semantic id="sem-a5a01f8f7dba6eae" claim="docalign viz outputs self-contained HTML with a Cytoscape.js graph. Nodes = doc files and code files. Edges = claims. Colors = verification status." -->
 **Output:** Self-contained HTML with a Cytoscape.js graph. Nodes = doc files and code files. Edges = claims. Colors = verification status.
 
 ### docalign mcp

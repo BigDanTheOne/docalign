@@ -1,9 +1,29 @@
+---
+title: "Architecture"
+summary: "Technical architecture reference for DocAlign contributors: layer overview, directory structure, data flow, core types, and entry points."
+description: "Documents the 8-layer architecture (L0-L7), directory structure under src/, full scan pipeline flow, CLI mode vs server mode distinction, core TypeScript types in src/shared/types.ts, configuration flow from .docalign.yml through Zod validation, storage adapters (SQLite for CLI, PostgreSQL for server), and entry points."
+category: architecture
+read_when:
+  - You are a contributor learning the codebase structure
+  - You are implementing a new layer or feature
+  - You need to understand how CLI mode differs from server mode
+  - You are debugging a pipeline issue
+related:
+  - docs/contributing/adding-a-check.md
+  - docs/contributing/design-patterns.md
+  - docs/contributing/testing.md
+docalign:
+  setup_date: "2026-02-19T00:00:00Z"
+  monitored: true
+---
+
 # Architecture
 
 DocAlign is organized into 8 layers (L0-L7), each with a single responsibility. Data flows through the layers as a pipeline.
 
 ## Layer Overview
 
+<!-- docalign:semantic id="sem-54a8ac288ba87790" claim="MCP server has 10 tools with stdio transport" -->
 ```
 L0  Codebase Index     Build lightweight repo view (file tree, AST, package.json)
 L1  Claim Extractor    Parse docs, extract verifiable claims
@@ -70,16 +90,22 @@ src/
 
 DocAlign runs in two modes:
 
+<!-- docalign:semantic id="sem-bff55669284c98d8" claim="CLI mode uses SQLite, runs local pipeline: L0 → L1 → L3 → output, no L4 triggers, no L5 PR comments" -->
+<!-- docalign:semantic id="sem-dd5dd0eaa580350f" claim="CliPipeline class orchestrates CLI pipeline in src/cli/local-pipeline.ts" -->
 **CLI mode** (default): Uses SQLite for storage. Runs a local pipeline: L0 → L1 → L3 → output. No L4 triggers, no L5 PR comments. The `CliPipeline` class orchestrates this in `src/cli/local-pipeline.ts`.
 
+<!-- docalign:semantic id="sem-21bd5f62c09b3da9" claim="Server mode uses PostgreSQL + Redis. Express server handles webhooks (L4), runs scan queue (BullMQ), posts PR comments (L5)" -->
 **Server mode**: Uses PostgreSQL + Redis. Express server handles webhooks (L4), runs scan queue (BullMQ), posts PR comments (L5). Full pipeline with all layers.
 
 ## Core Types
 
 The type system lives in `src/shared/types.ts`:
 
+<!-- docalign:semantic id="sem-ec9acba3b77d80cc" claim="ClaimType is a union of 11 literal types" -->
 - **`ClaimType`**: Union of 11 literal types (`'path_reference' | 'dependency_version' | ...`)
+<!-- docalign:semantic id="sem-f232977934997b85" claim="Verdict is 'verified' | 'drifted' | 'uncertain'" -->
 - **`Verdict`**: `'verified' | 'drifted' | 'uncertain'`
+<!-- docalign:semantic id="sem-8b113ad32397a77d" claim="Severity is 'low' | 'medium' | 'high'" -->
 - **`Severity`**: `'low' | 'medium' | 'high'`
 - **`Claim`**: A verified claim with type, source location, value, verdict, severity, evidence
 - **`RawExtraction`**: Output of L1 extraction before verification
@@ -96,12 +122,14 @@ The type system lives in `src/shared/types.ts`:
                                                     Validated DocalignConfig object
 ```
 
+<!-- docalign:semantic id="sem-25cebbb673b72c10" claim="Config loader reads YAML, validates against Zod schema, merges with defaults, invalid fields get warnings and fall back to defaults" -->
 The loader reads YAML, validates against the Zod schema, merges with defaults, and returns a typed config object. Invalid fields get warnings and fall back to defaults.
 
 ## Storage Adapters
 
 The `StorageAdapter` interface abstracts the database:
 
+<!-- docalign:semantic id="sem-2c74a43ec427a3d9" claim="SQLiteAdapter uses better-sqlite3. Single file at .docalign/db.sqlite" -->
 - **SQLiteAdapter**: For CLI mode. Uses better-sqlite3. Single file at `.docalign/db.sqlite`.
 - **PostgresAdapter**: For server mode. Uses pg with pgvector for embeddings.
 

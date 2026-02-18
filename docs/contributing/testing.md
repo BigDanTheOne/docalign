@@ -1,5 +1,23 @@
+---
+title: "Testing"
+summary: "Testing guide for DocAlign contributors: how to run tests, test structure, fixtures, and writing extraction and verification tests."
+description: "Covers running tests with Vitest (npm run test, npm run test:watch), the test directory structure mirroring src/, fixture helpers (makeClaim, makeMockIndex, makeResult), patterns for writing extraction tests and verification tests, and coverage targets by layer."
+category: guide
+read_when:
+  - You are writing tests for a new check or extractor
+  - You need to understand what fixtures are available
+  - You want to know the testing conventions
+related:
+  - docs/contributing/adding-a-check.md
+  - docs/contributing/design-patterns.md
+docalign:
+  setup_date: "2026-02-19T00:00:00Z"
+  monitored: true
+---
+
 # Testing
 
+<!-- docalign:semantic id="sem-0610668466f65261" claim="DocAlign uses Vitest for all testing" -->
 DocAlign uses Vitest for all testing. Tests mirror the source structure.
 
 ## Running Tests
@@ -12,9 +30,11 @@ npm run typecheck      # TypeScript type checking (run before tests)
 
 **Rule:** `npm run typecheck && npm run test` must pass after every change.
 
+<!-- docalign:semantic id="sem-f53ea585cdee12dc" claim="Tests mirror the src/ directory" -->
 ## Test Structure
 Tests mirror the `src/` directory:
 
+<!-- docalign:skip reason="sample_output" description="Directory tree showing test folder layout — structure diagram, not a factual claim about individual files" -->
 ```
 test/
   layers/
@@ -30,12 +50,15 @@ test/
   config/                 # Config loading and validation tests
   shared/                 # Utility tests
 ```
+<!-- /docalign:skip -->
 
 ## Test Fixtures
 ### makeClaim()
 
+<!-- docalign:semantic id="sem-52f7249e08945356" claim="makeClaim() creates a test Claim object with sensible defaults" -->
 Creates a test `Claim` object with sensible defaults. Override only what matters for your test:
 
+<!-- docalign:skip reason="tutorial_example" description="Illustrative usage example for makeClaim() with placeholder field values" -->
 ```typescript
 import { makeClaim } from '../fixtures';
 
@@ -46,10 +69,13 @@ const claim = makeClaim({
   line_number: 15,
 });
 ```
+<!-- /docalign:skip -->
 
 ### makeMockIndex()
+<!-- docalign:semantic id="sem-87b235d4c73676c3" claim="makeMockIndex() creates a mock CodebaseIndex that verifiers use to check claims" -->
 Creates a mock `CodebaseIndex` that verifiers use to check claims:
 
+<!-- docalign:skip reason="tutorial_example" description="Illustrative usage example for makeMockIndex() with placeholder field values" -->
 ```typescript
 import { makeMockIndex } from '../fixtures';
 
@@ -61,7 +87,9 @@ const index = makeMockIndex({
   license: 'MIT',
 });
 ```
+<!-- /docalign:skip -->
 
+<!-- docalign:semantic id="sem-c186b1e2ccdb63ff" claim="makeMockIndex() available fields: files, packages, scripts, engines, license, headings, envVars, exports" -->
 **Available fields:**
 - `files`: Array of file paths that "exist" in the mock repo
 - `packages`: Object of package name → version string
@@ -73,12 +101,14 @@ const index = makeMockIndex({
 - `exports`: Object of file → exported symbols
 ### makeResult()
 
+<!-- docalign:semantic id="sem-9bdb63b026b4567e" claim="makeResult() is the production helper used to build VerificationResult objects" -->
 Not a test fixture -- this is the production helper used to build `VerificationResult` objects. Tests use it to verify that verifiers produce expected outputs.
 
 ## Writing Extraction Tests
 
 Extraction tests verify that regex patterns correctly identify claims in documentation lines:
 
+<!-- docalign:skip reason="tutorial_example" description="Illustrative extraction test example using hypothetical extractPathReferences function" -->
 ```typescript
 describe('extractPathReferences', () => {
 it('extracts inline file paths', () => {
@@ -102,6 +132,7 @@ it('extracts inline file paths', () => {
   });
 });
 ```
+<!-- /docalign:skip -->
 
 **Testing principles for extractors:**
 - Test positive cases (lines that should match)
@@ -113,6 +144,7 @@ it('extracts inline file paths', () => {
 
 Verification tests check that claims are correctly verified against the codebase:
 
+<!-- docalign:skip reason="tutorial_example" description="Illustrative verification test example using hypothetical verifyPathReference function and simplified makeMockIndex fields" -->
 ```typescript
 describe('verifyPathReference', () => {
   it('verifies existing file', () => {
@@ -140,6 +172,7 @@ it('drifts for missing file', () => {
   });
 });
 ```
+<!-- /docalign:skip -->
 
 **Testing principles for verifiers:**
 - Test the `verified` path (claim matches code)
@@ -152,6 +185,7 @@ it('drifts for missing file', () => {
 
 Config tests verify YAML parsing, default merging, and validation:
 
+<!-- docalign:skip reason="tutorial_example" description="Illustrative config test example using hypothetical parseConfig function and placeholder values" -->
 ```typescript
 describe('parseConfig', () => {
   it('returns defaults for empty config', () => {
@@ -165,6 +199,7 @@ describe('parseConfig', () => {
 });
 });
 ```
+<!-- /docalign:skip -->
 
 ## Test Coverage
 

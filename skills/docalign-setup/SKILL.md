@@ -231,7 +231,28 @@ Next: Processing documents to extract claims and add annotations...
 
 ### Phase 3: Document Processing (Parallel Sub-Agents)
 
-**Step 3.1: Prepare context, then spawn sub-agents**
+**Step 3.1: Ask user for concurrency limit**
+
+Before doing anything else, tell the user how many documents need processing and ask:
+
+```
+Ready to process {N} documents. Each document is handled by a parallel sub-agent.
+
+How many sub-agents should run at once?
+
+[1] Conservative — 3 at a time  (slow but light on RAM/CPU)
+[2] Balanced    — 5 at a time  (recommended for most machines)
+[3] Fast        — 10 at a time (good if you have 16 GB+ RAM)
+[4] Custom      — enter a number
+
+Running too many in parallel can exhaust memory on large repos.
+```
+
+Use the user's answer as the **batch size** for Step 3.3.
+If the user picks Custom, accept any integer between 1 and 20.
+Default to 5 if the user skips the question.
+
+**Step 3.2: Prepare context, then spawn sub-agents**
 
 Before spawning, do this once:
 1. Read the sub-agent spec: `skills/docalign-setup/document-processor.md`
@@ -262,12 +283,14 @@ Repository root: {absolute_repo_root}
 2. Please ensure that the dynamic context you provide to each sub-agent is complete, relevant, and self-contained to provide the subagent with sufficient information to perform its task correctly.
 
  
-**Step 3.2: Parallel Execution**
+**Step 3.3: Batched Parallel Execution**
 
-- Spawn ALL sub-agents in parallel
-- Track progress: "Processing 5/8 documents..."
+Split the document list into batches of the chosen size. For each batch:
+1. Spawn all agents in the batch in a **single message** (parallel)
+2. Wait for all of them to finish before starting the next batch
+3. Report progress after each batch: "Batch 2/4 complete — processed 10/19 documents"
 
-**Step 3.3: Retry Logic**
+**Step 3.4: Retry Logic**
 
 **IF a sub-agent fails:**
 
@@ -279,7 +302,7 @@ Repository root: {absolute_repo_root}
    - Continue with other docs
    - Report to user at end
 
-**Step 3.4: Collect Results**
+**Step 3.5: Collect Results**
 
 As sub-agents complete:
 
