@@ -1,6 +1,6 @@
 {
   "name": "docalign",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Documentation-reality alignment engine — detects when docs drift from code",
   "main": "dist/app.js",
   "bin": {
