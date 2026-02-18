@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "eacb9c54480c",
+  "strategy": "auto-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "BACKLOG.md",
+    "src/cli/prompts/semantic-extract.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/ea/cb9c54480c/0/metadata.json",
+      "transcript": "/ea/cb9c54480c/0/full.jsonl",
+      "context": "",
+      "content_hash": "/ea/cb9c54480c/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 19,
+    "cache_creation_tokens": 27754,
+    "cache_read_tokens": 830567,
+    "output_tokens": 487,
+    "api_call_count": 15
+  }
+}

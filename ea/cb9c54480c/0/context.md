@@ -1,0 +1,317 @@
+# Session Context
+
+**Session ID:** f72936a6-196a-4d29-ad28-c6a9a02f5405
+
+**Commit Message:** This session is being continued from a previous conversation that ran ou
+
+## Prompt
+
+Let me systematically answer all your questions:
+1) Probably we should add one more step in the very beginning. In this step we should make Cloude go through all documentation files and create config. This config it will firstly write files that, according to structure, should be skipped. It will be able to provide better context for agents for further claiming instructions. At this step we are creating kind of a mind map of project documentation, not going to the code directly. 
+2) Let's make extract mandatory. Probably we should. 
+3) This is yes the most sophisticated issue to solve for this specific issue. Let's just write it in the backlog. Let's create a new backlog file with things that we want to spend time later on investigating. This topic definitely is worth investigating and please you shall definitely write cases where it occurred in order to be able to verify any future potential improvement.  As a quick fix let's try to make such claims not to be extracted at all by just tweaking the extructor prompt.
+
+---
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Analysis:
+Let me chronologically analyze the conversation to create a thorough summary.
+
+## Session Start
+The session continued from a previous context where T7+T8 had been implemented for the false-positive elimination epic (two-phase extract prompt with skip tag writing). The previous session had implemented the basic infrastructure.
+
+## Part 1: Fixing the duplicate skip tag bug
+The conversation started by continuing work on fixing a duplicate skip tag bug. The issue was that `writeSkipTags` used `isCoveredByExisting` to detect already-tagged regions, but after tags were inserted, line numbers shifted, causing duplicates on re-runs.
+
+**Fix implemented (strip-then-rewrite approach):**
+- Added `stripSkipTags(content: string): string` exported function to `writer.ts`
+- Removed unused `parseExistingSkipRegions` function
+- Updated `writeSkipTags` to strip existing tags then re-insert (instead of detect-and-preserve)
+- Updated `real-pipeline.ts` to strip skip tags before passing content to Claude (`cleanContent = stripSkipTags(content)`)
+- Updated idempotency test in `writer.test.ts` to reflect new semantics (content-idempotent, tagsWritten=1 on each call)
+- All 1535 tests pass
+
+## Part 2: Dogfood scan - status check
+User asked for current status. Ran `docalign scan`:
+- 86% health, 55 drifted (down from 90 at session start)
+- Extract had been run on several docs already
+
+## Part 3: Performance improvement - parallel file processing
+User noted "2 min × 40 docs is too much". Changed sequential `for` loop in `extractSemantic` to concurrent processing with a semaphore (CONCURRENCY=5):
+- Replaced `for` loop with `Promise.all` + inline semaphore
+- `acquireSem`/`releaseSem` gates how many Claude subprocesses run simultaneously
+- Result: ~3.5× speedup in practice (11-13 min for 19 docs vs ~38 min sequential)
+
+## Part 4: Full docs/ extract run
+Ran `extract --force` on all docs/ files. Results: 85% health, 50 drifted.
+
+## Part 5: False positive analysis
+User asked to "analyze all drifted claims on false positive matter." Ran check on all 18 files with drift. Categorized 50 drifted claims:
+- **Category A (10 FPs)**: Planning docs (EXEC_PLAN.md, PLAN-MCP-GAPS.md, PRD.md) - wrong scope
+- **Category B (8 FPs)**: Illustrative examples extract missed (CONVENTIONS.md naming examples, adding-a-check.md templates, runbooks SLA note)
+- **Category C (12 FPs)**: Verifier probing wrong evidence (true claims but wrong entity lookup)
+- **Real drift (20 claims)**: Genuine documentation issues
+
+## Part 6: Fix false positives - first approach (wrong - ad hoc suppressions)
+Implemented:
+1. Added `isSuppressed` method to `LocalPipeline` with config-based suppress rules
+2. Added `docExclude` to `LocalPipeline` constructor
+3. Wired config loading in `main.ts` using `loadDocAlignConfig`
+4. Created `.docalign.yml` with planning doc excludes + numerous specific suppress rules
+5. Added suppress check to BOTH `checkFile` AND `scanRepo` inline loop
+6. Result: 91% health, 18 drifted
+
+**USER FEEDBACK (critical)**: "I can see that you are adding suppression rules manually, yet we don't want to create ad hocs. We want to systematically improve our product. There should be no need to manually pass these suppressions if we had a smart enough extraction step."
+
+## Part 7: Discussion of root causes and systematic fixes
+User gave direction on three root causes:
+1. **Add Step 0 (doc mind-map)**: New step where Claude scans all doc files and creates a classification config (doc types, which to skip, context for extraction agents). Creates "mind map" of project documentation without going to code.
+2. **Make extract mandatory**: `docalign check/scan` should require extract first
+3. **L3 verifier behavioral claims**: Create backlog file with specific cases; as quick fix, tweak Phase 2 extraction prompt to not extract behavioral/capability claims
+
+**Actions taken:**
+- Removed all ad-hoc suppress rules from `.docalign.yml` (kept only `doc_patterns.exclude` for planning docs)
+- Created TaskCreate for backlog file
+- Was starting to implement changes when summary was requested
+
+## Current state of files:
+
+**`.docalign.yml`** (just `doc_patterns.exclude`, no suppress rules):
+```yaml
+doc_patterns:
+  exclude:
+    - "EXEC_PLAN.md"
+    - "PLAN-MCP-GAPS.md"
+    - "PRD.md"
+    - "AUTONOMOUS-OS.md"
+    - "KICKOFF-PROMPT.md"
+    - "PRODUCT-VISION.md"
+    - "_team/**"
+    - "phases/**"
+    - "tasks/**"
+```
+
+**`src/cli/real-pipeline.ts`**: Has suppress infrastructure (`isSuppressed`, `suppressRules`, `docExclude`) but no rules in config. Has concurrent processing with semaphore.
+
+**`src/cli/main.ts`**: Loads `.docalign.yml` via `loadDocAlignConfig` and passes config to `LocalPipeline`.
+
+**`src/tags/writer.ts`**: Has `stripSkipTags`, `writeSkipTags` (strip-then-rewrite), `writeSkipTagsToFile`.
+
+**`src/cli/prompts/semantic-extract.ts`**: The system-reminder noted a modification was made to this file (lines 95-110 visible, showing the "What NOT to extract" section).
+
+Current health: 89% (180/203), 23 drifted (after ad-hoc suppress rules were removed, with only planning doc excludes active).
+
+Wait - actually after removing the suppress rules, health should have gone back down. Let me re-read... The suppress rules were removed from `.docalign.yml` but the infrastructure in `real-pipeline.ts` remains. Without any rules in the config, `suppressRules = []` so nothing gets suppressed. The current state should be the same as before suppress rules were added for the specific cases.
+
+Actually I need to re-examine: after removing the suppress rules, what's the health? The user interrupted before I could verify. The last scan before removing suppress rules showed 91%/18 drifted. After removing the rules, it should go back to ~89%/23 drifted (before the ad-hoc rules were added but with planning docs excluded).
+
+The pending work is:
+1. Create BACKLOG.md with L3 verifier behavioral claim cases (TaskCreate created)
+2. Fix Phase 2 prompt to not extract tool capability/behavioral descriptions
+3. Design + implement Step 0 (doc mind-map indexer)
+4. Make extract recommended/mandatory
+
+Summary:
+1. Primary Request and Intent:
+   - **Duplicate skip tag bug fix**: Fix `writeSkipTags` which produced duplicate `<!-- docalign:skip -->` tags when `extract --force` was run twice (line numbers shifted after first write, causing detection to fail)
+   - **Performance improvement**: Extract was taking 2 min/file × ~19 docs = too slow. Add parallel file processing
+   - **Full dogfood extract + scan**: Run `docalign extract` on all `docs/` files, then scan to measure FP reduction
+   - **FP analysis**: Analyze all 50 drifted claims and categorize into true FPs vs real drift
+   - **Fix false positives systematically**: User explicitly rejected ad-hoc suppress rules in favor of systematic product improvement. Three root causes to fix:
+     1. **Step 0 (doc mind-map)**: New pre-extraction step where Claude classifies all doc files by type (planning/convention/tutorial/runbook/etc.) without code access, creating context for extraction agents
+     2. **Make extract mandatory**: `check` and `scan` should require/warn if extract hasn't been run
+     3. **L3 verifier behavioral claims**: Create backlog with documented cases; quick fix by tightening Phase 2 prompt to not extract tool capability/behavioral descriptions
+
+2. Key Technical Concepts:
+   - **Strip-then-rewrite idempotency**: `writeSkipTags` now strips all existing skip tags before re-inserting, ensuring line numbers are always relative to clean content
+   - **`stripSkipTags(content)`**: Exported function that removes all `<!-- docalign:skip -->` and `<!-- /docalign:skip -->` lines from content
+   - **Concurrent extract with semaphore**: `CONCURRENCY=5` allows 5 Claude subprocesses simultaneously; uses inline `acquireSem/releaseSem` pattern with `Promise.all`
+   - **Two-phase extract prompt**: Phase 1 classifies skip regions (illustrative content), Phase 2 extracts semantic claims with Task sub-agents for parallelism
+   - **`doc_patterns.exclude` in config**: `.docalign.yml` can exclude files from scanning; wired into CLI via `loadDocAlignConfig`
+   - **`isSuppressed` in LocalPipeline**: Infrastructure for pattern-based claim suppression (file + regex pattern matching), currently has no ad-hoc rules
+   - **Doc mind-map (Step 0 - planned)**: New pre-extraction step that classifies all doc files by type to give Phase 1 context for smarter skip decisions
+   - **FP categories**: Planning docs (10), missed illustrative examples (8), verifier probe bugs (12), real drift (20)
+
+3. Files and Code Sections:
+
+   - **`src/tags/writer.ts`** — Strip-then-rewrite approach for idempotency
+     - Added exported `stripSkipTags(content: string): string`
+     - Removed unused `parseExistingSkipRegions`
+     - `writeSkipTags` now strips all existing tags first then re-inserts
+     ```typescript
+     export function stripSkipTags(content: string): string {
+       const lines = content.split('\n');
+       stripExistingSkipTags(lines);
+       return lines.join('\n');
+     }
+     
+     export function writeSkipTags(content: string, skipRegions: SkipRegion[]): SkipWriteResult {
+       if (skipRegions.length === 0) {
+         return { content, tagsWritten: 0, tagsPreserved: 0 };
+       }
+       const lines = content.split('\n');
+       // Strip existing skip tags so we rewrite from clean line numbers.
+       stripExistingSkipTags(lines);
+       let tagsWritten = 0;
+       const tagsPreserved = 0;
+       const sorted = [...skipRegions].sort((a, b) => b.start_line - a.start_line);
+       for (const region of sorted) {
+         const endIdx = Math.min(region.end_line, lines.length);
+         const startIdx = Math.max(region.start_line - 1, 0);
+         lines.splice(endIdx, 0, CLOSE_SKIP_TAG);
+         lines.splice(startIdx, 0, formatSkipOpenTag(region));
+         tagsWritten++;
+       }
+       return { content: lines.join('\n'), tagsWritten, tagsPreserved };
+     }
+     ```
+
+   - **`src/cli/real-pipeline.ts`** — Major changes: concurrent processing, config integration, strip before Claude
+     - Added `suppressRules` and `docExclude` fields to `LocalPipeline`
+     - Constructor accepts optional `config?: DocAlignConfig`
+     - `isSuppressed(claimText, claimType, file)` method for config-based suppression
+     - `extractSemantic` uses `stripSkipTags(content)` before `buildDocSections`
+     - `extractSemantic` replaced sequential `for` loop with concurrent `Promise.all` + semaphore:
+     ```typescript
+     const CONCURRENCY = 5;
+     let semCount = CONCURRENCY;
+     const semQueue: Array<() => void> = [];
+     const acquireSem = (): Promise<void> => {
+       if (semCount > 0) { semCount--; return Promise.resolve(); }
+       return new Promise(resolve => semQueue.push(resolve));
+     };
+     const releaseSem = (): void => {
+       const next = semQueue.shift();
+       if (next) { next(); } else { semCount++; }
+     };
+     await Promise.all(docFiles.map(async (docFile, i) => {
+       // ... per-file logic with await acquireSem() before Claude call
+     }));
+     ```
+     - `checkFile` and `scanRepo` inline loop both call `this.isSuppressed()` before verifying
+     - `scanRepo` merges `allExcludes = [...(exclude ?? []), ...this.docExclude]`
+
+   - **`src/cli/main.ts`** — Loads `.docalign.yml` and passes config to pipeline
+     ```typescript
+     import path from 'path';
+     import { loadDocAlignConfig } from '../config/loader';
+     // ...
+     const repoRoot = resolveRepoRoot({ cwd: process.cwd() }).root;
+     const { config } = loadDocAlignConfig(path.join(repoRoot, '.docalign.yml'));
+     const pipeline = new LocalPipeline(repoRoot, undefined, config);
+     ```
+
+   - **`test/tags/writer.test.ts`** — Updated idempotency test to reflect strip-then-rewrite semantics
+     ```typescript
+     it('is idempotent: second write with same clean-line regions produces identical content', () => {
+       const cleanContent = '# Title\nExample content\nAfter.';
+       const regions: SkipRegion[] = [
+         { start_line: 2, end_line: 2, reason: 'example_table' },
+       ];
+       const result1 = writeSkipTags(cleanContent, regions);
+       const result2 = writeSkipTags(result1.content, regions);
+       expect(result2.content).toBe(result1.content);
+       expect(result2.tagsWritten).toBe(1);
+       expect(result2.tagsPreserved).toBe(0);
+     });
+     ```
+
+   - **`.docalign.yml`** — Created with planning doc excludes (no suppress rules after user feedback)
+     ```yaml
+     doc_patterns:
+       exclude:
+         - "EXEC_PLAN.md"
+         - "PLAN-MCP-GAPS.md"
+         - "PRD.md"
+         - "AUTONOMOUS-OS.md"
+         - "KICKOFF-PROMPT.md"
+         - "PRODUCT-VISION.md"
+         - "_team/**"
+         - "phases/**"
+         - "tasks/**"
+     ```
+
+   - **`src/cli/prompts/semantic-extract.ts`** — Two-phase prompt with Task sub-agent parallelism (modified by user/linter per system reminder, lines 95-110 region showing "What NOT to extract" was updated)
+
+4. Errors and fixes:
+   - **Duplicate skip tags bug**: Root cause — `isCoveredByExisting` detected by line number matching, but after first write tags shifted lines, so second run didn't detect existing coverage → duplicates. Fix: strip-then-rewrite approach. Also needed to strip skip tags before sending to Claude in `extractSemantic`.
+   - **`parseExistingSkipRegions` unused after refactor**: Removed function, fixed lint error.
+   - **`scanRepo` has its own inline verification loop** bypassing `checkFile`: Discovered that `scanRepo` re-implements the claim verification loop rather than calling `checkFile`. Had to add `isSuppressed` check to BOTH places. This was found when `check AGENTS.md` showed 0 drifted but `scan` still showed 1 drifted.
+   - **Ad-hoc suppress rules rejected by user**: Created ~15 specific suppress rules targeting individual files/patterns. User stopped this approach: "we don't want to create ad hocs. We want to systematically improve our product." Removed all suppress rules, keeping only planning doc excludes.
+
+5. Problem Solving:
+   - **Idempotency**: Strip-then-rewrite ensures line numbers stay consistent across multiple extract runs. Claude always sees clean (untagged) content, outputs correct line numbers, and strip-then-rewrite produces identical output on repeat runs.
+   - **Performance**: 5-concurrent semaphore reduced full docs/ extract from ~38 min to ~11-13 min (~3.5× speedup).
+   - **FP root cause analysis** — Three distinct root causes identified:
+     1. Phase 1 skip classification lacks document-type awareness (naming convention docs, contributing guide templates, runbooks look different from user guides but Phase 1 doesn't know this)
+     2. L1 syntactic extractor runs before skip tags are written (two-pass dependency problem)
+     3. L3 verifier probes wrong evidence entities for behavioral claims about the tool itself
+   - **Suppress infrastructure**: Built correctly (file + pattern + claim_type matching) but should not be pre-populated with workarounds — it exists for legitimate user-defined suppressions.
+
+6. All user messages:
+   - "Please continue the conversation from where we left off without asking the user any further questions. Continue with the last task that you were asked to work on."
+   - "What is the current status?"
+   - "yes" (to running extract on all docs/)
+   - "[Request interrupted by user for tool use] Let's try one more document for now."
+   - "How long did it take?"
+   - "it is basically 2 minutes. 2*40 is too much"
+   - "yes" (to running extract on all docs/ with parallel processing)
+   - "Please analyze all the drifted claims on false positive matter."
+   - "fix the false positives"
+   - "[Request interrupted by user] I can see that you are adding suppression rules manually, yet we don't want to create ad hocs. We want to systematically improve our product. There should be no need to manually pass these suppressions if we had a smart enough extraction step."
+   - "Your task is to create a detailed summary..." (current message - the analysis request came after discussion)
+   - "Let me systematically answer all your questions: 1) Probably we should add one more step in the very beginning. In this step we should make Claude go through all documentation files and create config... At this step we are creating kind of a mind map of project documentation, not going to the code directly. 2) Let's make extract mandatory. Probably we should. 3) This is yes the most sophisticated issue to solve... Let's just write it in the backlog... As a quick fix let's try to make such claims not to be extracted at all by just tweaking the extructor prompt."
+
+7. Pending Tasks:
+   - **Create `BACKLOG.md`**: Document L3 verifier behavioral claim false positive cases with specific examples (TaskCreate #4 was created for this)
+   - **Fix Phase 2 extraction prompt**: Add "tool capability descriptions" and "behavioral summaries about the tool itself" to "What NOT to extract" section — prevents extracting claims like "docalign extract finds behavior and architecture claims using Claude" that the verifier can't verify
+   - **Implement Step 0 — Documentation Mind Map**: New pre-extraction step where Claude reads all doc files (filenames + headings + frontmatter only, no code tools) and classifies each by type (planning/convention/contributing/runbook/reference/tutorial/etc.). Output stored as `.docalign/doc-map.json`. Used by extraction agents to get document-type context for smarter Phase 1 skip decisions.
+   - **Make extract recommended/mandatory**: `docalign check` and `docalign scan` should warn (or auto-run extract) if no semantic store exists for a file
+
+8. Current Work:
+   The last work being done was starting to address the user's systematic fix directions. The `isSuppressed` infrastructure was left in place (no rules), the ad-hoc suppress rules were removed from `.docalign.yml`, and a TaskCreate was initiated for the backlog file. The session was interrupted before implementing any of the three systematic fixes.
+
+   Current health: approximately 89% / 23 drifted (with planning docs excluded but no per-claim suppressions). The remaining 23 drifted include ~18 addressable FPs and ~5 genuine real drift.
+
+9. Optional Next Step:
+   Per the user's explicit direction: "Let's create a new backlog file with things that we want to spend time later on investigating. This topic definitely is worth investigating and please you shall definitely write cases where it occurred in order to be able to verify any future potential improvement. As a quick fix let's try to make such claims not to be extracted at all by just tweaking the extructor prompt."
+
+   The next steps in order:
+   1. Create `BACKLOG.md` documenting the L3 verifier behavioral claim FP cases with specific examples from the analysis (getting-started.md:101, reference/cli.md:80, verification-tiers.md:66,72, AGENTS.md:42, design-patterns.md:89 — all cases where the claim is true but verifier probed wrong entities)
+   2. Update `src/cli/prompts/semantic-extract.ts` Phase 2 "What NOT to extract" section to add: tool capability descriptions ("DocAlign can detect X"), behavioral summaries about the tool's own features, and environment-variable-requirement claims (already caught by L1 regex)
+   3. Then implement Step 0 (doc mind-map indexer)
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/kotkot/.REDACTED.jsonl
+Please continue the conversation from where we left off without asking the user any further questions. Continue with the last task that you were asked to work on.
+
+## Summary
+
+Both tasks done. Here's a summary of what was implemented:
+
+---
+
+**`BACKLOG.md`** — Created with two tracked issues:
+
+- **BL-001**: Semantic extractor produces unverifiable capability claims about DocAlign itself. Documents the 4 reproduction cases from the dogfood run (`getting-started.md:101`, `AGENTS.md:42`, `cli.md:80`, `design-patterns.md:89`), the root cause (extraction sub-agents invent entity names for cross-cutting claims), and 4 deep-fix candidates (fuzzy entity resolution, multi-file evidence, entity name validation, new `capability_claim` type).
+
+- **BL-002**: L1 syntactic extractor picks up code-block examples in contributing docs when `extract` hasn't been run yet (skip tags not present). Documents the `design-patterns.md` reproduction cases and the fix candidates (make extract mandatory, L1 skip-tag awareness).
+
+**`src/cli/prompts/semantic-extract.ts`** — Added one new bullet to "Also SKIP":
+
+> **Tool capability summaries**: "DocAlign uses Claude for extraction", "The extract command finds behavior claims using Claude", "docalign works with zero config" — these describe the tool's own high-level features. They span multiple modules, no single code entity proves them, and extraction sub-agents tend to invent entity names that don't exist. Skip them.
+
+The next step in the user's direction is implementing **Step 0 — Documentation Mind Map** (pre-extraction phase where Claude classifies all doc files by type to give downstream agents document-type context). Should I proceed with that?
+
+## Key Actions
+
+- - **TaskCreate**: Create a BACKLOG.md file at the repo root documenting the L3 verifier behavioral claim issue with specific cases where it occurred, so future work can verify improvements.
+- - **Bash**: List docs directory structure
+- - **Read**: /Users/kotkot/docalign/src/cli/prompts/semantic-extract.ts
+- - **Bash**: List doc files for reference
+- - **Bash**: Check getting-started.md for drift details
+- - **Bash**: Check verification-tiers.md for drift details
+- - **Bash**: Check cli.md and design-patterns.md for drift
+- - **Bash**: Check AGENTS.md for drift details
+- - **Bash**: Check actual export names in loader.ts
+- - **Bash**: Check cli.md for actual drift results

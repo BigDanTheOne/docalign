@@ -1,0 +1,15 @@
+Both tasks done. Here's a summary of what was implemented:
+
+---
+
+**`BACKLOG.md`** — Created with two tracked issues:
+
+- **BL-001**: Semantic extractor produces unverifiable capability claims about DocAlign itself. Documents the 4 reproduction cases from the dogfood run (`getting-started.md:101`, `AGENTS.md:42`, `cli.md:80`, `design-patterns.md:89`), the root cause (extraction sub-agents invent entity names for cross-cutting claims), and 4 deep-fix candidates (fuzzy entity resolution, multi-file evidence, entity name validation, new `capability_claim` type).
+
+- **BL-002**: L1 syntactic extractor picks up code-block examples in contributing docs when `extract` hasn't been run yet (skip tags not present). Documents the `design-patterns.md` reproduction cases and the fix candidates (make extract mandatory, L1 skip-tag awareness).
+
+**`src/cli/prompts/semantic-extract.ts`** — Added one new bullet to "Also SKIP":
+
+> **Tool capability summaries**: "DocAlign uses Claude for extraction", "The extract command finds behavior claims using Claude", "docalign works with zero config" — these describe the tool's own high-level features. They span multiple modules, no single code entity proves them, and extraction sub-agents tend to invent entity names that don't exist. Skip them.
+
+The next step in the user's direction is implementing **Step 0 — Documentation Mind Map** (pre-extraction phase where Claude classifies all doc files by type to give downstream agents document-type context). Should I proceed with that?
