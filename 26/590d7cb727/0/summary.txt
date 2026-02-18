@@ -1,0 +1,7 @@
+All clean:
+
+- `.docalign.yml` — deleted
+- `README.md` — tag-free (the match shown is the test fixture, which is out of scope and untouched)
+- All 17 `docs/**/*.md` files — tag-free
+
+Content between the tags was preserved; only the comment lines themselves were removed.

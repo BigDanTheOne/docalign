@@ -1,0 +1,1 @@
+tasks/* are out of scope, should be excluded too as well as root planning docs. target specfically readme + docs/*
