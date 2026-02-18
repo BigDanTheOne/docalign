@@ -1,4 +1,0 @@
-[
-  {"id": "finding-1", "source": "critic", "summary": "applyMutationChange silently no-ops when file/pattern not found — consider strict mode", "status": "not_applicable", "rationale": "Low-risk edge case for future improvement, not a bug in current code. No action needed for this task."},
-  {"id": "finding-2", "source": "critic", "summary": "replace_line_matching only replaces first matching line — assumption should be documented", "status": "not_applicable", "rationale": "Current mutations only need single-line replacement. Documentation improvement is out of scope for this fix task."}
-]

@@ -12,3 +12,6 @@ coverage/
 .docalign/
 .agent-dev.json
 .env.agent
+_team/
+debug-*.mjs
+worktree/

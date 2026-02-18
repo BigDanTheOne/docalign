@@ -1,8 +1,0 @@
-{
-  "status": "timed_out_no_feedback",
-  "codex_issue_count": 0,
-  "no_feedback_reason": "No Codex review integration configured for this repository. No comments received.",
-  "waited_since": "2026-02-17T17:10:00Z",
-  "latest_codex_comment_at": null,
-  "final_ingest_at": null
-}
