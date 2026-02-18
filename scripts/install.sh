@@ -183,37 +183,35 @@ fi
 
 echo ""
 
-# Step 5: Launch Claude Code
-log_info "Launching Claude Code to begin interactive setup..."
+# Step 5: Print final instructions
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
-echo "  🎉 Installation complete! Here's what happens next:"
+echo "  🎉 DocAlign is installed and configured!"
 echo ""
-echo "  1. Claude Code is about to open in this terminal."
+echo "  To begin the interactive setup wizard, open a NEW terminal"
+echo "  window in this directory and run:"
 echo ""
-echo "  2. It will automatically invoke /docalign-setup — the"
-echo "     interactive wizard that walks you through:"
+echo "      claude"
+echo ""
+echo "  What happens when you do:"
+echo ""
+echo "  1. Claude Code opens and automatically detects that"
+echo "     DocAlign setup is pending (via CLAUDE.md)."
+echo ""
+echo "  2. It launches the /docalign-setup wizard, which walks"
+echo "     you through:"
 echo "       • Discovering your documentation files"
 echo "       • Selecting which docs to monitor"
 echo "       • Writing config + YAML headers to each doc"
 echo "       • Extracting claims and annotating your docs"
 echo "       • Running an initial drift scan"
 echo ""
-echo "  3. When the setup wizard finishes, DocAlign is active."
-echo "     From that point on, Claude will automatically flag"
-echo "     stale documentation whenever you change code."
-echo ""
-echo "  ➜  Press Enter once Claude Code opens to get started."
+echo "  3. When the wizard finishes, DocAlign is active."
+echo "     Claude will automatically flag stale documentation"
+echo "     whenever you change code."
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
-
-# Launch Claude Code with /docalign-setup as the initial message.
-# Redirect stdin from /dev/tty so Claude gets an interactive terminal even
-# when this script was piped from curl (which replaces stdin with the pipe).
-# Reset terminal line discipline first — the curl pipe may have left it in a
-# broken state (no echo, wrong mode), which causes Claude Code to appear to
-# accept no keyboard input.
-stty sane </dev/tty 2>/dev/null || true
-exec claude "/docalign-setup" </dev/tty
+echo "  ➜  Open a new terminal, cd to this directory, then: claude"
+echo ""
