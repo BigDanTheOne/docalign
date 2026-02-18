@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "07bd9ecf9eb3",
+  "strategy": "auto-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "scripts/dogfood-corpus.ts",
+    "src/cli/local-index.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/07/bd9ecf9eb3/0/metadata.json",
+      "transcript": "/07/bd9ecf9eb3/0/full.jsonl",
+      "context": "",
+      "content_hash": "/07/bd9ecf9eb3/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 82,
+    "cache_creation_tokens": 46485,
+    "cache_read_tokens": 6366865,
+    "output_tokens": 4877,
+    "api_call_count": 47
+  }
+}

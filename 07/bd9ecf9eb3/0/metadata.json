@@ -1,0 +1,24 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "07bd9ecf9eb3",
+  "session_id": "f72936a6-196a-4d29-ad28-c6a9a02f5405",
+  "strategy": "auto-commit",
+  "created_at": "2026-02-18T01:03:47.200175Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "scripts/dogfood-corpus.ts",
+    "src/cli/local-index.ts"
+  ],
+  "agent": "Claude Code",
+  "transcript_identifier_at_start": "58349c3f-0113-4398-8941-2fbb30188e5d",
+  "checkpoint_transcript_start": 2347,
+  "transcript_lines_at_start": 2347,
+  "token_usage": {
+    "input_tokens": 82,
+    "cache_creation_tokens": 46485,
+    "cache_read_tokens": 6366865,
+    "output_tokens": 4877,
+    "api_call_count": 47
+  }
+}
