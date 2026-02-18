@@ -1,0 +1,46 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "cc66374509e7",
+  "strategy": "auto-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/contributing/adding-a-check.md",
+    "docs/contributing/architecture.md",
+    "docs/contributing/design-patterns.md",
+    "docs/contributing/testing.md",
+    "docs/explanation/how-it-works.md",
+    "docs/explanation/verification-tiers.md",
+    "docs/getting-started.md",
+    "docs/guides/checking-files.md",
+    "docs/guides/custom-configuration.md",
+    "docs/guides/fixing-drift.md",
+    "docs/reference/checks.md",
+    "docs/reference/cli.md",
+    "docs/reference/configuration.md",
+    "docs/reference/mcp-tools.md",
+    "docs/troubleshooting.md",
+    "src/cli/doc-map.ts",
+    "src/cli/prompts/doc-map.ts",
+    "src/cli/prompts/semantic-extract.ts",
+    "src/cli/real-pipeline.ts",
+    "src/layers/L1-claim-extractor/semantic-extractor.ts",
+    "test/cli/doc-map.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/cc/66374509e7/0/metadata.json",
+      "transcript": "/cc/66374509e7/0/full.jsonl",
+      "context": "",
+      "content_hash": "/cc/66374509e7/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 68,
+    "cache_creation_tokens": 74928,
+    "cache_read_tokens": 6567260,
+    "output_tokens": 19586,
+    "api_call_count": 66
+  }
+}

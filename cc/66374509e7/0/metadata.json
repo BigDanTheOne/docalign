@@ -1,0 +1,50 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "cc66374509e7",
+  "session_id": "f72936a6-196a-4d29-ad28-c6a9a02f5405",
+  "strategy": "auto-commit",
+  "created_at": "2026-02-18T10:51:36.449467Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/contributing/adding-a-check.md",
+    "docs/contributing/architecture.md",
+    "docs/contributing/design-patterns.md",
+    "docs/contributing/testing.md",
+    "docs/explanation/how-it-works.md",
+    "docs/explanation/verification-tiers.md",
+    "docs/getting-started.md",
+    "docs/guides/checking-files.md",
+    "docs/guides/custom-configuration.md",
+    "docs/guides/fixing-drift.md",
+    "docs/reference/checks.md",
+    "docs/reference/cli.md",
+    "docs/reference/configuration.md",
+    "docs/reference/mcp-tools.md",
+    "docs/troubleshooting.md",
+    "src/cli/doc-map.ts",
+    "src/cli/prompts/doc-map.ts",
+    "src/cli/prompts/semantic-extract.ts",
+    "src/cli/real-pipeline.ts",
+    "src/layers/L1-claim-extractor/semantic-extractor.ts",
+    "test/cli/doc-map.test.ts"
+  ],
+  "agent": "Claude Code",
+  "transcript_identifier_at_start": "a6b4fe96-0500-4e87-80ac-42bb0ccc4732",
+  "checkpoint_transcript_start": 4262,
+  "transcript_lines_at_start": 4262,
+  "token_usage": {
+    "input_tokens": 68,
+    "cache_creation_tokens": 74928,
+    "cache_read_tokens": 6567260,
+    "output_tokens": 19586,
+    "api_call_count": 66,
+    "subagent_tokens": {
+      "input_tokens": 17,
+      "cache_creation_tokens": 47274,
+      "cache_read_tokens": 59347,
+      "output_tokens": 3,
+      "api_call_count": 3
+    }
+  }
+}
