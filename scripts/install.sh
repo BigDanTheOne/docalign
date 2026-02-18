@@ -200,4 +200,8 @@ echo ""
 # Launch Claude Code with /docalign-setup as the initial message.
 # Redirect stdin from /dev/tty so Claude gets an interactive terminal even
 # when this script was piped from curl (which replaces stdin with the pipe).
+# Reset terminal line discipline first — the curl pipe may have left it in a
+# broken state (no echo, wrong mode), which causes Claude Code to appear to
+# accept no keyboard input.
+stty sane </dev/tty 2>/dev/null || true
 exec claude "/docalign-setup" </dev/tty
