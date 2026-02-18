@@ -9,12 +9,14 @@
  *   mcp   — Start MCP server (has its own pipeline lifecycle)
  */
 
+import path from 'path';
 import { run, parseArgs } from './index';
 import { LocalPipeline } from './real-pipeline';
 import { runInit } from './commands/init';
 import { startMcpServer } from './commands/mcp';
 import { runExtract } from './commands/extract';
 import { resolveRepoRoot } from '../lib/repo-root-resolver';
+import { loadDocAlignConfig } from '../config/loader';
 
 async function main(): Promise<void> {
   // Detect command before creating pipeline (some commands don't need one)
@@ -31,7 +33,8 @@ async function main(): Promise<void> {
   }
 
   const repoRoot = resolveRepoRoot({ cwd: process.cwd() }).root;
-  const pipeline = new LocalPipeline(repoRoot);
+  const { config } = loadDocAlignConfig(path.join(repoRoot, '.docalign.yml'));
+  const pipeline = new LocalPipeline(repoRoot, undefined, config);
 
   if (rawCommand === 'extract') {
     const { args, flags } = parseArgs(process.argv);

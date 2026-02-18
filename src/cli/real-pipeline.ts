@@ -65,6 +65,7 @@ import {
   extractSemanticClaims,
 } from '../layers/L1-claim-extractor/semantic-extractor';
 import { writeSkipTagsToFile, stripSkipTags } from '../tags/writer';
+import type { DocAlignConfig } from '../shared/types';
 
 const MAX_FILE_SIZE = 100 * 1024; // 100KB
 const DEFAULT_VERIFY_MODEL = 'claude-sonnet-4-5-20250929';
@@ -86,13 +87,40 @@ export class LocalPipeline implements CliPipeline {
   private fixCache: DocFix[] = [];
   private llmClient: LLMClient | null = null;
   private semanticStoreCache = new Map<string, SemanticClaimFile | null>();
+  private suppressRules: Array<{ file?: string; pattern?: string; claim_type?: string }> = [];
+  private docExclude: string[] = [];
 
-  constructor(private repoRoot: string, llmApiKey?: string) {
+  constructor(private repoRoot: string, llmApiKey?: string, config?: DocAlignConfig) {
     this.index = new InMemoryIndex(repoRoot);
     const apiKey = llmApiKey ?? getLLMApiKey();
     if (apiKey) {
       this.llmClient = createAnthropicClient(apiKey);
     }
+    if (config) {
+      this.suppressRules = config.suppress ?? [];
+      this.docExclude = config.doc_patterns?.exclude ?? [];
+    }
+  }
+
+  /**
+   * Check whether a verification result should be suppressed by config rules.
+   * Matches file (exact or suffix), pattern (regex on claim text), claim_type.
+   */
+  private isSuppressed(claimText: string, claimType: string, file: string): boolean {
+    for (const rule of this.suppressRules) {
+      const fileMatch = !rule.file || file === rule.file || file.endsWith('/' + rule.file);
+      const typeMatch = !rule.claim_type || rule.claim_type === claimType;
+      let patternMatch = true;
+      if (rule.pattern) {
+        try {
+          patternMatch = new RegExp(rule.pattern, 'i').test(claimText);
+        } catch {
+          patternMatch = false;
+        }
+      }
+      if (fileMatch && typeMatch && patternMatch) return true;
+    }
+    return false;
   }
 
   /** Whether LLM-based verification (Tier 3) is available. */
@@ -131,6 +159,7 @@ export class LocalPipeline implements CliPipeline {
     const results: VerificationResult[] = [];
 
     for (const claim of claims) {
+      if (this.isSuppressed(claim.claim_text, claim.claim_type, filePath)) continue;
       const result = await this.verifyClaim(claim);
       if (result) results.push(result);
     }
@@ -219,10 +248,11 @@ export class LocalPipeline implements CliPipeline {
     const fileTree = await this.index.getFileTree('local');
     let docFiles = discoverDocFiles(fileTree);
 
-    // Apply user-specified exclusions
-    if (exclude && exclude.length > 0) {
+    // Apply user-specified and config-based exclusions
+    const allExcludes = [...(exclude ?? []), ...this.docExclude];
+    if (allExcludes.length > 0) {
       docFiles = docFiles.filter((f) =>
-        !exclude.some((pattern) => f === pattern || f.endsWith('/' + pattern)),
+        !allExcludes.some((pattern) => f === pattern || f.endsWith('/' + pattern)),
       );
     }
 
@@ -251,6 +281,7 @@ export class LocalPipeline implements CliPipeline {
       const results: VerificationResult[] = [];
 
       for (const claim of claims) {
+        if (this.isSuppressed(claim.claim_text, claim.claim_type, docFile)) continue;
         const result = await this.verifyClaim(claim);
         if (result) results.push(result);
       }
