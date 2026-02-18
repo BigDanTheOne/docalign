@@ -1,46 +1,38 @@
----
-title: "Fixing Drift"
-summary: "Generate and apply fix suggestions for drifted documentation claims"
-description: "Use when you want to generate and apply fix suggestions for drifted documentation claims."
-category: "guide"
-read_when:
-  - DocAlign has found drift and you want suggested fixes
-  - Applying or reviewing auto-generated documentation fixes
-  - Understanding how the fix workflow works
-related:
-  - docs/guides/checking-files.md
-  - docs/reference/cli.md
----
-
 # Fixing Drift
 
 After finding drifted claims, DocAlign can suggest fixes.
 
 ## Generate fix suggestions
 
+<!-- docalign:skip reason="sample_output" description="bash code block showing docalign fix command — handled by regex extractor" -->
 ### Fix all files with drift
 
 ```bash
 docalign fix
 ```
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="sample_output" description="bash code block showing docalign fix README.md command — handled by regex extractor" -->
 ### Fix a specific file
 
 ```bash
 docalign fix README.md
 ```
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="sample_output" description="MCP usage example showing fix_doc invocation — handled by regex extractor" -->
 ### Fix via MCP
 
 ```
 Use fix_doc with file="README.md"
 ```
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="What fixes look like section — already marked with docalign:skip, contains hypothetical fix output examples" -->
 ## What fixes look like
 
 Fix suggestions come in two forms:
 
-<!-- docalign:skip reason="illustrative_example" description="Deterministic fixes section showing hypothetical fix examples with invented paths and package versions" -->
 ### Deterministic fixes
 
 For claims with clear correct values, DocAlign suggests exact replacements:
@@ -49,15 +41,16 @@ For claims with clear correct values, DocAlign suggests exact replacements:
 - **Missing script**: "Change `npm run deploy` to `npm run build`" (closest match)
 - **Wrong path**: "Change `src/auth.ts` to `src/auth/index.ts`" (fuzzy match)
 
-<!-- /docalign:skip -->
 ### LLM-generated fixes
 
+<!-- /docalign:skip -->
 For complex claims, an LLM reads the relevant code and suggests line-level replacements. These include the original text, suggested replacement, and reasoning.
 
 LLM fixes require `ANTHROPIC_API_KEY` to be set. Without it, only deterministic suggestions are available.
 
 ## Workflow
 
+<!-- docalign:skip reason="sample_output" description="Workflow steps referencing docalign commands and MCP tool names — command/path references handled by regex" -->
 1. **Find drift**: `docalign scan` or `list_drift` via MCP
 2. **Review suggestions**: `docalign fix <file>` or `fix_doc` via MCP
 3. **Apply manually**: Review each suggestion and apply the ones you agree with
@@ -65,6 +58,8 @@ LLM fixes require `ANTHROPIC_API_KEY` to be set. Without it, only deterministic 
 
 ## Auto-fix (experimental)
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="user_instruction" description="Auto-fix experimental section — already contains docalign:skip blocks for config YAML and MCP usage examples" -->
 For high-confidence deterministic fixes, you can enable auto-fix:
 
 ```yaml
@@ -89,3 +84,5 @@ Use report_drift via MCP:
 ```
 
 Reports are stored in `.docalign/reports/` for tracking.
+
+<!-- /docalign:skip -->

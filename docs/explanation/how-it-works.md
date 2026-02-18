@@ -1,23 +1,9 @@
----
-title: "How It Works"
-summary: "Extract-verify-report pipeline and overall architecture overview"
-description: "Use when you need to understand DocAlign's extract-verify-report pipeline and overall architecture."
-category: "explanation"
-read_when:
-  - Understanding what DocAlign does at each step
-  - Learning the difference between syntactic and semantic claims
-  - Tracing how a doc claim becomes a verified or drifted finding
-related:
-  - docs/explanation/verification-tiers.md
-  - docs/reference/checks.md
----
-
 # How It Works
 
 DocAlign follows a three-stage pipeline: **extract** claims from documentation, **verify** each claim against the codebase, and **report** the results.
 
-<!-- docalign:skip reason="illustrative_example" description="ASCII pipeline diagram showing the flow between L0/L1/L3/L5 layers — illustrative architecture diagram, not a falsifiable code claim" -->
 ## Pipeline Overview
+<!-- docalign:skip reason="illustrative_example" description="ASCII pipeline diagram showing architecture with L0, L1, L3, L5 layer labels — already tagged by the project as an illustrative example, not a set of falsifiable code claims" -->
 
 ```
                     +-----------------------+
@@ -47,10 +33,11 @@ DocAlign follows a three-stage pipeline: **extract** claims from documentation, 
                     +-----------------------+
 ```
 
-<!-- /docalign:skip -->
 ## Stage 1: Extract
+<!-- /docalign:skip -->
 
 DocAlign scans each documentation file and extracts **claims** -- verifiable statements about the codebase.
+<!-- docalign:skip reason="capability_description" description="Existing docalign:skip block — already tagged by the project as a capability description with hypothetical file paths, routes, commands, and env vars as illustrations of what the tool detects" -->
 
 **Syntactic extraction** uses regex patterns to find:
 - File paths: `src/auth.ts`, `![logo](assets/logo.png)`
@@ -61,6 +48,7 @@ DocAlign scans each documentation file and extracts **claims** -- verifiable sta
 - Environment variables: `DATABASE_URL`, `process.env.API_KEY`
 - Convention claims: "Uses TypeScript strict mode"
 - Config values: "defaults to port 3000"
+<!-- /docalign:skip -->
 - URLs: `https://docs.example.com/guide`
 
 **Table extraction** parses markdown tables and recognizes column semantics (package/version/path/command columns).
@@ -92,6 +80,7 @@ Results flow to multiple outputs:
 
 Each claim gets one of three verdicts:
 
+<!-- docalign:skip reason="example_table" description="Verdict table listing the three verdict values and their meanings — the verdict values themselves are factual claims but the table format is illustrative; the claim about three verdicts is extracted separately as a semantic claim" -->
 | Verdict | Meaning |
 |---------|---------|
 | **verified** | Claim matches the codebase |
@@ -102,6 +91,7 @@ Each claim gets one of three verdicts:
 
 After individual claims are verified, DocAlign runs cross-cutting checks:
 
+<!-- /docalign:skip -->
 - **Cross-document consistency:** Groups claims by entity. If different files say different things about the same entity, flags the inconsistency.
 - **Frontmatter consistency:** Checks YAML frontmatter `title` against the document's first heading.
 - **Navigation validation:** Verifies that doc site configs reference files that exist.

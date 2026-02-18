@@ -1,27 +1,11 @@
----
-title: "CLI Reference"
-summary: "All docalign commands, flags, exit codes, and environment variables"
-description: "Use when you need the exact flags, options, exit codes, or environment variables for any DocAlign command."
-category: "reference"
-read_when:
-  - Looking up a specific command's flags or options
-  - Understanding what an exit code means
-  - Scripting or automating DocAlign in CI
-related:
-  - docs/guides/checking-files.md
-  - docs/reference/configuration.md
----
-
 # CLI Reference
 
 ## Installation
 
-<!-- docalign:skip reason="user_instruction" description="Installation commands showing how to install and run docalign — user instructions, not factual claims about the current codebase" -->
 ```bash
 npm install -g docalign    # Global install
 npx docalign scan          # Or run directly with npx
 ```
-<!-- /docalign:skip -->
 
 ## Commands
 
@@ -170,13 +154,11 @@ docalign help
 ```
 
 ## Environment Variables
-<!-- docalign:skip reason="capability_description" description="Environment variables table listing ANTHROPIC_API_KEY — env var references are caught by regex-based checks" -->
 
 | Variable | Purpose |
 |----------|---------|
 | `ANTHROPIC_API_KEY` | Enables LLM verification (Tier 3), fix generation, and semantic extraction |
 
-<!-- /docalign:skip -->
 ## Exit Codes
 
 | Code | Meaning |

@@ -26,7 +26,7 @@ No configuration needed. DocAlign auto-discovers doc files and applies sensible 
 
 **Syntactic checks** (regex-based, zero config):
 
-<!-- docalign:skip reason="capability_description" description="What It Finds table listing hypothetical detection examples (e.g. 'src/auth.ts referenced but doesn't exist') — illustrative capability descriptions, not factual claims about the current codebase" -->
+<!-- docalign:skip reason="example_table" description="What It Finds capability table with hypothetical file paths, package names, command names, and route paths used as illustrative examples of what the tool detects" -->
 | Category | Example |
 |----------|---------|
 | File paths | `src/auth.ts` referenced but doesn't exist |
@@ -39,12 +39,12 @@ No configuration needed. DocAlign auto-discovers doc files and applies sensible 
 | URLs | Dead links (HTTP 404) in documentation |
 
 Plus: anchor validation, cross-doc consistency, frontmatter checks, nav config links, deprecation detection, license/changelog consistency, and fuzzy suggestions.
+<!-- /docalign:skip -->
 
 **Semantic checks** (LLM-powered, optional):
 
 Behavior claims, architecture decisions, and config assumptions — verified against actual code using Claude.
 
-<!-- /docalign:skip -->
 See [Checks Reference](docs/reference/checks.md) for all claim types and cross-cutting checks.
 
 ## Commands
@@ -66,8 +66,8 @@ DocAlign works as an MCP server, giving AI coding agents live access to document
 
 ```bash
 docalign init    # Auto-configures MCP + installs skill for Claude Code
-<!-- docalign:skip reason="user_instruction" description="JSON snippet showing how to manually add docalign to an MCP config — user instruction showing example configuration, not a factual claim about the project's current state" -->
 ```
+<!-- docalign:skip reason="user_instruction" description="MCP config JSON block showing a user instruction on how to add docalign to their MCP config — not a factual claim about the current project's state" -->
 
 Or add manually to your MCP config:
 
@@ -77,9 +77,9 @@ Or add manually to your MCP config:
     "docalign": {
       "command": "npx",
       "args": ["docalign", "mcp", "--repo", "."]
-<!-- /docalign:skip -->
     }
   }
+<!-- /docalign:skip -->
 }
 ```
 
@@ -101,12 +101,12 @@ See [Semantic Extraction Guide](docs/guides/semantic-extraction.md) for details.
 
 ## Configuration
 
-<!-- docalign:skip reason="user_instruction" description="Sample .docalign.yml configuration block — illustrates what a user could put in their config file, not a factual claim about the project's current defaults or behaviour" -->
 DocAlign works with zero configuration. To customize, create `.docalign.yml`:
 
 ```yaml
 doc_patterns:
   include: ['README.md', 'docs/**/*.md']
+<!-- docalign:skip reason="user_instruction" description="Configuration YAML block showing a sample .docalign.yml with example values — instruction for users to customize their config, not a claim about current project defaults" -->
   exclude: ['docs/archive/**']
 
 claim_types:

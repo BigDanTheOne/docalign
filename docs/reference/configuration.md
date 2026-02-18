@@ -1,17 +1,3 @@
----
-title: "Configuration Reference"
-summary: ".docalign.yml schema — all fields, types, and defaults"
-description: "Use when you need the exact field names, types, defaults, and validation rules for .docalign.yml."
-category: "reference"
-read_when:
-  - Configuring DocAlign for a specific repository
-  - Looking up an exact field name or its default value
-  - Understanding what a configuration option does
-related:
-  - docs/guides/custom-configuration.md
-  - docs/guides/suppressing-findings.md
----
-
 # Configuration Reference
 
 DocAlign works with zero configuration. All settings have sensible defaults. To customize, create `.docalign.yml` at your repo root.
@@ -26,7 +12,7 @@ With no config file, DocAlign:
 - Checks up to 50 claims per PR
 - Checks URLs with 5s timeout, max 5 per domain
 
-<!-- docalign:skip reason="illustrative_example" description="Full Example .docalign.yml block showing all configuration options — this is a reference example of what a config file looks like, not a factual claim about the current project state" -->
+<!-- docalign:skip reason="illustrative_example" description="Full Example .docalign.yml configuration block — already marked docalign:skip, illustrates user-facing config format not internal implementation" -->
 ## Full Example
 
 ```yaml
@@ -107,9 +93,9 @@ coverage:
   min_entity_importance: exported
 ```
 
-<!-- /docalign:skip -->
 ## Sections
 
+<!-- /docalign:skip -->
 ### doc_patterns
 
 Controls which documentation files are scanned.
@@ -183,6 +169,7 @@ suppress:
 
   # Ignore a specific pattern across all files
   - pattern: 'internal-.*-service'
+<!-- docalign:skip reason="illustrative_example" description="YAML code block inside suppress section showing example suppress rules — already marked docalign:skip" -->
 
   # Ignore all URL checks
   - claim_type: url_reference
@@ -206,6 +193,7 @@ Controls automated full scans (server mode).
 | `full_scan` | `'daily' \| 'weekly' \| 'monthly' \| 'never'` | `'weekly'` | Full scan frequency |
 | `full_scan_day` | `string` | `'sunday'` | Day of week for weekly scans |
 
+<!-- /docalign:skip -->
 ### agent
 
 Controls the agent execution environment (server mode).

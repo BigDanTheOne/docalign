@@ -1,22 +1,8 @@
----
-title: "Verification Tiers"
-summary: "Four-tier verification system from fast deterministic checks to LLM"
-description: "Use when you need to understand how DocAlign decides whether a claim is verified, drifted, or uncertain."
-category: "explanation"
-read_when:
-  - Understanding why a claim got a specific verdict
-  - Deciding which testability level to assign to a new claim type
-  - Debugging a false positive or false negative in verification
-related:
-  - docs/explanation/how-it-works.md
-  - docs/reference/checks.md
----
-
 # Verification Tiers
 
 DocAlign verifies claims through a four-tier system, from fast deterministic checks to human review. Each tier handles the claims that the previous tier couldn't resolve.
 
-<!-- docalign:skip reason="capability_description" description="Tier 1 capability table listing claim types DocAlign can check (file paths, dependencies, commands, etc.) with generic/hypothetical descriptions — not factual claims about the current codebase's own files or behavior" -->
+<!-- docalign:skip reason="capability_description" description="Tier 1 capability table listing claim types and checks — describes what the tool can detect using generic examples (file paths, dependencies, commands), not factual claims about codebase implementation" -->
 ## Tier 1: Deterministic Checks
 
 Direct evidence-based verification with high confidence. These are fast, reliable, and require no configuration.
@@ -36,7 +22,7 @@ Direct evidence-based verification with high confidence. These are fast, reliabl
 **When it can't decide:** File doesn't exist but might be generated at build time, URL returns an ambiguous status, import uses a path alias that DocAlign doesn't resolve.
 
 <!-- /docalign:skip -->
-<!-- docalign:skip reason="capability_description" description="Tier 2 capability table listing pattern-based checks DocAlign can perform (env vars, conventions, engine versions, etc.) — capability descriptions, not claims about the project's own code" -->
+<!-- docalign:skip reason="capability_description" description="Tier 2 capability table listing pattern-based checks — describes what the tool can detect using generic examples (env vars, conventions, license), not factual claims about codebase implementation" -->
 ## Tier 2: Pattern-Based Checks
 
 Heuristic verification using well-known file patterns. Slightly lower confidence because patterns may have false positives.
@@ -58,6 +44,7 @@ Heuristic verification using well-known file patterns. Slightly lower confidence
 **When it can't decide:** Env var is used in a non-standard way, convention claim is subjective, config file doesn't exist.
 
 <!-- /docalign:skip -->
+<!-- docalign:skip reason="capability_description" description="Tier 3 description of how LLM verification works — the numbered steps and 'When it's used' examples are illustrative, not claims about specific code entities" -->
 ## Tier 3: LLM Verification (Optional)
 
 For claims that can't be checked deterministically, an LLM reads the relevant code and assesses whether the claim holds.
@@ -77,6 +64,7 @@ For claims that can't be checked deterministically, an LLM reads the relevant co
 
 **Confidence:** 0.5-0.9 (varies by claim complexity)
 
+<!-- /docalign:skip -->
 ## Tier 4: Human Review
 
 Claims that remain uncertain after all automated tiers are flagged for human review. These appear with verdict `uncertain` in scan results.
@@ -87,7 +75,7 @@ Claims that remain uncertain after all automated tiers are flagged for human rev
 - Relevant code is obfuscated or uses unusual patterns
 - Claim references external systems not in the repo
 
-<!-- docalign:skip reason="illustrative_example" description="ASCII flowchart showing the tier progression pipeline — an illustrative diagram of the system flow, not a falsifiable claim about specific code behavior" -->
+<!-- docalign:skip reason="illustrative_example" description="Tier progression ASCII diagram — illustrative flowchart showing the escalation path, not a direct code claim" -->
 ## Tier Progression
 
 ```
@@ -113,5 +101,6 @@ Claim arrives
 ```
 
 Claims are only escalated to the next tier if the current tier cannot determine a verdict. Most claims (file paths, versions, commands) are resolved at Tier 1.
+
 
 <!-- /docalign:skip -->

@@ -1,18 +1,3 @@
----
-title: "Adding a Check"
-summary: "Step-by-step guide for adding new claim types and verifiers to DocAlign"
-description: "Use when you want to add a new claim type or verification check to DocAlign."
-category: "contributing"
-read_when:
-  - Adding a new claim type to DocAlign
-  - Writing a new extractor or verifier function
-  - Understanding the extractor-verifier registration pattern
-related:
-  - docs/contributing/design-patterns.md
-  - docs/contributing/testing.md
-  - docs/contributing/architecture.md
----
-
 # Adding a Check
 
 This guide walks through adding a new claim type or verification check to DocAlign.
@@ -75,7 +60,6 @@ Register it in the extraction pipeline in `src/layers/L1-claim-extractor/syntact
 
 Add a verification function. Follow the verifier pattern:
 
-<!-- docalign:skip reason="illustrative_example" description="Template verifier function using hypothetical verifyYourNewType, someCheck, makeResult, and findCloseMatch placeholders" -->
 ```typescript
 export function verifyYourNewType(
   claim: Claim,
@@ -107,20 +91,16 @@ export function verifyYourNewType(
   });
 }
 ```
-<!-- /docalign:skip -->
 
 Register it in the verifier router in `src/layers/L3-verifier/index.ts`:
 
-<!-- docalign:skip reason="illustrative_example" description="Template router snippet using hypothetical your_new_type and verifyYourNewType placeholders" -->
 ```typescript
 case 'your_new_type':
   return verifyYourNewType(claim, index);
 ```
-<!-- /docalign:skip -->
 
 ## Step 4: Write Tests
 
-<!-- docalign:skip reason="illustrative_example" description="Template extraction test code block using hypothetical extractYourNewType function" -->
 ### Extraction tests
 
 In `test/layers/L1-claim-extractor/`:
@@ -141,8 +121,6 @@ describe('extractYourNewType', () => {
 });
 ```
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="Template verification test code block using hypothetical verifyYourNewType function" -->
 ### Verification tests
 
 In `test/layers/L3-verifier/`:
@@ -175,8 +153,6 @@ describe('verifyYourNewType', () => {
 });
 ```
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="user_instruction" description="Step 5 instruction telling contributor to run typecheck and test commands" -->
 ## Step 5: Verify
 
 ```bash
@@ -185,7 +161,6 @@ npm run typecheck && npm run test
 
 Both must pass before the change is complete.
 
-<!-- /docalign:skip -->
 ## Checklist
 
 - [ ] Claim type added to `ClaimType` union (if new type)
@@ -196,4 +171,7 @@ Both must pass before the change is complete.
 - [ ] Uses `findCloseMatch()` for fuzzy suggestions where appropriate
 - [ ] Extraction tests cover match and no-match cases
 - [ ] Verification tests cover verified, drifted, and edge cases
+<!-- docalign:skip reason="user_instruction" description="Checklist of steps for contributors to follow when adding a check — imperatives, not factual claims about current code" -->
 - [ ] `npm run typecheck && npm run test` passes
+
+<!-- /docalign:skip -->

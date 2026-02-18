@@ -1,22 +1,8 @@
----
-title: "Suppressing Findings"
-summary: "Ignore specific files, patterns, claim types, or packages in DocAlign scan results"
-read_when:
-  - Suppressing a known false positive in scan results
-  - Excluding specific files, packages, or claim types from findings
-  - Understanding the limits of suppression rules
-description: "Use when you need to ignore specific files, patterns, claim types, or packages in DocAlign results."
-category: "guide"
-related:
-  - docs/reference/configuration.md
-  - docs/guides/checking-files.md
----
-
 # Suppressing Findings
 
 Not every finding is actionable. Suppress rules let you ignore specific files, patterns, claim types, or packages.
 
-<!-- docalign:skip reason="illustrative_example" description="YAML block showing all four suppress rule fields together as a combined syntax example, not the project's own config" -->
+<!-- docalign:skip reason="illustrative_example" description="Sample .docalign.yml suppress block showing multiple rule types — already marked by docalign:skip" -->
 ## Add suppress rules
 
 In `.docalign.yml`:
@@ -29,9 +15,9 @@ suppress:
   - pattern: 'internal-.*-service'
 ```
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="YAML block showing suppress-by-file syntax with example paths (docs/legacy.md, docs/archive/**, docs/examples/*.md)" -->
 ## Suppress by file
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="Suppress-by-file YAML examples with hypothetical file paths — already marked by docalign:skip" -->
 
 Ignore all findings in a file or file pattern:
 
@@ -42,9 +28,10 @@ suppress:
   - file: 'docs/examples/*.md'        # All examples
 ```
 
-<!-- /docalign:skip -->
 ## Suppress by claim type
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="Suppress-by-claim-type YAML examples — already marked by docalign:skip" -->
 Ignore all findings of a specific type:
 
 ```yaml
@@ -55,10 +42,11 @@ suppress:
 
 Valid claim types: `path_reference`, `dependency_version`, `command`, `api_route`, `code_example`, `behavior`, `architecture`, `config`, `convention`, `environment`, `url_reference`.
 
-<!-- docalign:skip reason="illustrative_example" description="YAML block showing suppress-by-package syntax with example package names (@internal/private-pkg, legacy-lib)" -->
 ## Suppress by package
 
 Ignore findings about a specific package:
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="Suppress-by-package YAML examples — already marked by docalign:skip" -->
 
 ```yaml
 suppress:
@@ -66,24 +54,25 @@ suppress:
   - package: 'legacy-lib'
 ```
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="YAML block showing suppress-by-pattern syntax with example regex patterns" -->
 ## Suppress by pattern
 
 Ignore findings matching a regex pattern:
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="Suppress-by-pattern YAML examples — already marked by docalign:skip" -->
 ```yaml
 suppress:
   - pattern: 'internal-.*-service'    # Regex against claim text
   - pattern: 'localhost:\d+'          # Local URLs
 ```
 
-<!-- /docalign:skip -->
 ## Combine rules
 
 Multiple fields in one rule are AND-combined:
 
 ```yaml
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="Combine-rules YAML examples — already marked by docalign:skip" -->
 suppress:
   # Ignore path claims only in examples docs
   - file: 'docs/examples.md'
@@ -100,6 +89,8 @@ If you never want a claim type checked across the entire repo, disable it instea
 
 ```yaml
 claim_types:
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="Disable claim types YAML examples — already marked by docalign:skip" -->
   url_reference: false    # Never extract or verify URLs
   environment: false      # Never check env vars
 ```
@@ -113,8 +104,12 @@ To see only important issues without suppressing:
 ```yaml
 verification:
   min_severity: medium    # Only report medium and high severity
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="Raise severity floor YAML example — already marked by docalign:skip" -->
 ```
 
 ## Limits
 
 Maximum 200 suppress rules per config file.
+
+<!-- /docalign:skip -->

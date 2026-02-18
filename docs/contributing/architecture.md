@@ -1,17 +1,3 @@
----
-title: "Architecture"
-summary: "DocAlign's L0–L7 layer system, data flow, and internal architecture"
-description: "Use when you need to understand DocAlign's internal architecture, layer system, and data flow."
-category: "contributing"
-read_when:
-  - Understanding how the layers fit together end-to-end
-  - Deciding which layer a new feature belongs in
-  - Understanding how data flows from doc file to verification result
-related:
-  - docs/contributing/design-patterns.md
-  - docs/contributing/adding-a-check.md
----
-
 # Architecture
 
 DocAlign is organized into 8 layers (L0-L7), each with a single responsibility. Data flows through the layers as a pipeline.
@@ -26,10 +12,10 @@ L3  Verifier           Check claims against code (Tier 1-2-3)
 L4  Triggers           Webhook handlers, scan queue, pipeline orchestration
 L5  Reporter           PR comments, check runs, health scores
 L6  MCP                MCP server (10 tools, stdio transport)
+<!-- docalign:skip reason="tutorial_example" description="Directory structure listing of src/ layers — flagged in extraction notes and by the existing docalign:skip markers as target layout that may not match current state" -->
 L7  Learning           Feedback, suppression, learning loop
 ```
 
-<!-- docalign:skip reason="tutorial_example" description="Directory structure listing reflects target layout, not necessarily current state — extraction notes explicitly call this out" -->
 ## Directory Structure
 
 ```
@@ -49,8 +35,8 @@ src/
   storage/                # StorageAdapter interface + SQLite + PostgreSQL
 ```
 
-<!-- /docalign:skip -->
 ## Data Flow
+<!-- /docalign:skip -->
 
 ### Full scan pipeline
 

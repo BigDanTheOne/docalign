@@ -1,17 +1,3 @@
----
-title: "Testing"
-summary: "How to write, run, and organize tests for DocAlign"
-description: "Use when you need to understand how to write, run, and organize tests for DocAlign."
-category: "contributing"
-read_when:
-  - Writing new tests for a DocAlign feature
-  - Running or debugging the test suite
-  - Understanding the test tier structure or coverage expectations
-related:
-  - docs/contributing/design-patterns.md
-  - docs/contributing/adding-a-check.md
----
-
 # Testing
 
 DocAlign uses Vitest for all testing. Tests mirror the source structure.
@@ -27,6 +13,7 @@ npm run typecheck      # TypeScript type checking (run before tests)
 **Rule:** `npm run typecheck && npm run test` must pass after every change.
 
 ## Test Structure
+<!-- docalign:skip reason="tutorial_example" description="Target test/ directory structure diagram — aspirational layout matching the unimplemented src/ structure, not the actual current test/ contents (pre-existing docalign:skip block)" -->
 
 Tests mirror the `src/` directory:
 
@@ -47,10 +34,11 @@ test/
 ```
 
 ## Test Fixtures
+<!-- /docalign:skip -->
 
-<!-- docalign:skip reason="illustrative_example" description="makeClaim() fixture usage example showing hypothetical test setup code" -->
 ### makeClaim()
 
+<!-- docalign:skip reason="illustrative_example" description="makeClaim() usage example with hypothetical Claim fields — shows how the fixture would be called, not a real test (pre-existing docalign:skip block)" -->
 Creates a test `Claim` object with sensible defaults. Override only what matters for your test:
 
 ```typescript
@@ -64,10 +52,10 @@ const claim = makeClaim({
 });
 ```
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="makeMockIndex() fixture usage example showing hypothetical mock codebase setup" -->
 ### makeMockIndex()
+<!-- /docalign:skip -->
 
+<!-- docalign:skip reason="illustrative_example" description="makeMockIndex() usage example with hypothetical CodebaseIndex fields — shows how the fixture would be called, not a real test (pre-existing docalign:skip block)" -->
 Creates a mock `CodebaseIndex` that verifiers use to check claims:
 
 ```typescript
@@ -91,19 +79,19 @@ const index = makeMockIndex({
 - `headings`: Object of file → heading slugs
 - `envVars`: Array of known environment variables
 - `exports`: Object of file → exported symbols
-
 <!-- /docalign:skip -->
+
 ### makeResult()
 
 Not a test fixture -- this is the production helper used to build `VerificationResult` objects. Tests use it to verify that verifiers produce expected outputs.
 
-<!-- docalign:skip reason="illustrative_example" description="Writing Extraction Tests section showing example test patterns for extractors" -->
 ## Writing Extraction Tests
 
 Extraction tests verify that regex patterns correctly identify claims in documentation lines:
 
 ```typescript
 describe('extractPathReferences', () => {
+<!-- docalign:skip reason="illustrative_example" description="Writing Extraction Tests section with hypothetical extractPathReferences test code — shows patterns contributors should follow, not actual test implementations (pre-existing docalign:skip block)" -->
   it('extracts inline file paths', () => {
     const results = extractPathReferences('See `src/auth.ts` for details', 1, ctx);
     expect(results).toHaveLength(1);
@@ -132,8 +120,6 @@ describe('extractPathReferences', () => {
 - Test edge cases (multiple matches, unusual formatting, embedded in markdown)
 - Test that claim_type, value, and line_number are correct
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="Writing Verification Tests section showing example test patterns for verifiers" -->
 ## Writing Verification Tests
 
 Verification tests check that claims are correctly verified against the codebase:
@@ -146,7 +132,9 @@ describe('verifyPathReference', () => {
 
     const result = verifyPathReference(claim, index);
     expect(result?.verdict).toBe('verified');
+<!-- /docalign:skip -->
   });
+<!-- docalign:skip reason="illustrative_example" description="Writing Verification Tests section with hypothetical verifyPathReference test code — shows patterns contributors should follow, not actual test implementations (pre-existing docalign:skip block)" -->
 
   it('drifts for missing file', () => {
     const claim = makeClaim({ claim_type: 'path_reference', value: 'src/missing.ts' });
@@ -174,8 +162,6 @@ describe('verifyPathReference', () => {
 - Test that severity is set appropriately
 - Test edge cases (empty index, null values)
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="Config Tests section showing example test patterns for parseConfig" -->
 ## Config Tests
 
 Config tests verify YAML parsing, default merging, and validation:
@@ -189,12 +175,13 @@ describe('parseConfig', () => {
 
   it('validates numeric ranges', () => {
     const config = parseConfig('verification:\n  max_claims_per_pr: 999');
+<!-- /docalign:skip -->
     // Should clamp to 200 or warn
+<!-- docalign:skip reason="illustrative_example" description="Config Tests section with hypothetical parseConfig test code — shows patterns contributors should follow, not actual test implementations (pre-existing docalign:skip block)" -->
   });
 });
 ```
 
-<!-- /docalign:skip -->
 ## Test Coverage
 
 Coverage targets vary by layer:
@@ -203,10 +190,9 @@ Coverage targets vary by layer:
 - **Config**: Full coverage of parsing, defaults, and error paths
 - **CLI**: Integration-level tests for command dispatch
 
-<!-- docalign:skip reason="sample_output" description="npm run test --coverage command block — handled by regex" -->
 Run coverage report:
 
 ```bash
+<!-- /docalign:skip -->
 npm run test -- --coverage
 ```
-<!-- /docalign:skip -->

@@ -1,15 +1,3 @@
----
-Schema-Version: 1
-summary: "Operational runbook for repo relocation: rollback thresholds, symlink governance, and build-exit evidence checklist"
-read_when:
-  - Executing or preparing a repository relocation
-  - Reviewing rollback trigger thresholds during a relocation incident
-  - Verifying build-exit evidence criteria after a relocation
-Run-ID: 24919391-3857-458b-a416-90666443ede9
-Stage: build
-Agent: tech-lead
-Generated-At: 2026-02-16T22:55:00+04:00
----
 # Repo Relocation Runbook
 
 ## Owner / on-call

@@ -1,17 +1,3 @@
----
-title: "Troubleshooting"
-summary: "Common errors, unexpected results, and debugging steps"
-description: "Use when DocAlign produces unexpected results, errors, or you need to debug issues."
-category: "guide"
-read_when:
-  - DocAlign is producing unexpected results or errors
-  - A scan result looks wrong and you need to debug it
-  - You want to understand why a specific claim was flagged
-related:
-  - docs/reference/cli.md
-  - docs/reference/configuration.md
----
-
 # Troubleshooting
 
 ## No documentation files found
@@ -21,14 +7,14 @@ related:
 **Cause:** DocAlign looks for files matching its default patterns (`README.md`, `docs/**/*.md`, etc.) from the directory where you run the command.
 
 **Fix:** Run from your repository root. If your docs are in a non-standard location, configure `doc_patterns` in `.docalign.yml`:
-<!-- docalign:skip reason="user_instruction" description="YAML config example for doc_patterns showing hypothetical include patterns" -->
+<!-- docalign:skip reason="user_instruction" description="YAML config example showing how to set doc_patterns" -->
 
 ```yaml
 doc_patterns:
   include:
     - 'documentation/**/*.md'
-    - 'wiki/**/*.md'
 <!-- /docalign:skip -->
+    - 'wiki/**/*.md'
 ```
 
 ## False positives on file paths
@@ -37,8 +23,8 @@ doc_patterns:
 
 **Cause:** The path in the doc may be relative to a different base directory, or use a format DocAlign doesn't recognize as a path.
 
-<!-- docalign:skip reason="user_instruction" description="YAML suppress example for false-positive path findings" -->
 **Fix:** Either update the doc to use a repo-root-relative path, or suppress the finding:
+<!-- docalign:skip reason="user_instruction" description="YAML suppress config example for false positives" -->
 
 ```yaml
 suppress:
@@ -54,16 +40,20 @@ suppress:
 **Cause:** Default timeout is 5 seconds. Some sites are slow or block automated requests.
 
 **Fix:** Increase the timeout or exclude slow domains:
+<!-- docalign:skip reason="user_instruction" description="YAML url_check timeout config example" -->
 
 ```yaml
 url_check:
   timeout_ms: 10000
   exclude_domains:
+<!-- /docalign:skip -->
     - 'slow-site.example.com'
+<!-- docalign:skip reason="user_instruction" description="YAML url_check disable config example" -->
 ```
 
 To disable URL checking entirely:
 
+<!-- /docalign:skip -->
 ```yaml
 url_check:
   enabled: false
@@ -74,21 +64,23 @@ url_check:
 **Symptom:** DocAlign reports dozens of drifted claims and the output is overwhelming.
 
 **Fix options:**
+<!-- docalign:skip reason="user_instruction" description="YAML verification min_severity config example" -->
 
-<!-- docalign:skip reason="user_instruction" description="YAML config examples for min_severity and suppress options" -->
 1. Raise the severity floor to focus on important issues:
    ```yaml
    verification:
+<!-- /docalign:skip -->
      min_severity: medium
+<!-- docalign:skip reason="user_instruction" description="YAML suppress config example for too many findings" -->
    ```
 
 2. Suppress entire files or claim types:
    ```yaml
    suppress:
+<!-- /docalign:skip -->
      - file: 'docs/legacy/**'
      - claim_type: url_reference
    ```
-<!-- /docalign:skip -->
 
 3. Use `docalign check <file>` to fix one file at a time instead of scanning everything.
 
@@ -99,11 +91,13 @@ url_check:
 **Cause:** Semantic extraction requires the `claude` CLI to be installed and authenticated (part of Claude Code).
 
 **Fix:** Install Claude Code and authenticate:
+<!-- docalign:skip reason="user_instruction" description="Shell commands showing how to install/authenticate claude CLI" -->
 
 ```bash
 claude   # Follow the authentication prompts
 docalign extract
 ```
+<!-- /docalign:skip -->
 
 ## Config file not being picked up
 
@@ -121,6 +115,7 @@ docalign extract
 **Fix:**
 1. Run `docalign status` to check MCP integration status
 2. Verify `.claude/mcp.json` (or equivalent) has the correct entry:
+<!-- docalign:skip reason="user_instruction" description="JSON mcp.json config example for MCP server entry" -->
    ```json
    {
      "mcpServers": {
@@ -130,6 +125,7 @@ docalign extract
        }
      }
    }
+<!-- /docalign:skip -->
    ```
 3. Restart your MCP client (Claude Code, Cursor, etc.)
 4. Try `docalign init` to reconfigure automatically
@@ -147,16 +143,16 @@ docalign extract
 **Symptom:** DocAlign reports version drift when different packages have different versions of the same dependency.
 
 **Cause:** DocAlign checks against the `package.json` nearest to the repo root.
-<!-- docalign:skip reason="user_instruction" description="YAML suppress example for monorepo package version differences" -->
 
 **Fix:** Suppress findings for packages with known version differences:
 
+<!-- docalign:skip reason="user_instruction" description="YAML suppress config example for monorepo version mismatches" -->
 ```yaml
 suppress:
   - package: 'react'
-<!-- /docalign:skip -->
     file: 'docs/packages/legacy-app.md'
 ```
+<!-- /docalign:skip -->
 
 ## Getting Help
 

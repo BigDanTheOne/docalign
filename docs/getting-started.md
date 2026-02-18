@@ -1,18 +1,3 @@
----
-title: "Getting Started"
-summary: "Install DocAlign and run your first documentation health scan"
-description: "Use when setting up DocAlign for the first time. Covers installation, first scan, reading output, and next steps."
-category: "tutorial"
-read_when:
-  - Setting up DocAlign for the first time
-  - Running your first documentation health check
-  - Understanding what the scan output means
-related:
-  - docs/reference/cli.md
-  - docs/guides/checking-files.md
-  - docs/guides/mcp-integration.md
----
-
 # Getting Started
 
 This guide walks you through installing DocAlign, running your first scan, and understanding the output.
@@ -44,12 +29,12 @@ docalign scan
 
 DocAlign automatically finds documentation files (`README.md`, `docs/**/*.md`, `CONTRIBUTING.md`, and more) and scans them for verifiable claims.
 
-<!-- docalign:skip reason="sample_output" description="Sample CLI output block showing hypothetical scan results with invented file paths, dependency versions, and health scores" -->
 ### Sample Output
 
 ```
 Scanning repository...
 
+<!-- docalign:skip reason="sample_output" description="Sample CLI output block showing illustrative scan results with invented file paths, dependency versions, and health score (already marked with docalign:skip in source)" -->
 README.md (12 claims)
   DRIFT  [high]  Line 15: File path "src/auth/middleware.ts" — file not found
   DRIFT  [medium]  Line 28: Dependency "express@4.17" — package.json has 4.18.2
@@ -62,9 +47,9 @@ Summary: 20 claims scanned, 16 verified, 4 drifted
 Health score: 80/100
 ```
 
-<!-- /docalign:skip -->
 ## Check a Single File
 
+<!-- /docalign:skip -->
 For detailed results on one file:
 
 ```bash
@@ -73,6 +58,7 @@ docalign check README.md --verbose
 
 The `--verbose` flag shows all claims, including verified ones. Without it, only drifted claims appear.
 
+<!-- docalign:skip reason="capability_description" description="Description of verdict/severity/evidence output fields — illustrative tool output structure, not falsifiable code behavior (already marked with docalign:skip in source)" -->
 ## Understanding Results
 
 Each finding has three parts:
@@ -83,7 +69,9 @@ Each finding has three parts:
 
 ### Health Score
 
+<!-- /docalign:skip -->
 The health score is calculated as:
+<!-- docalign:skip reason="illustrative_example" description="Health score formula block — mathematical formula shown as documentation, not a verifiable code implementation pattern (already marked with docalign:skip in source)" -->
 
 ```
 score = 100 * verified / (verified + drifted)
@@ -97,6 +85,7 @@ If you use Claude Code, Cursor, or another MCP client:
 
 ```bash
 docalign init
+<!-- /docalign:skip -->
 ```
 
 This configures the MCP server so your AI agent can query documentation health, find stale docs, and get fix suggestions. See [MCP Integration](guides/mcp-integration.md).
@@ -111,7 +100,6 @@ docalign extract
 
 This finds claims that regex can't catch, like "Authentication uses JWT tokens" or "Services communicate via REST." See [Semantic Extraction](guides/semantic-extraction.md).
 
-<!-- docalign:skip reason="user_instruction" description="Instructions telling the reader to run 'docalign configure' or create .docalign.yml — imperative steps, not factual claims about the current codebase" -->
 ## Optional: Configuration
 
 DocAlign works with zero configuration, but you can customize what it scans:
@@ -122,8 +110,6 @@ docalign configure
 
 Or create `.docalign.yml` manually. See [Custom Configuration](guides/custom-configuration.md).
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="user_instruction" description="Next Steps section listing links for further reading — navigation instructions, not factual claims" -->
 ## Next Steps
 
 - [Checking Files](guides/checking-files.md) -- Scan repos, check files, interpret results
@@ -131,4 +117,3 @@ Or create `.docalign.yml` manually. See [Custom Configuration](guides/custom-con
 - [Checks Reference](reference/checks.md) -- See all 11 claim types and cross-cutting checks
 - [CLI Reference](reference/cli.md) -- All commands, flags, and options
 
-<!-- /docalign:skip -->
