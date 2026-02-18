@@ -35,18 +35,18 @@ export async function checkClaimStaleness(
   if (!claim.last_verification) return 'stale';
 
   // No evidence at all → treat as fresh (nothing to invalidate)
-  if (claim.evidence_entities.length === 0 && claim.evidence_assertions.length === 0) {
+  if ((claim.evidence_entities ?? []).length === 0 && (claim.evidence_assertions ?? []).length === 0) {
     return 'fresh';
   }
 
   // Check entities
-  for (const entity of claim.evidence_entities) {
+  for (const entity of (claim.evidence_entities ?? [])) {
     const isStale = await checkEntityStaleness(entity, index, repoRoot);
     if (isStale) return 'stale';
   }
 
   // Check assertions
-  for (const assertion of claim.evidence_assertions) {
+  for (const assertion of (claim.evidence_assertions ?? [])) {
     const isStale = checkAssertionStaleness(assertion, repoRoot);
     if (isStale) return 'stale';
   }
@@ -88,7 +88,7 @@ export async function verifyWithEvidence(
   const failures: string[] = [];
 
   // No evidence → uncertain (can't verify without evidence)
-  if (claim.evidence_entities.length === 0 && claim.evidence_assertions.length === 0) {
+  if ((claim.evidence_entities ?? []).length === 0 && (claim.evidence_assertions ?? []).length === 0) {
     return {
       verification: {
         verdict: 'uncertain',
@@ -102,7 +102,7 @@ export async function verifyWithEvidence(
   }
 
   // Check entities and compute current hashes
-  for (const entity of claim.evidence_entities) {
+  for (const entity of (claim.evidence_entities ?? [])) {
     const result = await checkEntityExists(entity, index, repoRoot);
     details.push({
       type: 'entity',
@@ -117,7 +117,7 @@ export async function verifyWithEvidence(
   }
 
   // Check assertions
-  for (const assertion of claim.evidence_assertions) {
+  for (const assertion of (claim.evidence_assertions ?? [])) {
     const passed = !checkAssertionStaleness(assertion, repoRoot);
     details.push({
       type: 'assertion',

@@ -92,6 +92,14 @@ export function loadClaimsForFile(repoRoot: string, docFile: string): SemanticCl
     const raw = fs.readFileSync(filePath, 'utf-8');
     const data = JSON.parse(raw) as SemanticClaimFile;
     if (data.version !== 1 || !Array.isArray(data.claims)) return null;
+    // Normalize claims: default missing array fields to [] to guard against
+    // hand-written or agent-generated JSON that omits optional array fields.
+    data.claims = data.claims.map((c) => ({
+      ...c,
+      evidence_entities: Array.isArray(c.evidence_entities) ? c.evidence_entities : [],
+      evidence_assertions: Array.isArray(c.evidence_assertions) ? c.evidence_assertions : [],
+      keywords: Array.isArray(c.keywords) ? c.keywords : [],
+    }));
     return data;
   } catch {
     return null;
