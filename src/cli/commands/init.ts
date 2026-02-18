@@ -179,7 +179,7 @@ project directory is a git repository (has a .git folder).
 `;
 
 interface HookEntry {
-  matcher: { tools: string[] };
+  matcher: string;
   hooks: Array<{
     type: string;
     command: string;
@@ -257,13 +257,23 @@ export async function runInit(
   if (!settings.hooks) settings.hooks = {};
   if (!settings.hooks.PostToolUse) settings.hooks.PostToolUse = [];
 
-  // Migrate any old string-matcher entries to the object format
-  settings.hooks.PostToolUse = settings.hooks.PostToolUse
-    .filter((h) => h && typeof h === "object" && h.hooks !== undefined)
-    .map((h) => ({
-      ...h,
-      matcher: typeof h.matcher === "string" ? { tools: [h.matcher] } : h.matcher,
-    }));
+  // Normalise any existing entries: matcher must be a string, hooks must be an array
+  settings.hooks.PostToolUse = (settings.hooks.PostToolUse as unknown[])
+    .filter((h): h is Record<string, unknown> => h != null && typeof h === "object")
+    .map((h) => {
+      const matcherStr =
+        typeof h["matcher"] === "string"
+          ? h["matcher"]
+          : ((h["matcher"] as Record<string, unknown>)?.["tools"] as string[])?.[0] ?? "Bash";
+      const hooksArr = Array.isArray(h["hooks"])
+        ? h["hooks"]
+        : h["command"]
+          ? [{ type: "command", command: h["command"] }]
+          : null;
+      if (!hooksArr) return null;
+      return { matcher: matcherStr, hooks: hooksArr };
+    })
+    .filter((h): h is HookEntry => h !== null);
 
   const hookCommand =
     'bash -c \'INPUT=$(cat); if echo "$INPUT" | grep -q "git commit"; then echo "[DocAlign] Code committed. Consider running get_doc_health or check_doc to verify documentation is still accurate."; fi\'';
@@ -272,7 +282,7 @@ export async function runInit(
   );
   if (!existingHook) {
     settings.hooks.PostToolUse.push({
-      matcher: { tools: ["Bash"] },
+      matcher: "Bash",
       hooks: [{ type: "command", command: hookCommand }],
     });
   }

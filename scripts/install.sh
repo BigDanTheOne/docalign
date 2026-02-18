@@ -157,17 +157,17 @@ if (settings.hooks && settings.hooks.PostToolUse) {
     // Drop malformed entries (missing hooks array)
     .filter(h => h && typeof h === 'object')
     .map(h => {
-      // Already correct format
+      // Already correct format: string matcher + hooks array
       if (Array.isArray(h.hooks)) {
         return {
-          matcher: typeof h.matcher === 'string' ? { tools: [h.matcher] } : h.matcher,
+          matcher: typeof h.matcher === 'object' ? (h.matcher.tools?.[0] || 'Bash') : h.matcher,
           hooks: h.hooks,
         };
       }
       // Old flat format: { matcher, pattern, command } -> new nested format
       if (h.command) {
         return {
-          matcher: typeof h.matcher === 'string' ? { tools: [h.matcher] } : (h.matcher || { tools: ['Bash'] }),
+          matcher: typeof h.matcher === 'object' ? (h.matcher.tools?.[0] || 'Bash') : (h.matcher || 'Bash'),
           hooks: [{ type: 'command', command: h.command }],
         };
       }
