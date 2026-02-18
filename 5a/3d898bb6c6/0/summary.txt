@@ -1,0 +1,11 @@
+Down to 2 drifted from 16 (before extract) — a huge improvement. The 2 remaining are real documentation drift issues, not false positives.
+
+The fix is working correctly:
+- **No duplicate tags** after running extract twice
+- **Content-idempotent**: second run strips and rewrites cleanly
+- **Drift reduced**: 16 → 2 on `docs/reference/checks.md`
+
+The key changes made:
+1. **`src/tags/writer.ts`**: Added exported `stripSkipTags(content)` function; removed unused `parseExistingSkipRegions`
+2. **`src/cli/real-pipeline.ts`**: Strips skip tags from file content before passing to `buildDocSections`/Claude, so Claude always sees clean line numbers
+3. **`test/tags/writer.test.ts`**: Updated idempotency test to reflect strip-then-rewrite semantics — the content is identical after two writes, but `tagsWritten` is 1 (not 0) because we always strip-then-rewrite
