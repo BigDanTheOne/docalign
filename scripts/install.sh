@@ -183,35 +183,66 @@ fi
 
 echo ""
 
-# Step 5: Print final instructions
+# Step 5: Launch Claude Code setup wizard
+log_info "Launching Claude Code setup wizard..."
 echo ""
-echo "═══════════════════════════════════════════════════════════════"
-echo ""
-echo "  🎉 DocAlign is installed and configured!"
-echo ""
-echo "  To begin the interactive setup wizard, open a NEW terminal"
-echo "  window in this directory and run:"
-echo ""
-echo "      claude"
-echo ""
-echo "  What happens when you do:"
-echo ""
-echo "  1. Claude Code opens and automatically detects that"
-echo "     DocAlign setup is pending (via CLAUDE.md)."
-echo ""
-echo "  2. It launches the /docalign-setup wizard, which walks"
-echo "     you through:"
-echo "       • Discovering your documentation files"
-echo "       • Selecting which docs to monitor"
-echo "       • Writing config + YAML headers to each doc"
-echo "       • Extracting claims and annotating your docs"
-echo "       • Running an initial drift scan"
-echo ""
-echo "  3. When the wizard finishes, DocAlign is active."
-echo "     Claude will automatically flag stale documentation"
-echo "     whenever you change code."
-echo ""
-echo "═══════════════════════════════════════════════════════════════"
-echo ""
-echo "  ➜  Open a new terminal, cd to this directory, then: claude"
-echo ""
+
+PROJ_DIR="$PWD"
+
+launch_banner() {
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+    echo "  🎉 DocAlign is installed and configured!"
+    echo ""
+    echo "  The /docalign-setup wizard is starting. It will guide you"
+    echo "  through:"
+    echo ""
+    echo "    1. Discovering your documentation files"
+    echo "    2. Selecting which docs to monitor"
+    echo "    3. Writing config + YAML headers to each doc"
+    echo "    4. Extracting claims and annotating your docs"
+    echo "    5. Running an initial drift scan to find stale docs"
+    echo ""
+    echo "  When the wizard finishes, DocAlign is fully active."
+    echo "  Claude will automatically flag stale documentation"
+    echo "  whenever you change code."
+    echo ""
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+}
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS: open a new Terminal window with a proper PTY.
+    # We can't exec Claude Code directly from a curl|bash pipe because
+    # the piped shell has no controlling TTY — TUI apps receive no keystrokes.
+    # osascript opens a fresh window with full terminal capabilities.
+    osascript << APPLESCRIPT
+tell application "Terminal"
+    activate
+    do script "cd '$PROJ_DIR' && claude '/docalign-setup'"
+end tell
+APPLESCRIPT
+    launch_banner
+    echo "  ➜  A new Terminal window is opening now."
+    echo ""
+
+elif command -v gnome-terminal &>/dev/null; then
+    gnome-terminal -- bash -c "cd '$PROJ_DIR' && claude '/docalign-setup'; exec bash" &
+    launch_banner
+    echo "  ➜  A new gnome-terminal window is opening now."
+    echo ""
+
+elif command -v xterm &>/dev/null; then
+    xterm -e "bash -c \"cd '$PROJ_DIR' && claude '/docalign-setup'\"" &
+    launch_banner
+    echo "  ➜  A new xterm window is opening now."
+    echo ""
+
+else
+    # Fallback: can't detect a terminal emulator — give manual instructions
+    launch_banner
+    echo "  ➜  Open a new terminal in this directory, then run:"
+    echo ""
+    echo "         claude"
+    echo ""
+fi
