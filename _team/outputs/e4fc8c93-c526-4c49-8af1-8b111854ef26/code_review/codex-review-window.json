@@ -1,0 +1,8 @@
+{
+  "status": "timed_out_no_feedback",
+  "codex_issue_count": 0,
+  "no_feedback_reason": "No Codex review comments after 4+ hours (PR created 2026-02-18T01:40:05Z)",
+  "waited_since": "2026-02-18T01:40:05Z",
+  "latest_codex_comment_at": null,
+  "final_ingest_at": "2026-02-18T05:42:00Z"
+}

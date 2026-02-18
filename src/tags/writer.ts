@@ -7,9 +7,145 @@
  */
 
 import fs from 'fs';
-import path from 'path';
 import type { ClaimType } from '../shared/types';
 import { parseTags } from './parser';
+
+// ============================================================
+// Skip region tags
+// ============================================================
+
+/** A region to wrap with <!-- docalign:skip --> block tags. */
+export interface SkipRegion {
+  /** 1-based line number of the first line in the region (inclusive). */
+  start_line: number;
+  /** 1-based line number of the last line in the region (inclusive). */
+  end_line: number;
+  /** Short machine-readable reason: e.g. "example_table", "sample_output". */
+  reason: string;
+  /** Human-readable description of why the region is skipped. */
+  description?: string;
+}
+
+export interface SkipWriteResult {
+  /** Updated document content. */
+  content: string;
+  /** Number of new skip-tag pairs inserted. */
+  tagsWritten: number;
+  /** Number of regions already tagged (preserved). */
+  tagsPreserved: number;
+}
+
+const CLOSE_SKIP_TAG = '<!-- /docalign:skip -->';
+const SKIP_OPEN_RE = /^\s*<!--\s*docalign:skip\b/;
+const SKIP_CLOSE_RE = /^\s*<!--\s*\/docalign:skip\s*-->\s*$/;
+
+function formatSkipOpenTag(region: SkipRegion): string {
+  const parts: string[] = [`<!-- docalign:skip reason="${region.reason}"`];
+  if (region.description) parts.push(`description="${region.description}"`);
+  parts.push('-->');
+  return parts.join(' ');
+}
+
+/** Parse all existing docalign:skip block regions from line array (1-based). */
+function parseExistingSkipRegions(lines: string[]): Array<{ startLine: number; endLine: number }> {
+  const regions: Array<{ startLine: number; endLine: number }> = [];
+  let openLine: number | null = null;
+  for (let i = 0; i < lines.length; i++) {
+    if (SKIP_OPEN_RE.test(lines[i])) {
+      openLine = i + 1; // 1-based
+    } else if (SKIP_CLOSE_RE.test(lines[i]) && openLine !== null) {
+      regions.push({ startLine: openLine, endLine: i + 1 }); // close tag line (1-based, inclusive)
+      openLine = null;
+    }
+  }
+  return regions;
+}
+
+/** Returns true if the requested region is already fully covered by an existing tagged region. */
+function isCoveredByExisting(
+  region: SkipRegion,
+  existing: Array<{ startLine: number; endLine: number }>,
+): boolean {
+  return existing.some(
+    (e) => e.startLine <= region.start_line && e.endLine >= region.end_line,
+  );
+}
+
+/**
+ * Wrap skip regions with <!-- docalign:skip --> block tags.
+ *
+ * Idempotent: regions already surrounded by skip tags are preserved.
+ * Insertions are applied bottom-to-top so line numbers stay stable.
+ */
+export function writeSkipTags(content: string, skipRegions: SkipRegion[]): SkipWriteResult {
+  if (skipRegions.length === 0) {
+    return { content, tagsWritten: 0, tagsPreserved: 0 };
+  }
+
+  const lines = content.split('\n');
+  const existing = parseExistingSkipRegions(lines);
+
+  let tagsWritten = 0;
+  let tagsPreserved = 0;
+
+  // Sort descending so we can splice bottom-to-top without shifting earlier indices
+  const sorted = [...skipRegions].sort((a, b) => b.start_line - a.start_line);
+
+  for (const region of sorted) {
+    if (isCoveredByExisting(region, existing)) {
+      tagsPreserved++;
+      continue;
+    }
+
+    // Clamp to document bounds
+    const endIdx = Math.min(region.end_line, lines.length); // splice position for close tag (after end_line)
+    const startIdx = Math.max(region.start_line - 1, 0);   // splice position for open tag (before start_line)
+
+    // Insert close tag first (higher index), then open tag (lower index)
+    lines.splice(endIdx, 0, CLOSE_SKIP_TAG);
+    lines.splice(startIdx, 0, formatSkipOpenTag(region));
+
+    tagsWritten++;
+  }
+
+  return { content: lines.join('\n'), tagsWritten, tagsPreserved };
+}
+
+/**
+ * Write skip tags to a file atomically.
+ *
+ * 1. Read file content
+ * 2. Apply writeSkipTags
+ * 3. Write to temp file (<path>.docalign-tmp)
+ * 4. Rename temp to target
+ * 5. On error: delete temp file, re-throw
+ */
+export async function writeSkipTagsToFile(
+  filePath: string,
+  skipRegions: SkipRegion[],
+): Promise<SkipWriteResult> {
+  const content = fs.readFileSync(filePath, 'utf8');
+  const result = writeSkipTags(content, skipRegions);
+
+  if (result.tagsWritten === 0) {
+    return result; // Nothing to write
+  }
+
+  const tmpPath = filePath + '.docalign-tmp';
+  try {
+    fs.writeFileSync(tmpPath, result.content, 'utf8');
+    fs.renameSync(tmpPath, filePath);
+  } catch (err) {
+    try {
+      fs.unlinkSync(tmpPath);
+    } catch {
+      // Ignore cleanup errors
+    }
+    throw err;
+  }
+
+  return result;
+}
 
 export interface TaggableClaim {
   /** UUID of the claim. */

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { writeTags } from '../../src/tags/writer';
+import { writeTags, writeSkipTags } from '../../src/tags/writer';
 import { parseTags } from '../../src/tags/parser';
-import type { TaggableClaim } from '../../src/tags/writer';
+import type { TaggableClaim, SkipRegion } from '../../src/tags/writer';
 
 describe('writeTags', () => {
   it('returns unchanged content with no claims', () => {
@@ -147,5 +147,80 @@ describe('writeTags', () => {
     expect(result.tagsWritten).toBe(2);
     expect(result.content).toContain('id="multi-1"');
     expect(result.content).toContain('id="multi-2"');
+  });
+});
+
+describe('writeSkipTags', () => {
+  it('returns unchanged content with no skip regions', () => {
+    const content = '# Hello\nWorld\n';
+    const result = writeSkipTags(content, []);
+    expect(result.content).toBe(content);
+    expect(result.tagsWritten).toBe(0);
+    expect(result.tagsPreserved).toBe(0);
+  });
+
+  it('wraps a region with skip block tags', () => {
+    const content = '# Title\nLine 1\nLine 2\nLine 3\nLine 4';
+    const regions: SkipRegion[] = [
+      { start_line: 2, end_line: 3, reason: 'example_table', description: 'An example table' },
+    ];
+    const result = writeSkipTags(content, regions);
+    expect(result.tagsWritten).toBe(1);
+    const lines = result.content.split('\n');
+    // Open tag before line 2 (now at index 1)
+    expect(lines[1]).toContain('docalign:skip reason="example_table"');
+    expect(lines[1]).toContain('description="An example table"');
+    // Original line 2 is now at index 2
+    expect(lines[2]).toBe('Line 1');
+    // Original line 3 is at index 3
+    expect(lines[3]).toBe('Line 2');
+    // Close tag after original line 3 (now at index 4)
+    expect(lines[4]).toBe('<!-- /docalign:skip -->');
+    // Original line 4 is preserved after close tag
+    expect(lines[5]).toBe('Line 3');
+  });
+
+  it('is idempotent: wrapping an already-tagged region does nothing', () => {
+    const content = [
+      '# Title',
+      '<!-- docalign:skip reason="example_table" -->',
+      'Example content',
+      '<!-- /docalign:skip -->',
+      'After.',
+    ].join('\n');
+    const regions: SkipRegion[] = [
+      { start_line: 2, end_line: 4, reason: 'example_table' },
+    ];
+    const result = writeSkipTags(content, regions);
+    expect(result.tagsWritten).toBe(0);
+    expect(result.tagsPreserved).toBe(1);
+    expect(result.content).toBe(content);
+  });
+
+  it('handles multiple non-overlapping regions (bottom-to-top)', () => {
+    const content = 'Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6';
+    const regions: SkipRegion[] = [
+      { start_line: 2, end_line: 2, reason: 'sample_output' },
+      { start_line: 5, end_line: 6, reason: 'example_table' },
+    ];
+    const result = writeSkipTags(content, regions);
+    expect(result.tagsWritten).toBe(2);
+    // Both regions should be tagged
+    expect(result.content).toContain('reason="sample_output"');
+    expect(result.content).toContain('reason="example_table"');
+    // Original content is preserved
+    expect(result.content).toContain('Line 1');
+    expect(result.content).toContain('Line 6');
+  });
+
+  it('omits description attribute when not provided', () => {
+    const content = '# Title\nSome content\nEnd';
+    const regions: SkipRegion[] = [
+      { start_line: 2, end_line: 2, reason: 'user_instruction' },
+    ];
+    const result = writeSkipTags(content, regions);
+    const openTag = result.content.split('\n').find((l) => l.includes('docalign:skip'));
+    expect(openTag).toBeDefined();
+    expect(openTag).not.toContain('description=');
   });
 });

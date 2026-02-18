@@ -64,6 +64,7 @@ import {
   buildDocSections,
   extractSemanticClaims,
 } from '../layers/L1-claim-extractor/semantic-extractor';
+import { writeSkipTagsToFile } from '../tags/writer';
 
 const MAX_FILE_SIZE = 100 * 1024; // 100KB
 const DEFAULT_VERIFY_MODEL = 'claude-sonnet-4-5-20250929';
@@ -73,6 +74,8 @@ export interface ExtractSemanticResult {
   totalFiles: number;
   totalExtracted: number;
   totalSkipped: number;
+  /** Total number of skip-tag pairs written to document files. */
+  totalTagsWritten: number;
   errors: Array<{ file: string; message: string }>;
 }
 
@@ -305,6 +308,7 @@ export class LocalPipeline implements CliPipeline {
         totalFiles: 0,
         totalExtracted: 0,
         totalSkipped: 0,
+        totalTagsWritten: 0,
         errors: [{ file: '', message: 'Claude CLI not found. Install: npm install -g @anthropic-ai/claude-code' }],
       };
     }
@@ -324,6 +328,7 @@ export class LocalPipeline implements CliPipeline {
 
     let totalExtracted = 0;
     let totalSkipped = 0;
+    let totalTagsWritten = 0;
     const errors: Array<{ file: string; message: string }> = [];
 
     for (let i = 0; i < docFiles.length; i++) {
@@ -377,6 +382,21 @@ export class LocalPipeline implements CliPipeline {
         }
       }
 
+      // Write skip tags to the document file (Phase 1 classification output)
+      if (result.skipRegions.length > 0) {
+        const absDocPath = path.join(this.repoRoot, docFile);
+        try {
+          const tagResult = await writeSkipTagsToFile(absDocPath, result.skipRegions);
+          totalTagsWritten += tagResult.tagsWritten;
+        } catch (tagErr) {
+          // Tag writing failure is non-fatal — semantic claims still persist
+          errors.push({
+            file: docFile,
+            message: `Failed to write skip tags: ${tagErr instanceof Error ? tagErr.message : String(tagErr)}`,
+          });
+        }
+      }
+
       if (result.claims.length > 0 || sectionsToExtract.length > 0) {
         // Upsert into store
         const currentData = stored ?? {
@@ -423,7 +443,7 @@ export class LocalPipeline implements CliPipeline {
       if (onProgress) onProgress(i + 1, docFiles.length, docFile, 'done');
     }
 
-    return { totalFiles: docFiles.length, totalExtracted, totalSkipped, errors };
+    return { totalFiles: docFiles.length, totalExtracted, totalSkipped, totalTagsWritten, errors };
   }
 
   // === Assertion correction ===

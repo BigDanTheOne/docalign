@@ -25,7 +25,17 @@ const EvidenceAssertionSchema = z.object({
   description: z.string(),
 });
 
+export const SkipRegionSchema = z.object({
+  start_line: z.number().int().positive(),
+  end_line: z.number().int().positive(),
+  reason: z.string(),
+  description: z.string().optional(),
+});
+
+export type SkipRegion = z.infer<typeof SkipRegionSchema>;
+
 export const SemanticExtractionOutputSchema = z.object({
+  skip_regions: z.array(SkipRegionSchema).optional().default([]),
   claims: z.array(z.object({
     claim_text: z.string(),
     claim_type: z.enum(['behavior', 'architecture', 'config']),
@@ -53,6 +63,8 @@ export interface DocSection {
 
 export interface ExtractionResult {
   claims: SemanticClaimRecord[];
+  /** Skip regions identified by Phase 1 classification (for tag stamping). */
+  skipRegions: SkipRegion[];
   errors: Array<{ file: string; error: ClaudeBridgeError }>;
 }
 
@@ -118,7 +130,7 @@ export async function extractSemanticClaims(
   options?: ClaudeBridgeOptions,
 ): Promise<ExtractionResult> {
   if (sections.length === 0) {
-    return { claims: [], errors: [] };
+    return { claims: [], skipRegions: [], errors: [] };
   }
 
   const prompt = buildExtractionPrompt(sections, repoPath);
@@ -134,17 +146,23 @@ export async function extractSemanticClaims(
       // 1. Bare array → {claims: [...]}
       // 2. "not_exists" → "absent" (Claude sometimes invents enum values)
       preprocess: (data: unknown) => {
+        // Normalize bare claims array → {claims: [...]}
         const normalized = Array.isArray(data) ? { claims: data } : data;
-        // Fix invented enum values in evidence_assertions
-        if (normalized && typeof normalized === 'object' && 'claims' in normalized) {
-          const obj = normalized as { claims: unknown[] };
-          for (const claim of obj.claims) {
+        if (normalized && typeof normalized === 'object') {
+          const obj = normalized as Record<string, unknown>;
+          // Fix invented enum values in evidence_assertions
+          const claims = Array.isArray(obj['claims']) ? obj['claims'] : [];
+          for (const claim of claims) {
             if (claim && typeof claim === 'object' && 'evidence_assertions' in claim) {
               const c = claim as { evidence_assertions: Array<{ expect: string }> };
               for (const a of c.evidence_assertions) {
                 if (a.expect === 'not_exists') a.expect = 'absent';
               }
             }
+          }
+          // Ensure skip_regions is always present
+          if (!Array.isArray(obj['skip_regions'])) {
+            obj['skip_regions'] = [];
           }
         }
         return normalized;
@@ -156,6 +174,7 @@ export async function extractSemanticClaims(
   if (!result.ok) {
     return {
       claims: [],
+      skipRegions: [],
       errors: [{ file: sourceFile, error: result.error }],
     };
   }
@@ -186,5 +205,5 @@ export async function extractSemanticClaims(
     };
   });
 
-  return { claims, errors: [] };
+  return { claims, skipRegions: result.data.skip_regions ?? [], errors: [] };
 }

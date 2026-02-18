@@ -50,6 +50,9 @@ export async function runExtract(
 
   write(`  Files analyzed: ${result.totalFiles}`);
   write(`  Claims extracted: ${result.totalExtracted}`);
+  if (result.totalTagsWritten > 0) {
+    write(`  Skip tags written: ${result.totalTagsWritten}`);
+  }
   write(`  Files skipped (unchanged): ${result.totalSkipped}`);
 
   if (result.errors.length > 0) {
@@ -58,8 +61,13 @@ export async function runExtract(
 
   write('');
 
-  if (result.totalExtracted > 0) {
-    write('  Claims stored in .docalign/semantic/');
+  if (result.totalExtracted > 0 || result.totalTagsWritten > 0) {
+    if (result.totalExtracted > 0) {
+      write('  Claims stored in .docalign/semantic/');
+    }
+    if (result.totalTagsWritten > 0) {
+      write('  Skip tags written to doc files (invisible when rendered).');
+    }
     write('  Run `docalign check <file>` to verify claims against code.');
   } else if (result.totalSkipped === result.totalFiles && result.totalFiles > 0) {
     write('  All sections unchanged since last extraction. Use --force to re-extract.');

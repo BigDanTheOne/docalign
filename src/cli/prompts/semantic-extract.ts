@@ -10,7 +10,7 @@
  * - Output format (JSON with claims array)
  */
 
-export const SEMANTIC_EXTRACT_SYSTEM_PROMPT = `You extract specific, falsifiable claims from documentation — claims that would break if someone changed the code. You are ruthlessly selective: skip vague descriptions, skip anything regex can catch (commands, paths, versions, env vars), skip marketing language. Only extract claims where you can find concrete code evidence. Return valid JSON.`;
+export const SEMANTIC_EXTRACT_SYSTEM_PROMPT = `You analyze documentation in two phases: first classify which regions are illustrative/instructional (not factual claims about the current codebase), then extract specific falsifiable semantic claims from the real content. You are ruthlessly selective: skip vague descriptions, skip anything regex can catch (commands, paths, versions, env vars), skip marketing language. Only extract claims where you can find concrete code evidence. Return valid JSON.`;
 
 /**
  * Build the extraction prompt for one doc file's changed sections.
@@ -21,11 +21,50 @@ export const SEMANTIC_EXTRACT_SYSTEM_PROMPT = `You extract specific, falsifiable
 export function buildSemanticExtractPrompt(sectionText: string, repoPath: string): string {
   return `You are analyzing documentation in a codebase at: ${repoPath}
 
-Your job: find claims in the docs that could become WRONG if someone changes the code, but that simple regex can't catch. These are claims about HOW the system works, not WHAT files exist.
+Work in two phases. Return a single JSON object with both phases' results.
 
-## What to extract
+---
 
-Extract claims that are **specific, falsifiable, and would break if code changes**:
+## PHASE 1 — Document Classification (no tools needed)
+
+Read the documentation sections below and identify regions that should be SKIPPED by the claim extractor. These are regions that contain illustrative content, not factual claims about the current codebase.
+
+### What to mark as skip regions
+
+Mark a region as a skip region if it:
+
+1. **Example / illustration tables** — Tables showing what the tool detects or capabilities, using hypothetical file paths, package names, API routes, etc. E.g., a table listing "src/auth.ts referenced but doesn't exist" is showing an *example of the tool's output*, not a real file claim.
+2. **Sample CLI output** — Code blocks showing what the output *looks like* (e.g., "Scanning repository... README.md (12 claims)..."). These paths are invented for illustration.
+3. **Illustrative code examples** — Code blocks that show hypothetical usage or examples, not the project's own code. E.g., \`import { foo } from './bar'\` shown as an example of what the tool can detect.
+4. **User instructions / imperatives** — Text telling the reader to create a file, run a command, etc. "Create \`.docalign.yml\`" is an instruction, not a claim that the file exists.
+5. **Capability descriptions** — Prose describing what the product *can* detect or *can* do ("DocAlign can find X, Y, Z") using example paths/names that are not part of the actual project.
+6. **Getting-started tutorials** — Hypothetical project state shown as an example (the "your repository" scenario).
+
+### What NOT to mark as skip
+
+- Real factual claims about the current project's behavior ("Uses Pino for logging", "Validates config with Zod")
+- Real architecture statements about how this codebase works
+- Configuration defaults for this project ("Defaults to port 3000")
+
+### Skip region output
+
+For each skip region, output:
+- \`start_line\`: 1-based line number of the FIRST line to skip (inclusive)
+- \`end_line\`: 1-based line number of the LAST line to skip (inclusive)
+- \`reason\`: one of: \`example_table\`, \`sample_output\`, \`illustrative_example\`, \`user_instruction\`, \`capability_description\`, \`tutorial_example\`
+- \`description\`: brief human-readable explanation (e.g., "What It Finds capability table")
+
+Be conservative: when uncertain whether a region is illustrative, do NOT mark it as skip.
+
+---
+
+## PHASE 2 — Semantic Claim Extraction (use Read, Glob, Grep tools)
+
+From the remaining content (excluding skip regions from Phase 1), extract specific falsifiable claims.
+
+### What to extract
+
+Claims that are **specific, falsifiable, and would break if code changes**:
 
 - "Retries up to 3 times before failing" → could become 5, or retries could be removed
 - "Uses JWT for authentication" → could switch to sessions
@@ -33,10 +72,8 @@ Extract claims that are **specific, falsifiable, and would break if code changes
 - "Returns 404 for unknown routes" → error handling could change
 - "Validates input with Zod schemas" → validation library could change
 - "Caches results for 5 minutes" → TTL could change, caching could be removed
-- "Logs all API requests to stdout" → logging could change
-- "The pipeline runs extractors in this order: paths, commands, versions" → order could change
 
-## What NOT to extract (CRITICAL — these are already handled by regex)
+### What NOT to extract (CRITICAL — these are already handled by regex)
 
 SKIP all of these — another system already checks them:
 - **Commands**: "docalign scan", "npm run test" — regex catches these
@@ -52,13 +89,13 @@ Also SKIP:
 - **External claims**: "GitHub sends webhooks" — we can't verify third-party behavior
 - **Aspirational statements**: "Designed for scale" — not falsifiable
 
-## Quality bar
+### Quality bar
 
 Ask yourself for each potential claim: "If a developer changed the code in a plausible way, would this claim become wrong, AND would it matter?"
 
 If the answer is no to either question, skip it.
 
-## Evidence — READ THE CODE FIRST, THEN ASSERT
+### Evidence — READ THE CODE FIRST, THEN ASSERT
 
 **CRITICAL WORKFLOW**: You have Read, Glob, and Grep tools. For each claim:
 
@@ -95,10 +132,20 @@ If a claim is specific and falsifiable but you CANNOT find supporting evidence i
 - These are likely already-drifted claims — the most valuable ones to report
 - Example: doc says "Uses JWT for authentication" but grepping for jwt/jsonwebtoken finds nothing → extract with \`{"pattern": "jsonwebtoken", "scope": "src/**/*.ts", "expect": "exists"}\`
 
+---
+
 ## Output format
 
-Return JSON:
+Return a single JSON object:
 {
+  "skip_regions": [
+    {
+      "start_line": 29,
+      "end_line": 38,
+      "reason": "example_table",
+      "description": "What It Finds capability table with hypothetical paths"
+    }
+  ],
   "claims": [
     {
       "claim_text": "exact text or minimal phrase from the doc",
@@ -111,7 +158,7 @@ Return JSON:
   ]
 }
 
-It is completely fine to return {"claims": []} if there are no claims worth extracting. Quality over quantity.
+It is completely fine to return \`{"skip_regions": [], "claims": []}\` if there are no regions to skip and no claims worth extracting. Quality over quantity.
 
 Documentation sections to analyze:
 
