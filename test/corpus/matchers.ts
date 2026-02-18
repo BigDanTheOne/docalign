@@ -120,8 +120,12 @@ function toMatchExpectedFindings(
   }
 }
 
-// Extend Vitest's expect with custom matchers
-export const corpusExpect = expect.extend({
+// Extend Vitest's expect with custom matchers.
+// expect.extend() mutates the global expect in-place and returns void,
+// so we call it as a side-effect and then export expect itself.
+expect.extend({
   toContainFinding,
   toMatchExpectedFindings,
 });
+
+export const corpusExpect = expect;
