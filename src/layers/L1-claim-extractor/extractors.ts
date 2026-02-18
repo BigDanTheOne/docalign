@@ -4,7 +4,7 @@ import type { PreProcessedDoc, RawExtraction } from '../../shared/types';
 
 const FILE_PATH_PATTERNS = [
   { name: 'backtick_path', regex: /`([a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+)`/g },
-  { name: 'markdown_link_path', regex: /\[.*?\]\(\.?\/?([a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+)(?:#([a-zA-Z0-9_-]+))?\)/g },
+  { name: 'markdown_link_path', regex: /\[.*?\]\((?:\.\/)?([a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+)(?:#([a-zA-Z0-9_-]+))?\)/g },
   { name: 'text_ref_path', regex: /(?:see|in|at|from|file)\s+[`"]?([a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+)/gi },
 ];
 
@@ -174,6 +174,10 @@ function passesPathFilters(path: string, docFile: string): boolean {
   // Paths ending in a purely numeric "extension" are likely model identifiers
   // (e.g., "openai/gpt-5.2", "zai/glm-4.7") or version references, not file paths.
   if (/\.\d+$/.test(path)) return false;
+
+  // Filter JS member-access patterns like 'process.env': a bare path (no '/') ending
+  // in '.env' that doesn't start with '.' is not a dotfile — it's property access.
+  if (!path.includes('/') && path.endsWith('.env') && !path.startsWith('.')) return false;
 
   return true;
 }

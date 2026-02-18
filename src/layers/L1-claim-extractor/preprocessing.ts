@@ -137,11 +137,35 @@ export function preProcess(content: string, format: DocFormat): PreProcessedDoc 
     }
   }
 
-  // Step 8: Detect docalign tag lines (metadata, not content for extraction)
+  // Step 8: Detect docalign tag/block lines (metadata, not content for extraction).
+  // Opening and closing tag lines are always marked. For skip/semantic block tags,
+  // all lines inside the block are also marked so extractors skip them.
   const tagLines = new Set<number>();
-  const TAG_LINE_PATTERN = /^\s*<!--\s*docalign:\w+\s+.*?-->\s*$/;
+  const OPEN_TAG_PATTERN = /^\s*<!--\s*docalign:(\w+)(?:\s[^>]*)?\s*-->\s*$/;
+  const CLOSE_TAG_PATTERN = /^\s*<!--\s*\/docalign:(\w+)\s*-->\s*$/;
+  // These block types suppress claim extraction for their content
+  const SKIP_BLOCK_TAGS = new Set(['skip', 'semantic']);
+  let activeBlockTag: string | null = null;
   for (let i = 0; i < lines.length; i++) {
-    if (TAG_LINE_PATTERN.test(lines[i])) {
+    const line = lines[i];
+    const closeMatch = CLOSE_TAG_PATTERN.exec(line);
+    if (closeMatch) {
+      tagLines.add(i);
+      if (closeMatch[1] === activeBlockTag) {
+        activeBlockTag = null;
+      }
+      continue;
+    }
+    const openMatch = OPEN_TAG_PATTERN.exec(line);
+    if (openMatch) {
+      tagLines.add(i);
+      if (SKIP_BLOCK_TAGS.has(openMatch[1])) {
+        activeBlockTag = openMatch[1];
+      }
+      continue;
+    }
+    if (activeBlockTag !== null) {
+      // Inside a skip/semantic block — mark to suppress extraction
       tagLines.add(i);
     }
   }

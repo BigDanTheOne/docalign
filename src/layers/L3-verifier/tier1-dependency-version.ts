@@ -22,6 +22,16 @@ export const RUNTIME_ALLOWLIST = new Set([
   'node:os', 'node:path', 'node:process', 'node:stream', 'node:url',
   'node:util', 'node:worker_threads', 'node:zlib',
   'node:test',
+  // Runtime platform names — version mentions (e.g., "Node.js 18") are documentation,
+  // not package dependencies. Accept all case variants produced by extractor patterns.
+  'Node.js', 'Nodejs', 'node.js', 'nodejs', 'node',
+  'Python', 'python',
+  'Ruby', 'ruby',
+  'Go', 'go',
+  'Rust', 'rust',
+  'Java', 'java',
+  'Deno', 'deno',
+  'Bun', 'bun',
 ]);
 
 /**
