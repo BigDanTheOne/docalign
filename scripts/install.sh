@@ -197,5 +197,7 @@ echo ""
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
-# Launch Claude Code — setup wizard triggers automatically via CLAUDE.md notice
-exec claude
+# Launch Claude Code with /docalign-setup as the initial message.
+# Redirect stdin from /dev/tty so Claude gets an interactive terminal even
+# when this script was piped from curl (which replaces stdin with the pipe).
+exec claude "/docalign-setup" </dev/tty

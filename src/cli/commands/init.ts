@@ -287,6 +287,28 @@ export async function runInit(
     });
   }
 
+  // Add SessionStart hook: on every new session, if config is missing, inject setup context
+  if (!settings.hooks.SessionStart) settings.hooks.SessionStart = [];
+  const sessionStartCmd =
+    "bash -c 'test -f .docalign/config.yml || echo \"[DocAlign] Setup required: run /docalign-setup to configure documentation monitoring for this project.\"'";
+  const hasSessionStartHook = (settings.hooks.SessionStart as unknown[]).some(
+    (h) =>
+      h != null &&
+      typeof h === "object" &&
+      (h as Record<string, unknown[]>)["hooks"]?.some?.(
+        (hk: unknown) =>
+          typeof hk === "object" &&
+          hk != null &&
+          (hk as Record<string, string>)["command"]?.includes("docalign"),
+      ),
+  );
+  if (!hasSessionStartHook) {
+    (settings.hooks.SessionStart as unknown[]).push({
+      matcher: "startup",
+      hooks: [{ type: "command", command: sessionStartCmd }],
+    });
+  }
+
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
   write("  \u2713 .claude/settings.local.json (MCP server + hooks)");
 
