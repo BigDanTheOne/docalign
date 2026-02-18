@@ -1,3 +1,21 @@
+---
+title: "Design Patterns"
+summary: "Core code patterns used throughout DocAlign: extractor pattern, verifier pattern, makeResult() helper, findCloseMatch(), Zod config schema, Pino structured logging, and test fixture helpers."
+description: "Extractor pattern: function(line, lineNumber, context) → RawExtraction[], registered in syntactic.ts, never throws. Verifier pattern: function(claim, index) → VerificationResult|null, dispatched by router in L3-verifier/index.ts, uses makeResult(). makeResult() from src/layers/L3-verifier/result-helpers.ts for consistent structure (sets tier: 1, confidence: 1.0 by default). findCloseMatch() from src/layers/L3-verifier/close-match.ts using Levenshtein distance for package names, file paths, npm scripts. Config schema in src/config/schema.ts using Zod with typed enums, numeric constraints, and default values. Pino logging from src/shared/logger.ts (E5xx config errors, E4xx pipeline errors). Test fixtures: makeClaim() and makeMockIndex() with available fields, makeResult() is the production helper used in tests."
+category: reference
+read_when:
+  - You are writing a new extractor or verifier and need to follow existing patterns
+  - You need to know how to log errors or construct verification results
+  - You are writing tests and need to use the fixture helpers correctly
+related:
+  - docs/contributing/architecture.md
+  - docs/contributing/adding-a-check.md
+  - docs/contributing/testing.md
+docalign:
+  setup_date: "2026-02-18T00:00:00Z"
+  monitored: true
+---
+
 # Design Patterns
 
 These patterns are used consistently throughout the codebase.
@@ -18,10 +36,12 @@ function extractPathReferences(line: string, lineNumber: number, context: Extrac
 - Uses regex matching with named groups
 - Never throws -- returns empty array on no match
 
+<!-- docalign:semantic id="semantic-dp-syntactic-pipeline" claim="The syntactic pipeline in src/layers/L1-claim-extractor/syntactic.ts calls all extractors in sequence: preprocess, extract, filter, dedup, convert to Claim[]" -->
 The syntactic pipeline in `src/layers/L1-claim-extractor/syntactic.ts` calls all extractors in sequence: preprocess → extract → filter → dedup → convert to `Claim[]`.
 
 ## Verifier Pattern
 
+<!-- docalign:semantic id="semantic-dp-verifier-router" claim="The main router in src/layers/L3-verifier/index.ts switches on claim.claim_type and dispatches to the appropriate verifier" -->
 Each claim type has a verifier function in `src/layers/L3-verifier/`. The main router in `src/layers/L3-verifier/index.ts` switches on `claim.claim_type` and dispatches to the appropriate verifier.
 
 ```typescript
@@ -37,6 +57,7 @@ function verifyPathReference(claim: Claim, index: CodebaseIndex): VerificationRe
 <!-- /docalign:skip -->
 ## makeResult() Helper
 
+<!-- docalign:semantic id="semantic-dp-makeresult" claim="All verification results are built using makeResult() from src/layers/L3-verifier/result-helpers.ts" -->
 All verification results are built using `makeResult()` from `src/layers/L3-verifier/result-helpers.ts`:
 
 ```typescript
@@ -54,6 +75,7 @@ This ensures consistent result structure. Sets `tier: 1` and `confidence: 1.0` b
 ## Close Match / Fuzzy Suggestions
 <!-- /docalign:skip -->
 
+<!-- docalign:semantic id="semantic-dp-findclosematch" claim="findCloseMatch() from src/layers/L3-verifier/close-match.ts finds the nearest alternative using Levenshtein distance" -->
 When a claim references something that doesn't exist, `findCloseMatch()` from `src/layers/L3-verifier/close-match.ts` finds the nearest alternative using Levenshtein distance:
 
 ```typescript
@@ -70,6 +92,7 @@ Used for:
 
 ## Config Schema with Zod
 
+<!-- docalign:semantic id="semantic-dp-config-schema" claim="Config schema in src/config/schema.ts uses Zod with typed enums, numeric constraints, and default values" -->
 The configuration schema in `src/config/schema.ts` uses Zod with:
 - Typed enums for claim types, severity levels
 - Numeric constraints (`z.number().min(1).max(200)`)
@@ -78,6 +101,7 @@ The configuration schema in `src/config/schema.ts` uses Zod with:
 
 ## Structured Logging with Pino
 
+<!-- docalign:semantic id="semantic-dp-pino-logger" claim="All logging uses Pino from src/shared/logger.ts" -->
 All logging uses Pino (`src/shared/logger.ts`):
 
 ```typescript
@@ -124,8 +148,10 @@ This pattern keeps tests focused on the verifier logic without needing real file
 
 ## Error Handling
 
+<!-- docalign:semantic id="semantic-dp-verifiers-no-throw" claim="Verifiers never throw; they return null or a result with appropriate verdict" -->
 - Verifiers never throw. They return `null` (can't determine) or a result with appropriate verdict.
 - Config parsing logs warnings and uses defaults for invalid fields.
+<!-- docalign:semantic id="semantic-dp-url-uncertain" claim="URL checks handle timeouts and network errors by returning uncertain verdict" -->
 - URL checks handle timeouts and network errors by returning `uncertain` verdict.
 - The CLI catches top-level errors and exits with appropriate codes (0, 1, or 2).
 

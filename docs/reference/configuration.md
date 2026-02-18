@@ -1,3 +1,21 @@
+---
+title: "Configuration Reference"
+summary: "Complete reference for all .docalign.yml configuration sections, fields, types, defaults, and validation behavior."
+description: "Covers zero-config defaults (which files are scanned, what is excluded, enabled claim types, severity reporting, max 50 claims per PR, URL timeout 5s/max 5 per domain). Full example .docalign.yml. Documents 14 config sections: doc_patterns (include/exclude globs), code_patterns, verification (min_severity, max_claims_per_pr, auto_fix, auto_fix_threshold), claim_types (11 booleans), suppress (file/pattern/claim_type/package, max 200 rules), schedule (full_scan frequency), agent (concurrency, timeout_seconds), trigger (on_pr_open, on_push, on_ready_for_review, on_command), llm (verification_model, extraction_model, embedding_model, embedding_dimensions), check (min_severity_to_block), mapping (semantic_threshold, path1_max_evidence_tokens, max_agent_files_per_claim), url_check (enabled, timeout_ms, max_per_domain, exclude_domains), coverage (enabled, min_entity_importance). Error handling: E501 (invalid YAML), E502 (invalid field), shown in docalign status."
+category: reference
+read_when:
+  - You need the exact field name, type, or default for a config option
+  - You are troubleshooting unexpected DocAlign behavior and checking defaults
+  - You need to know the valid values for an enum field
+related:
+  - docs/guides/custom-configuration.md
+  - docs/guides/suppressing-findings.md
+  - docs/troubleshooting.md
+docalign:
+  setup_date: "2026-02-18T00:00:00Z"
+  monitored: true
+---
+
 # Configuration Reference
 
 DocAlign works with zero configuration. All settings have sensible defaults. To customize, create `.docalign.yml` at your repo root.
@@ -7,9 +25,12 @@ DocAlign works with zero configuration. All settings have sensible defaults. To 
 With no config file, DocAlign:
 - Scans `README.md`, `CONTRIBUTING.md`, `ARCHITECTURE.md`, `CLAUDE.md`, `AGENTS.md`, `docs/**/*.md`, and similar patterns
 - Excludes `node_modules/`, `vendor/`, `.git/`, `CHANGELOG.md`, `LICENSE.md`
+<!-- docalign:semantic id="sem-7951457454fc5227" claim="Enables all 11 claim types" -->
 - Enables all 11 claim types
 - Reports all severities (low, medium, high)
+<!-- docalign:semantic id="sem-bfb95a67c763998c" claim="Checks up to 50 claims per PR" -->
 - Checks up to 50 claims per PR
+<!-- docalign:semantic id="sem-5b61c05e2a59bd97" claim="Checks URLs with 5s timeout, max 5 per domain" -->
 - Checks URLs with 5s timeout, max 5 per domain
 
 <!-- docalign:skip reason="illustrative_example" description="Full Example .docalign.yml configuration block — already marked docalign:skip, illustrates user-facing config format not internal implementation" -->
@@ -182,6 +203,7 @@ suppress:
     claim_type: path_reference
 ```
 
+<!-- docalign:semantic id="sem-max-200-suppress-rules" claim="Maximum 200 suppress rules" -->
 Max 200 suppress rules.
 
 ### schedule
@@ -221,8 +243,12 @@ Controls LLM model selection.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
+<!-- docalign:semantic id="sem-9370d5116daf5641" claim="llm.verification_model default: 'claude-sonnet-4-20250514'" -->
+<!-- docalign:semantic id="sem-3be4394373836a3d" claim="llm.extraction_model default: 'claude-sonnet-4-20250514'" -->
 | `verification_model` | `string` | `'claude-sonnet-4-20250514'` | Model for Tier 3 verification |
 | `extraction_model` | `string` | `'claude-sonnet-4-20250514'` | Model for semantic extraction |
+<!-- docalign:semantic id="sem-3657bbd31d40aa75" claim="llm.embedding_model default: 'text-embedding-3-small'" -->
+<!-- docalign:semantic id="sem-7c205503ae95101b" claim="llm.embedding_dimensions default: 1536" -->
 | `embedding_model` | `string` | `'text-embedding-3-small'` | Model for embeddings |
 | `embedding_dimensions` | `number` (64-4096) | `1536` | Embedding vector dimensions |
 
@@ -272,9 +298,12 @@ When enabled, reports code entities (functions, classes, routes) with no documen
 
 - **Missing config file:** Uses all defaults silently
 - **Empty config file:** Uses all defaults silently
+<!-- docalign:semantic id="sem-322bbb7d5116d990" claim="Invalid YAML syntax emits warning E501, uses all defaults" -->
 - **Invalid YAML syntax:** Warning `E501`, uses all defaults
+<!-- docalign:semantic id="sem-6da9d86a050e495d" claim="Invalid field values emit warning E502 per field; unknown keys emit E502 with 'Did you mean?' suggestion using Levenshtein distance" -->
 - **Invalid field values:** Warning `E502` per field, uses default for that field
 - **Unknown keys:** Warning `E502` with "Did you mean?" suggestion using Levenshtein distance
 - **Invalid regex in suppress pattern:** Warning, rule is ignored
 
+<!-- docalign:semantic id="sem-8196b40fae589214" claim="Warnings are shown in docalign status output" -->
 Warnings are shown in `docalign status` output.

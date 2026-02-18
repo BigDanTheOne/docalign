@@ -1,3 +1,21 @@
+---
+title: "Checking Files"
+summary: "How to scan the entire repo, check a single file, interpret results, use DocAlign in CI, and get health overviews via CLI and MCP."
+description: "Covers docalign scan (with --json and --exclude flags), docalign check <file> (with --verbose), check_section MCP tool for section-scoped checks, reading results (line, type, verdict, severity, evidence), severity levels (high/medium/low definitions), CI integration (exit code 1 on drift, min_severity_to_block config), get_doc_health for 0-100 score, and get_docs_for_file for reverse lookup after code changes."
+category: guide
+read_when:
+  - You want to scan a repo or check a specific doc file
+  - You are setting up DocAlign in CI and need to understand exit codes
+  - You changed a code file and need to find which docs reference it
+related:
+  - docs/reference/cli.md
+  - docs/guides/fixing-drift.md
+  - docs/reference/mcp-tools.md
+docalign:
+  setup_date: "2026-02-18T00:00:00Z"
+  monitored: true
+---
+
 # Checking Files
 
 <!-- docalign:skip reason="sample_output" description="docalign scan command example — command itself is regex-caught; prose describes what the scan does at a high level" -->
@@ -72,12 +90,14 @@ Each finding includes:
 <!-- /docalign:skip -->
 ### Severity levels
 
+<!-- docalign:semantic id="sem-b6509d4569349f70" claim="Severity levels are: high, medium, low — where high means wrong in a way that would cause errors, medium means outdated or misleading, low means minor inconsistency" -->
 - **high**: The claim is wrong in a way that would cause errors (missing files, wrong versions, broken imports)
 - **medium**: The claim is outdated or misleading (version drift, renamed APIs, changed defaults)
 - **low**: Minor inconsistency (cosmetic, documentation-only, partial matches)
 
 ## Use in CI
 
+<!-- docalign:semantic id="sem-dc5649e2dfd1b60c" claim="docalign check exits with code 1 when drift is found" -->
 `docalign check` exits with code 1 when drift is found, making it suitable for CI gates:
 
 ```bash

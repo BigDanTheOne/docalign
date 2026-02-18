@@ -1,5 +1,25 @@
+---
+title: "Checks Reference"
+summary: "Complete reference for all 11 claim types DocAlign extracts and the 8 cross-cutting checks it runs after individual verification."
+description: "Documents all 11 claim types: path_reference (files, images, anchors), dependency_version (package.json semver), command (npm scripts, npx, shell), api_route (Express/Flask/FastAPI AST detection), code_example (imports, symbols, language tags), environment (env vars in .env/.env.example), convention (TypeScript strict, framework, engines), config (defaults, limits, thresholds), behavior (semantic only), architecture (semantic only), url_reference (HTTP status codes). Plus 8 cross-cutting checks: anchor validation, cross-document consistency, frontmatter consistency, navigation config validation, deprecation detection, license consistency, changelog consistency, fuzzy suggestions (Levenshtein distance)."
+category: reference
+read_when:
+  - You need to know if DocAlign can detect a specific type of claim
+  - You want to understand what evidence is used to verify a specific claim type
+  - You are adding a new claim type and need to see existing patterns
+related:
+  - docs/explanation/verification-tiers.md
+  - docs/contributing/adding-a-check.md
+  - docs/guides/suppressing-findings.md
+docalign:
+  setup_date: "2026-02-18T00:00:00Z"
+  monitored: true
+---
+
 # Checks Reference
 
+<!-- docalign:semantic id="sem-8781247a0f976d32" claim="DocAlign extracts 11 types of claims from documentation" -->
+<!-- docalign:semantic id="sem-8-cross-cutting-checks" claim="DocAlign runs 8 cross-cutting checks after individual claim verification" -->
 DocAlign extracts 11 types of claims from documentation and runs 8 cross-cutting checks. Each claim is verified against the codebase.
 
 ## Claim Types
@@ -172,10 +192,12 @@ These run after individual claim verification and analyze patterns across the en
 
 ### Anchor validation
 
+<!-- docalign:semantic id="sem-anchor-slug-generation" claim="Anchor validation generates correct slugs from heading text to check anchor links" -->
 Checks that `[text](#anchor)` links point to headings that exist in the target file. Generates correct slugs from heading text.
 
 ### Cross-document consistency
 
+<!-- docalign:semantic id="sem-cross-doc-grouping" claim="Cross-document consistency groups claims by entity (same package, config key, or env var) and flags when different doc files state different values for the same entity" -->
 Groups claims by entity (same package, config key, or env var). If different documentation files state different values for the same entity, flags the inconsistency.
 
 Example: `docs/setup.md` says port 3000, `docs/deploy.md` says port 8080.
@@ -205,4 +227,5 @@ Checks whether the latest version in `CHANGELOG.md` matches the version in `pack
 
 ### Fuzzy suggestions
 
+<!-- docalign:semantic id="sem-2d5b0a2bfe8222d4" claim="Fuzzy suggestions use Levenshtein distance for package names and file paths" -->
 When a claim references something that doesn't exist but is close to something that does, provides "Did you mean?" suggestions. Uses Levenshtein distance for package names and file paths.

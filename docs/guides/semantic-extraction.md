@@ -1,3 +1,21 @@
+---
+title: "Semantic Extraction"
+summary: "How to use docalign extract to find behavioral, architectural, and config claims that regex cannot catch, and how those claims are stored and verified."
+description: "Explains what semantic extraction catches (behavior, architecture, config assumptions, implicit contracts, design decisions). Commands: docalign extract (all files), extract README.md (single file), --force (re-extract), --dry-run (preview). How it works: section splitting → Claude generates grep-verifiable assertions (pattern, scope, expect) → self-checks against code → stored in .docalign/semantic/ JSON files. Claims are included in subsequent check and scan runs. MCP integration: deep_check (syntactic + semantic + coverage), register_claims (persist from agent analysis). Requirements: claude CLI authenticated, no ANTHROPIC_API_KEY needed."
+category: guide
+read_when:
+  - You want to extract behavior or architecture claims that regex misses
+  - You need to understand what .docalign/semantic/ files contain
+  - You are using deep_check and want to know why semantic results differ from check_doc
+related:
+  - docs/explanation/how-it-works.md
+  - docs/explanation/verification-tiers.md
+  - docs/reference/mcp-tools.md
+docalign:
+  setup_date: "2026-02-18T00:00:00Z"
+  monitored: true
+---
+
 # Semantic Extraction
 
 DocAlign's regex extraction catches structural claims (file paths, versions, commands), but documentation often contains natural language claims that regex can't extract. Semantic extraction uses Claude to find these.
@@ -44,6 +62,7 @@ Shows what would be extracted without writing to `.docalign/semantic/`.
 
 ## How it works
 
+<!-- docalign:semantic id="semantic-002" claim="DocAlign splits each doc file into sections (by headings)" -->
 1. DocAlign splits each doc file into sections (by headings)
 2. For each section, Claude receives the content plus relevant code context
 3. Claude identifies verifiable claims and generates grep-verifiable assertions:
@@ -51,6 +70,7 @@ Shows what would be extracted without writing to `.docalign/semantic/`.
    - **Scope**: which files to search
    - **Expectation**: whether the pattern should exist or be absent
 4. Claude self-checks each assertion against the actual code before returning
+<!-- docalign:semantic id="sem-7d562fd35b88185b" claim="Results are stored in .docalign/semantic/ as JSON files" -->
 5. Results are stored in `.docalign/semantic/` as JSON files
 
 ## Storage
@@ -88,12 +108,15 @@ Two MCP tools work with semantic claims:
 ## Requirements
 
 - `claude` CLI installed and authenticated (part of Claude Code)
+<!-- docalign:semantic id="sem-61ee0f93c7403d70" claim="Uses the model configured in llm.extraction_model (default: claude-sonnet-4-20250514)" -->
 - Uses the model configured in `llm.extraction_model` (default: `claude-sonnet-4-20250514`)
+<!-- docalign:semantic id="sem-1b38f31224cf3a8d" claim="No ANTHROPIC_API_KEY needed -- uses Claude Code's built-in authentication" -->
 - No `ANTHROPIC_API_KEY` needed -- uses Claude Code's built-in authentication
 
 ## Tips
 
 - Run `docalign extract` after significant doc changes to keep claims current
 - Use `deep_check` via MCP to find sections with no claims (candidates for extraction)
+<!-- docalign:semantic id="sem-4738bb9c61906d9f" claim="Extraction is incremental: unchanged sections are skipped automatically" -->
 - Extraction is incremental: unchanged sections are skipped automatically
 - Add `.docalign/semantic/` to `.gitignore` or commit it to share across the team

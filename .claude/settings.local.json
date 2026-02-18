@@ -26,6 +26,17 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'test -f .docalign/config.yml || echo \"[DocAlign] Setup required: run /docalign-setup to configure documentation monitoring for this project.\"'"
+          }
+        ]
+      }
     ]
   }
 }

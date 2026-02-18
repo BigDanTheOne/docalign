@@ -1,3 +1,21 @@
+---
+title: "MCP Tools Reference"
+summary: "Complete reference for all 10 DocAlign MCP tools with parameters, required fields, and return formats."
+description: "Documents: check_doc (file → claims/verified/drifted/findings), check_section (file+heading → scoped results), get_doc_health (no params → score 0-100/counts/top 10 hotspots), list_drift (max_results → drifted files), get_docs_for_file (file_path → referencing claims with verdicts), get_docs (query/verified_only/max_results → ranked sections), fix_doc (file → fixes with LLM or deterministic suggestions), report_drift (doc_file/claim_text/actual_behavior/line_number/evidence_files → report ID), deep_check (file → syntactic+semantic findings/unchecked sections/coverage/warnings), register_claims (claims array with source_file/line_number/claim_text/claim_type/keywords/evidence_entities/evidence_assertions/verification → count+IDs)."
+category: reference
+read_when:
+  - You need the exact parameter name or type for an MCP tool call
+  - You are building an integration that uses DocAlign MCP tools
+  - You need to know what a tool returns to process the response
+related:
+  - AGENTS.md
+  - docs/guides/mcp-integration.md
+  - docs/guides/semantic-extraction.md
+docalign:
+  setup_date: "2026-02-18T00:00:00Z"
+  monitored: true
+---
+
 # MCP Tools Reference
 
 DocAlign exposes 10 tools via the Model Context Protocol. Each tool is documented with its parameters and return format.
@@ -31,6 +49,7 @@ Get the overall documentation health score for the repository.
 
 **Parameters:** None.
 
+<!-- docalign:semantic id="sem-758713738bb5579f" claim="get_doc_health returns health score (0-100), total claims scored, verified/drifted counts, doc files scanned, duration, and top 10 hotspot files ranked by drift count" -->
 **Returns:** Health score (0-100), total claims scored, verified/drifted counts, doc files scanned, duration, and top 10 hotspot files ranked by drift count.
 
 ## list_drift
@@ -92,6 +111,7 @@ Report a documentation inaccuracy discovered during work. Stores the report loca
 | `line_number` | number | no | Approximate line number |
 | `evidence_files` | string[] | no | Code files showing actual behavior |
 
+<!-- docalign:semantic id="sem-6f9f8b1f3b0a2e4f" claim="report_drift stores the report locally and returns acknowledgment with report ID" -->
 **Returns:** Acknowledgment with report ID.
 
 ## deep_check
@@ -103,6 +123,7 @@ Deep documentation audit combining syntactic and semantic analysis.
 |------|------|----------|-------------|
 | `file` | string | yes | Path to doc file |
 
+<!-- docalign:semantic id="sem-a7d333f3ef268b6f" claim="deep_check returns syntactic findings, semantic findings from .docalign/semantic/, unchecked sections, coverage percentage, and warnings" -->
 **Returns:**
 - **Syntactic findings:** All regex-extracted claims with verification results
 - **Semantic findings:** All LLM-extracted claims from `.docalign/semantic/` with verification status
@@ -131,4 +152,5 @@ Persist semantic claims discovered during agent analysis. Stores them to `.docal
 | `evidence_assertions` | `[{ pattern, scope, expect, description }]` | no | Grep-verifiable patterns |
 | `verification` | `{ verdict, confidence, reasoning }` | no | Pre-verification result |
 
+<!-- docalign:semantic id="sem-b1d03e3311715859" claim="register_claims persists claims to .docalign/semantic/ and returns count and IDs" -->
 **Returns:** Count of registered claims and their IDs.

@@ -1,9 +1,28 @@
+---
+title: "Getting Started"
+summary: "Step-by-step guide to installing DocAlign, running your first scan, and setting up MCP integration for AI agents."
+description: "Covers installation via npm/npx, running docalign scan, reading results (verdict, severity, health score formula), checking a single file with --verbose, setting up MCP with docalign init, running semantic extraction, and optional configuration. Includes next-step links."
+category: tutorial
+read_when:
+  - You are installing DocAlign for the first time
+  - You want to run your first documentation scan
+  - You need to understand the scan output format or health score
+related:
+  - docs/guides/checking-files.md
+  - docs/explanation/how-it-works.md
+  - docs/reference/cli.md
+docalign:
+  setup_date: "2026-02-18T00:00:00Z"
+  monitored: true
+---
+
 # Getting Started
 
 This guide walks you through installing DocAlign, running your first scan, and understanding the output.
 
 ## Prerequisites
 
+<!-- docalign:semantic id="sem-2ecf29e3717aa1a0" claim="Node.js 18+ is required" -->
 - Node.js 18+
 - A repository with markdown documentation
 
@@ -27,6 +46,7 @@ Navigate to your repository root and run:
 docalign scan
 ```
 
+<!-- docalign:semantic id="sem-6b490a1895817ed2" claim="DocAlign automatically finds documentation files (README.md, docs/**/*.md, CONTRIBUTING.md, and more)" -->
 DocAlign automatically finds documentation files (`README.md`, `docs/**/*.md`, `CONTRIBUTING.md`, and more) and scans them for verifiable claims.
 
 ### Sample Output
@@ -70,6 +90,7 @@ Each finding has three parts:
 ### Health Score
 
 <!-- /docalign:skip -->
+<!-- docalign:semantic id="sem-ab68259683d0cf5a" claim="The health score is calculated as: score = 100 * verified / (verified + drifted)" -->
 The health score is calculated as:
 <!-- docalign:skip reason="illustrative_example" description="Health score formula block — mathematical formula shown as documentation, not a verifiable code implementation pattern (already marked with docalign:skip in source)" -->
 
@@ -77,6 +98,7 @@ The health score is calculated as:
 score = 100 * verified / (verified + drifted)
 ```
 
+<!-- docalign:semantic id="sem-84073b33eb73ba0a" claim="Uncertain claims don't count toward the health score" -->
 Uncertain claims don't count. A score of 100 means every checkable claim matches the code.
 
 ## Set Up for AI Agents (MCP)
@@ -88,6 +110,7 @@ docalign init
 <!-- /docalign:skip -->
 ```
 
+<!-- docalign:semantic id="sem-7b78d863f926878d" claim="docalign init configures the MCP server" -->
 This configures the MCP server so your AI agent can query documentation health, find stale docs, and get fix suggestions. See [MCP Integration](guides/mcp-integration.md).
 
 ## Optional: Semantic Extraction

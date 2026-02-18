@@ -1,3 +1,21 @@
+---
+title: "Adding a Check"
+summary: "Step-by-step guide for contributors adding a new claim type or verification check to DocAlign."
+description: "Covers the three files involved (extractor in L1, verifier in L3, tests). Step 1: add to ClaimType union in src/shared/types.ts and claimTypeEnum in src/config/schema.ts. Step 2: write extractor function in src/layers/L1-claim-extractor/extractors.ts (signature: line/lineNumber/context → RawExtraction[]) and register in src/layers/L1-claim-extractor/syntactic.ts. Step 3: write verifier function (claim/index → VerificationResult|null) using makeResult() and findCloseMatch(), register in src/layers/L3-verifier/index.ts. Step 4: write extraction tests (match/no-match) and verification tests (verified/drifted/fuzzy). Step 5: run npm run typecheck && npm run test. Includes checklist."
+category: guide
+read_when:
+  - You are implementing a new claim type for DocAlign
+  - You need to know where to register a new extractor or verifier
+  - You are writing tests for a new check and need the fixture patterns
+related:
+  - docs/contributing/architecture.md
+  - docs/contributing/design-patterns.md
+  - docs/contributing/testing.md
+docalign:
+  setup_date: "2026-02-18T00:00:00Z"
+  monitored: true
+---
+
 # Adding a Check
 
 This guide walks through adding a new claim type or verification check to DocAlign.
@@ -6,6 +24,7 @@ This guide walks through adding a new claim type or verification check to DocAli
 
 Adding a check involves three files:
 
+<!-- docalign:semantic id="semantic-ac-extractors-ts" claim="Extractor functions for each claim type are defined in src/layers/L1-claim-extractor/extractors.ts" -->
 1. **Extractor** (`src/layers/L1-claim-extractor/extractors.ts`) -- regex to find the claim
 2. **Verifier** (`src/layers/L3-verifier/`) -- logic to check the claim against code
 3. **Tests** (`test/`) -- covering both extraction and verification
@@ -14,6 +33,7 @@ Adding a check involves three files:
 
 If this is a new claim type (not a new check for an existing type), add it to the type system.
 
+<!-- docalign:semantic id="semantic-ac-claimtype-union" claim="ClaimType union type is defined in src/shared/types.ts" -->
 In `src/shared/types.ts`, add the new type to the `ClaimType` union:
 
 ```typescript
@@ -24,6 +44,7 @@ export type ClaimType =
   | 'your_new_type';
 ```
 
+<!-- docalign:semantic id="semantic-ac-config-schema" claim="claimTypeEnum and claim_types config section are defined in src/config/schema.ts" -->
 In `src/config/schema.ts`, add it to the `claimTypeEnum` and `claim_types` config section so it can be enabled/disabled.
 
 ## Step 2: Write the Extractor
@@ -54,6 +75,7 @@ export function extractYourNewType(
 }
 ```
 
+<!-- docalign:semantic id="semantic-ac-syntactic-registration" claim="Extractors are registered in the extraction pipeline in src/layers/L1-claim-extractor/syntactic.ts" -->
 Register it in the extraction pipeline in `src/layers/L1-claim-extractor/syntactic.ts`.
 
 ## Step 3: Write the Verifier
@@ -92,6 +114,7 @@ export function verifyYourNewType(
 }
 ```
 
+<!-- docalign:semantic id="semantic-ac-verifier-router" claim="Verifiers are registered in the verifier router in src/layers/L3-verifier/index.ts" -->
 Register it in the verifier router in `src/layers/L3-verifier/index.ts`:
 
 ```typescript

@@ -1,3 +1,21 @@
+---
+title: "Fixing Drift"
+summary: "How to generate and apply fix suggestions for drifted documentation claims using the CLI and MCP."
+description: "Explains docalign fix (all files or single file) and fix_doc MCP tool. Covers two fix types: deterministic fixes (exact replacements for versions, paths, scripts) and LLM-generated fixes (line-level replacements with reasoning, requires ANTHROPIC_API_KEY). Describes the scan→review→apply→re-check workflow, experimental auto-fix config (auto_fix: true, auto_fix_threshold), and the report_drift MCP tool for manually tracking doc errors not caught by DocAlign."
+category: guide
+read_when:
+  - You have found drifted claims and want fix suggestions
+  - You want to enable auto-fix for high-confidence deterministic corrections
+  - You noticed a doc error during work and want to track it
+related:
+  - docs/guides/checking-files.md
+  - docs/reference/mcp-tools.md
+  - docs/guides/suppressing-findings.md
+docalign:
+  setup_date: "2026-02-18T00:00:00Z"
+  monitored: true
+---
+
 # Fixing Drift
 
 After finding drifted claims, DocAlign can suggest fixes.
@@ -46,6 +64,7 @@ For claims with clear correct values, DocAlign suggests exact replacements:
 <!-- /docalign:skip -->
 For complex claims, an LLM reads the relevant code and suggests line-level replacements. These include the original text, suggested replacement, and reasoning.
 
+<!-- docalign:semantic id="sem-cf1f4e85f0277e92" claim="LLM fixes require ANTHROPIC_API_KEY to be set. Without it, only deterministic suggestions are available." -->
 LLM fixes require `ANTHROPIC_API_KEY` to be set. Without it, only deterministic suggestions are available.
 
 ## Workflow
@@ -69,7 +88,7 @@ verification:
   auto_fix_threshold: 0.9    # Only auto-fix when confidence >= 90%
 ```
 
-Auto-fix applies changes directly to your documentation files. Only deterministic fixes (version numbers, paths) with confidence above the threshold are applied. LLM suggestions are never auto-applied.
+Auto-fix applies changes directly to your documentation files. <!-- docalign:semantic id="sem-95eb03dcca99c446" claim="Only deterministic fixes (version numbers, paths) with confidence above the threshold are applied. LLM suggestions are never auto-applied." -->Only deterministic fixes (version numbers, paths) with confidence above the threshold are applied. LLM suggestions are never auto-applied.
 
 ## Report drift manually
 
@@ -83,6 +102,7 @@ Use report_drift via MCP:
   evidence_files: ["src/cache/index.ts"]
 ```
 
+<!-- docalign:semantic id="sem-83ab8696bf85fd27" claim="Reports are stored in .docalign/reports/ for tracking" -->
 Reports are stored in `.docalign/reports/` for tracking.
 
 <!-- /docalign:skip -->

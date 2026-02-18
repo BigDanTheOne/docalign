@@ -93,6 +93,7 @@ DocAlign is a system that:
 5. Suggests targeted fixes
 6. Serves verified documentation to AI coding agents via MCP
 
+<!-- docalign:skip reason="capability_description" description="Surfaces table listing product surfaces (GitHub App, CLI, MCP Server, Web Dashboard) with version priorities — product capability overview, not falsifiable code claims" -->
 ### 1.3 Surfaces
 
 | Surface | Description | Priority |
@@ -102,6 +103,7 @@ DocAlign is a system that:
 | MCP Server | AI agents query verified docs and report drift. | v2 |
 | Web Dashboard | Repo health scores, trends, hotspot visualization. | v3 |
 
+<!-- /docalign:skip -->
 ### 1.4 Target User
 
 Primary: Individual developers who use AI coding agents on repos with documentation.
@@ -120,6 +122,7 @@ Not targeting: Technical writers, VP Engineering, compliance buyers (yet).
 
 ## 2. System Architecture
 
+<!-- docalign:skip reason="illustrative_example" description="ASCII architecture diagram showing hypothetical flow between layers — illustrative system diagram, not factual claims about implementation" -->
 ### 2.1 High-Level Flow
 
 ```
@@ -165,6 +168,7 @@ DocAlign uses a split execution model. ALL LLM calls run on the client. DocAlign
 DocAlign orchestrates WHAT to verify and WHEN. The client's Action/agent decides HOW.
 See `phases/adr-agent-first-architecture.md` for full specification.
 
+<!-- /docalign:skip -->
 ### 2.2 Data Flow (PR Trigger)
 
 1. GitHub webhook fires: `@docalign review` comment on a PR (GATE42-009) or PR opened/updated (v2)
@@ -322,6 +326,7 @@ If a PR arrives before the initial scan completes (race condition): queue the PR
 
 ## 12. Data Models
 
+<!-- docalign:skip reason="illustrative_example" description="ASCII database schema diagram showing table hierarchy — visual illustration of schema structure" -->
 ### 12.1 Database Schema Overview
 
 ```
@@ -339,6 +344,7 @@ repos
   +-- scan_runs (Layer 4)
 ```
 
+<!-- /docalign:skip -->
 ### 12.2 Entity Descriptions
 
 **repos:** Repository metadata, GitHub installation info, cached health score, last indexed commit, configuration.
@@ -483,6 +489,7 @@ repos
 
 ## 16. Experiment Plan
 
+<!-- docalign:skip reason="capability_description" description="Experiment plan sections (16.1–16.5) describing validation methods using external open-source repos as examples — methodology descriptions, not claims about this codebase" -->
 ### 16.1 Experiment: Semantic Claim Extraction Quality
 
 **Goal:** Validate that LLMs can reliably extract testable claims from unstructured documentation.
@@ -582,6 +589,7 @@ repos
 
 ---
 
+<!-- /docalign:skip -->
 ## Appendix A: Configuration Options
 
 Users can configure DocAlign behavior via `.docalign.yml` in the repo root.

@@ -1,3 +1,21 @@
+---
+title: "MCP Integration"
+summary: "How to set up the DocAlign MCP server for Claude Code, Cursor, and other MCP clients, and what AI agents can do with the 10 documentation tools."
+description: "Quick setup via docalign init (auto-adds to .claude/mcp.json and installs skill). Manual setup with JSON mcp.json config block. Documents agent capabilities: find docs affected by code changes (get_docs_for_file), check doc accuracy (check_doc / deep_check), search by topic (get_docs), fix stale docs (list_drift + fix_doc), report doc errors (report_drift), get health overview (get_doc_health). Verification steps via docalign status or get_doc_health. Links to full MCP tools reference."
+category: guide
+read_when:
+  - You are setting up DocAlign with Claude Code or another MCP client
+  - You need to configure the MCP server manually
+  - You want to know what your AI agent can do with DocAlign tools
+related:
+  - docs/reference/mcp-tools.md
+  - docs/getting-started.md
+  - docs/troubleshooting.md
+docalign:
+  setup_date: "2026-02-18T00:00:00Z"
+  monitored: true
+---
+
 # MCP Integration
 
 DocAlign includes a Model Context Protocol (MCP) server that gives AI coding agents live access to documentation verification. Works with Claude Code, Cursor, and any MCP-compatible client.
@@ -10,7 +28,9 @@ docalign init
 ```
 
 This automatically:
+<!-- docalign:semantic id="sem-2dade71c794476fc" claim="docalign init automatically adds the DocAlign MCP server to .claude/mcp.json" -->
 1. Adds the DocAlign MCP server to `.claude/mcp.json`
+<!-- docalign:semantic id="sem-dffd38e4847182fd" claim="docalign init installs the docalign skill" -->
 2. Installs the `docalign` skill
 
 After setup, your AI agent has 10 documentation tools available.
@@ -100,6 +120,7 @@ Returns a 0-100 health score, verified vs drifted counts, and the worst files.
 
 ## Verify it's working
 
+<!-- docalign:semantic id="semantic-001" claim="Run docalign status to check MCP integration status" -->
 Run `docalign status` to check MCP integration status. Or ask your AI agent to run `get_doc_health` -- if it returns a score, the integration is working.
 <!-- /docalign:skip -->
 

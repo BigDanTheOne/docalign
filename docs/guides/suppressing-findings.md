@@ -1,3 +1,21 @@
+---
+title: "Suppressing Findings"
+summary: "How to use suppress rules in .docalign.yml to ignore specific files, claim types, packages, or regex patterns."
+description: "Covers the four suppress rule fields: file (exact path or glob), claim_type (one of 11 valid types), package (npm package name), pattern (regex against claim text). AND-combining multiple fields in one rule. Alternatives: disabling claim_types entirely (more efficient, no extraction at all) and raising verification.min_severity. Lists valid claim_type values. Notes maximum of 200 suppress rules per config."
+category: guide
+read_when:
+  - You want to ignore findings for legacy docs, archives, or internal-only paths
+  - You need to suppress all URL checks or env var checks across the repo
+  - You have a package that always triggers false positive version drift
+related:
+  - docs/guides/custom-configuration.md
+  - docs/reference/configuration.md
+  - docs/troubleshooting.md
+docalign:
+  setup_date: "2026-02-18T00:00:00Z"
+  monitored: true
+---
+
 # Suppressing Findings
 
 Not every finding is actionable. Suppress rules let you ignore specific files, patterns, claim types, or packages.
@@ -40,6 +58,7 @@ suppress:
   - claim_type: environment           # Skip env var checks
 ```
 
+<!-- docalign:semantic id="semantic-003" claim="Valid claim_type values are: path_reference, dependency_version, command, api_route, code_example, behavior, architecture, config, convention, environment, url_reference" -->
 Valid claim types: `path_reference`, `dependency_version`, `command`, `api_route`, `code_example`, `behavior`, `architecture`, `config`, `convention`, `environment`, `url_reference`.
 
 ## Suppress by package
@@ -68,6 +87,7 @@ suppress:
 
 ## Combine rules
 
+<!-- docalign:semantic id="sem-035b93f7d0cb5fe3" claim="Multiple fields in one rule are AND-combined" -->
 Multiple fields in one rule are AND-combined:
 
 ```yaml
@@ -110,6 +130,7 @@ verification:
 
 ## Limits
 
+<!-- docalign:semantic id="sem-7aa983200d9271e3" claim="Maximum 200 suppress rules per config file" -->
 Maximum 200 suppress rules per config file.
 
 <!-- /docalign:skip -->

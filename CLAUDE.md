@@ -1,3 +1,20 @@
+---
+title: "DocAlign Implementation Instructions"
+summary: "Project instructions for Claude Code agents working on the DocAlign implementation: commands, rules, tech stack, and key spec/task file locations."
+description: "Defines the development workflow (build, lint, test, migrate commands), coding rules (TDD authority, no scope creep, escalate unknowns), the full tech stack (Node.js, TypeScript strict, Express, PostgreSQL/pgvector, Redis/BullMQ, Vitest, Pino, Zod, web-tree-sitter, Octokit), and a directory of all spec files (phases/), architecture docs, and task breakdowns (tasks/)."
+category: reference
+read_when:
+  - You are an AI agent about to implement a DocAlign task
+  - You need to know which npm commands to run after making changes
+  - You need to find a spec file or task breakdown
+related:
+  - CONVENTIONS.md
+  - docs/contributing/architecture.md
+docalign:
+  setup_date: "2026-02-18T00:00:00Z"
+  monitored: true
+---
+
 # DocAlign — Implementation
 
 A documentation-reality alignment engine that detects when repo documentation drifts from code reality, alerts developers on PRs, and serves verified docs to AI coding agents via MCP.
@@ -39,14 +56,23 @@ docker compose down    # Stop local services
 
 ## Tech Stack
 
+<!-- docalign:semantic id="semantic-tech-stack-typescript" claim="Runtime: Node.js + TypeScript (strict mode)" -->
 - **Runtime:** Node.js + TypeScript (strict mode)
+<!-- docalign:semantic id="semantic-tech-stack-express" claim="Server: Express.js" -->
 - **Server:** Express.js
+<!-- docalign:semantic id="semantic-tech-stack-postgresql" claim="Database: PostgreSQL (pgvector), SQLite (CLI mode via better-sqlite3)" -->
 - **Database:** PostgreSQL (pgvector), SQLite (CLI mode via better-sqlite3)
+<!-- docalign:semantic id="semantic-tech-stack-redis-bullmq" claim="Queue: Redis + BullMQ" -->
 - **Queue:** Redis + BullMQ
+<!-- docalign:semantic id="semantic-tech-stack-vitest" claim="Testing: Vitest" -->
 - **Testing:** Vitest
+<!-- docalign:semantic id="semantic-tech-stack-pino" claim="Logging: Pino (structured JSON)" -->
 - **Logging:** Pino (structured JSON)
+<!-- docalign:semantic id="semantic-tech-stack-zod" claim="Validation: Zod" -->
 - **Validation:** Zod
+<!-- docalign:semantic id="semantic-tech-stack-web-tree-sitter" claim="AST Parsing: web-tree-sitter (WASM)" -->
 - **AST Parsing:** web-tree-sitter (WASM)
+<!-- docalign:semantic id="semantic-tech-stack-octokit" claim="GitHub: Octokit (GitHub App auth)" -->
 - **GitHub:** Octokit (GitHub App auth)
 
 ## Key Files
@@ -99,6 +125,7 @@ docker compose down    # Stop local services
 | `tasks/e8-mcp-server.md` | E8: MCP server (4 tasks, 13h) |
 | `tasks/e9-cli-sqlite.md` | E9: CLI + SQLite adapter (5 tasks, 17h) |
 
+<!-- docalign:skip reason="tutorial_example" description="Target project structure diagram showing aspirational/future file layout, not a factual claim about current state" -->
 ## Project Structure (target)
 
 ```
@@ -133,3 +160,5 @@ docalign/
 ├── tasks/                        # Task breakdowns + execution plan
 └── _planning/                    # Archived planning artifacts
 ```
+
+<!-- /docalign:skip -->

@@ -569,6 +569,7 @@ No core DocAlign source code (src/) is modified. All changes are to infrastructu
 
 ## 2. Architecture
 
+<!-- docalign:skip reason="illustrative_example" description="Data flow diagram showing hypothetical pipeline execution sequence" -->
 ### Data Flow
 
 ```
@@ -595,6 +596,8 @@ No core DocAlign source code (src/) is modified. All changes are to infrastructu
   Verify stage confirms both QA + builder tests pass
 ```
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="File layout diagram showing hypothetical/target directory structure for new files" -->
 ### File Layout
 
 ```
@@ -624,6 +627,7 @@ No core DocAlign source code (src/) is modified. All changes are to infrastructu
 
 ---
 
+<!-- /docalign:skip -->
 ## 3. Changes by File
 
 ### 3.1 QA Agent Workspace — `~/.openclaw/agents/qa/`
@@ -649,6 +653,7 @@ Create 7 files following the existing agent pattern (pm, critic, tech-lead as te
 
 **BOOTSTRAP.md**: Standard bootstrap template (match existing agents)
 
+<!-- docalign:skip reason="illustrative_example" description="YAML code blocks showing new stages to be added to task.yml" -->
 ### 3.2 Task Pipeline — `~/docalign/_team/pipelines/task.yml`
 
 **Add two new stages** (insert after `research`, before `build`):
@@ -673,6 +678,8 @@ Create 7 files following the existing agent pattern (pm, critic, tech-lead as te
 - `research_check.next_if_no`: change from `build` to `task_define`
 - `research.next`: change from `build` to `task_define`
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="YAML code block showing new stage to be added to feature.yml" -->
 ### 3.3 Feature Pipeline — `~/docalign/_team/pipelines/feature.yml`
 
 **Add one new stage** (insert after `plan`, before `build`):
@@ -689,6 +696,8 @@ Create 7 files following the existing agent pattern (pm, critic, tech-lead as te
 **Modify existing pointer**:
 - `plan.next`: change from `build` to `qa_tests`
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="YAML code block showing new stage to be added to epic.yml" -->
 ### 3.4 Epic Pipeline — `~/docalign/_team/pipelines/epic.yml`
 
 **Add one new stage** (insert after `ceo_decompose_approval`, before `execute_children`):
@@ -705,10 +714,12 @@ Create 7 files following the existing agent pattern (pm, critic, tech-lead as te
 **Modify existing pointer**:
 - `ceo_decompose_approval.on_approve`: change from `execute_children` to `qa_integration_tests`
 
+<!-- /docalign:skip -->
 ### 3.5 pipeline.js — `~/.openclaw/skills/pipeline/scripts/pipeline.js`
 
 Three modifications to the file (currently 956 lines):
 
+<!-- docalign:skip reason="illustrative_example" description="JavaScript code block showing the new copyQaTestsToWorktree function to be written" -->
 #### 3.5a New function: `copyQaTestsToWorktree()` (insert at line ~413, after `assembleExecPlan`)
 
 ```javascript
@@ -762,6 +773,8 @@ function copyQaTestsToWorktree(runId, wtPath) {
 }
 ```
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="JavaScript code blocks showing modifications to cmdAdvance and assembleExecPlan — aspirational, not current code" -->
 #### 3.5b Modify `cmdAdvance()` (line ~578)
 
 Current code:
@@ -821,6 +834,8 @@ Update the "Final validation" section to add:
   sections.push(`4. Run \`npm run test:qa\` separately to confirm design contracts`);
 ```
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="JSON snippet showing new scripts to be added to package.json" -->
 ### 3.6 package.json — `~/docalign/package.json`
 
 Add two new scripts in the `scripts` section:
@@ -831,6 +846,7 @@ Add two new scripts in the `scripts` section:
 
 Insert after the existing `"test": "vitest run"` line (line 25).
 
+<!-- /docalign:skip -->
 ### 3.7 Orchestrator AGENTS.md — `~/.openclaw/agents/orchestrator/AGENTS.md`
 
 #### Add to "Available personas to spawn" (after line 70):
@@ -901,18 +917,21 @@ After all changes to `~/.openclaw/skills/pipeline/scripts/pipeline.js`, copy the
 Run: `cd ~/docalign && npx jest .openclaw/skills/pipeline/scripts/pipeline-gate-format.test.js`
 Expected: All existing tests pass (no regressions).
 
+<!-- docalign:skip reason="sample_output" description="Bash code block showing YAML validation command as illustrative test" -->
 ### 4.2 YAML Validation
 Verify all three pipeline YAML files parse correctly:
 ```bash
 node -e "const yaml = require('js-yaml'); const fs = require('fs'); ['task', 'feature', 'epic'].forEach(t => { yaml.load(fs.readFileSync('_team/pipelines/' + t + '.yml', 'utf8')); console.log(t + '.yml: valid'); });"
 ```
 
+<!-- /docalign:skip -->
 ### 4.3 copyQaTestsToWorktree Functional Test
 1. Create mock staging: `_team/outputs/test-run/qa_tests/files/test/qa/test-slug/acceptance.qa.test.ts`
 2. Run `pipeline.js advance --stage build` for a test run
 3. Verify the file appears at `<worktree>/test/qa/test-slug/acceptance.qa.test.ts`
 4. Verify EXEC_PLAN.md contains "QA Test Requirements" section
 
+<!-- docalign:skip reason="sample_output" description="Bash code block showing npm script invocations as illustrative test" -->
 ### 4.4 npm Scripts
 ```bash
 npm run test:qa    # Should find test/qa/ directory (passes with 0 tests if empty)
@@ -921,6 +940,7 @@ npm run test:builder  # Should exclude test/qa/ files
 
 ---
 
+<!-- /docalign:skip -->
 ## 5. Migration / Breaking Changes
 
 **No breaking changes.** All modifications are additive:
@@ -1104,6 +1124,7 @@ Final validation:
 2. Verify all acceptance criteria above are met
 3. Verify no regressions in existing tests
 
+<!-- docalign:skip reason="illustrative_example" description="Integration testing steps referencing hypothetical agent-dev scripts and ports" -->
 ### Integration Testing (optional, for complex features)
 1. `npm run build`
 2. `bash ~/.openclaw/skills/pipeline/scripts/agent-dev.sh --run-id f08aaaa5-be24-4037-be73-e59e783f5ce6`
@@ -1111,6 +1132,7 @@ Final validation:
 4. `curl http://localhost:<port>/health`
 5. `bash ~/.openclaw/skills/pipeline/scripts/agent-dev-cleanup.sh --run-id f08aaaa5-be24-4037-be73-e59e783f5ce6`
 
+<!-- /docalign:skip -->
 ## Idempotence and Recovery
 
 - All tasks are idempotent — re-running produces the same result

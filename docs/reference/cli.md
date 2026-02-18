@@ -1,3 +1,21 @@
+---
+title: "CLI Reference"
+summary: "Complete reference for all docalign CLI commands, flags, environment variables, and exit codes."
+description: "Covers installation (global npm or npx). Commands: scan (--json, --exclude), check <file> (--verbose), extract [file] (--force, --dry-run), fix [file], status, configure (--exclude, --min-severity, --reset), init (adds MCP to .claude/mcp.json + installs skill), viz (--output, --no-open, --exclude), mcp (--repo, starts MCP server), help. Environment variables: ANTHROPIC_API_KEY. Exit codes: 0 (success), 1 (drift detected), 2 (usage error)."
+category: reference
+read_when:
+  - You need the exact syntax for a docalign command or flag
+  - You are writing a CI script and need to know exit codes
+  - You want to understand what docalign init does
+related:
+  - docs/guides/checking-files.md
+  - docs/guides/fixing-drift.md
+  - docs/guides/mcp-integration.md
+docalign:
+  setup_date: "2026-02-18T00:00:00Z"
+  monitored: true
+---
+
 # CLI Reference
 
 ## Installation
@@ -59,6 +77,7 @@ docalign extract --dry-run          # Preview without saving
 
 **Requirements:** `claude` CLI installed and authenticated (Claude Code).
 
+<!-- docalign:semantic id="sem-e23ce2967fee2194" claim="Extracted claims saved to .docalign/semantic/" -->
 **Storage:** Extracted claims saved to `.docalign/semantic/`, included in future `check` and `scan` runs.
 
 ### docalign fix [file]
@@ -70,6 +89,7 @@ docalign fix                # Fix all files with drift
 docalign fix README.md      # Fix a specific file
 ```
 
+<!-- docalign:semantic id="sem-046d26fea2645e44" claim="docalign fix requires ANTHROPIC_API_KEY for LLM-powered fixes; without it, only deterministic suggestions are available" -->
 **Requirements:** `ANTHROPIC_API_KEY` for LLM-powered fixes. Without it, only deterministic suggestions (version replacements, path corrections) are available.
 
 ### docalign status
@@ -108,7 +128,9 @@ docalign init
 ```
 
 **What it does:**
+<!-- docalign:semantic id="sem-e04ddc09ca6c89f1" claim="docalign init adds DocAlign MCP server to .claude/mcp.json" -->
 1. Adds DocAlign MCP server to `.claude/mcp.json`
+<!-- docalign:semantic id="sem-ab882ee276c75146" claim="docalign init installs the docalign skill for Claude Code" -->
 2. Installs the `docalign` skill for Claude Code
 
 ### docalign viz
@@ -157,10 +179,12 @@ docalign help
 
 | Variable | Purpose |
 |----------|---------|
+<!-- docalign:semantic id="sem-anthropic-api-key-enables" claim="ANTHROPIC_API_KEY enables LLM verification (Tier 3), fix generation, and semantic extraction" -->
 | `ANTHROPIC_API_KEY` | Enables LLM verification (Tier 3), fix generation, and semantic extraction |
 
 ## Exit Codes
 
+<!-- docalign:semantic id="sem-e8baf3fcb76e5806" claim="Exit code 0 = success (no drift found), 1 = drift detected, 2 = usage error" -->
 | Code | Meaning |
 |------|---------|
 | `0` | Success (no drift found, or command completed) |

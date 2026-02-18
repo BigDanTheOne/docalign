@@ -50,6 +50,7 @@ Both entry points call `registerTools(server, pipeline, repoRoot)` instead of in
 
 **Why:** The highest-value missing tool. Lets agents ask "what does the project say about authentication?" and get back verified doc sections. Without it, agents must know exact file paths.
 
+<!-- docalign:skip reason="illustrative_example" description="Architecture diagram showing multi-signal search flow — ASCII art illustration of a hypothetical query pipeline, not a factual code claim" -->
 ### Architecture: Multi-Signal Search with RRF
 
 Inspired by Sourcegraph Cody's Repo-level Semantic Graph approach. DocAlign already has a pre-computed tripartite graph (doc sections → claims → code entities) with typed edges and verification metadata. No other tool has this. The search should exploit it.
@@ -88,6 +89,7 @@ Query: "authentication"
   Ranked doc sections with verification metadata
 ```
 
+<!-- /docalign:skip -->
 ### Signal Details
 
 **Signal 1: Text Search (MiniSearch)**
@@ -224,6 +226,7 @@ server.tool(
 );
 ```
 
+<!-- docalign:skip reason="sample_output" description="JSON response example with hypothetical doc paths like 'docs/auth.md' — illustrates MCP tool output format, not real files" -->
 ### Response Example
 
 ```json
@@ -257,6 +260,7 @@ server.tool(
 }
 ```
 
+<!-- /docalign:skip -->
 ### Tests
 
 `test/layers/L6-mcp/doc-search.test.ts`:
@@ -296,6 +300,7 @@ server.tool(
 
 ---
 
+<!-- docalign:skip reason="sample_output" description="Task 3 design section with two JSON response format examples (with/without LLM) — illustrative output, not factual code claims" -->
 ## Task 3: `fix_doc(file)` — Generate Fix Suggestions via MCP
 
 **Why:** Agents should be able to request doc fixes through MCP. The pipeline already generates fixes (LLM-based for Tier 3, deterministic `suggested_fix` for Tier 1-2). This tool exposes that capability.
@@ -381,6 +386,7 @@ server.tool(
 
 ---
 
+<!-- /docalign:skip -->
 ## Task 4: `report_drift` — Local JSON Persistence
 
 **Why:** Agents discover drift while working. They should be able to report it for tracking even if not immediately fixed.
@@ -524,6 +530,7 @@ When user asks about a topic ("how does auth work?"):
 
 ---
 
+<!-- docalign:skip reason="illustrative_example" description="Execution order ASCII dependency graph — illustrative task sequencing diagram, not a code claim" -->
 ## Execution Order
 
 ```
@@ -538,6 +545,7 @@ Task 1: Extract shared handlers ──┐
 
 **Total estimated effort: ~12 hours**
 
+<!-- /docalign:skip -->
 ## Dependencies to Install
 
 ```bash
@@ -560,6 +568,7 @@ No other new dependencies. Embedding (Signal 5) uses the user's own API key via 
 - [ ] `npm run typecheck && npm run test` passes
 - [ ] No duplicated tool handler code between entry points
 
+<!-- docalign:skip reason="capability_description" description="Comparison table of DocAlign vs generic code search tools — marketing-style capability description using hypothetical features" -->
 ## What Makes This Search Unique
 
 | Feature | Generic code search (Cursor, Cody) | DocAlign `get_docs` |
@@ -572,3 +581,5 @@ No other new dependencies. Embedding (Signal 5) uses the user's own API key via 
 | LLM requirement | Always (embeddings) | Zero by default, optional for premium quality |
 
 The unique advantage: DocAlign has a pre-computed tripartite graph with typed edges and trust annotations. The search exploits this graph rather than trying to replicate pure vector search.
+
+<!-- /docalign:skip -->

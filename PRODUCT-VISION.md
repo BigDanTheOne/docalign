@@ -133,6 +133,7 @@ Do NOT extract:
 ```
 
 3. Cache the extracted claims. Re-extract only when a doc file changes.
+<!-- docalign:skip reason="example_table" description="Claim types and verification strategy table with hypothetical example values" -->
 
 **Claim types and their verification strategy:**
 
@@ -143,6 +144,7 @@ Do NOT extract:
 | command | "`pnpm test:unit`" | package.json scripts / Makefile targets (deterministic) |
 | api_route | "POST /api/v2/users" | Route definition search in code (deterministic + AST) |
 | behavior | "AuthService handles password reset" | LLM comparison with actual AuthService code (semantic) |
+<!-- /docalign:skip -->
 | architecture | "Data flows through SQS queue" | LLM analysis of imports/infra code (semantic) |
 | config | "Config loaded from config/default.yaml" | File existence + schema comparison (mixed) |
 | convention | "All API responses use camelCase" | AST/grep pattern check (deterministic) |
@@ -218,6 +220,7 @@ A) Clearly accurate (no further check needed)
 B) Clearly wrong (flag immediately)
 C) Uncertain (needs deeper analysis)
 Return only the letter and a 1-sentence reason.
+<!-- docalign:skip reason="illustrative_example" description="Tier 3 triage gate LLM prompt shown as illustration, not actual code" -->
 ```
 
 This is the Cloudy pattern. If A: skip expensive analysis. If B: flag directly. If C: proceed to Tier 4.
@@ -237,6 +240,8 @@ import { hash, compare } from 'argon2';
 
 export async function hashPassword(password: string): Promise<string> {
   return hash(password, { type: 2, memoryCost: 65536 });
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="Tier 4 semantic verification prompt template shown as an example with hypothetical bcrypt/argon2 evidence" -->
 }
 </evidence>
 
@@ -257,6 +262,7 @@ For "drifted" findings, generate a verification script:
 
 ---
 
+<!-- /docalign:skip -->
 ### Layer 4: Change-Triggered Scanning
 
 **What:** Determine WHEN to run verification and WHAT to verify based on code changes.
@@ -294,6 +300,7 @@ When an AI agent reports suspected drift via the MCP server, queue that claim fo
 **PR comment format (inspired by CodeRabbit + Semcheck):**
 
 ```markdown
+<!-- docalign:skip reason="sample_output" description="Sample PR comment output showing Documentation Health Check with hypothetical findings (bcrypt, /api/v1/users, config/default.yaml)" -->
 ## Documentation Health Check
 
 3 claims may need updating based on your code changes:
@@ -343,6 +350,7 @@ When an AI agent reports suspected drift via the MCP server, queue that claim fo
 
 ---
 
+<!-- /docalign:skip -->
 ### Layer 6: MCP Server (Bidirectional Agent Context)
 
 **What:** An MCP server that AI coding agents query for verified documentation and report drift they discover.
@@ -422,6 +430,7 @@ Track which suggested fixes are accepted vs rejected. Rejected suggestions indic
 
 ---
 
+<!-- docalign:skip reason="example_table" description="Borrowed patterns table showing competitor names and how their patterns are reused — not claims about this project's code" -->
 ## 6. What's Borrowed (Proven Patterns We Adopt)
 
 | Pattern | Source | How We Use It |
@@ -438,6 +447,7 @@ Track which suggested fixes are accepted vs rejected. Rejected suggestions indic
 | tree-sitter parsing | Greptile | Language-agnostic AST for codebase index |
 
 ---
+<!-- /docalign:skip -->
 
 ## 7. MVP Scope (What Ships in 2-4 Weeks)
 
@@ -553,6 +563,7 @@ At 100 PRs/month per repo, that's $7-23/month in LLM costs per repo. Sustainable
 
 ---
 
+<!-- docalign:skip reason="example_table" description="Pricing tier table (Free/Pro/Team/Enterprise) — business model, not code behavior" -->
 ## 10. Pricing (Based on WTP Research)
 
 **Model: Per-repo/month with transparent usage.**
@@ -569,6 +580,7 @@ At 100 PRs/month per repo, that's $7-23/month in LLM costs per repo. Sustainable
 - Per-repo aligns cost with value (more repos = more documentation to keep fresh = more value)
 - CodeRabbit uses per-contributing-developer; we simplify to per-repo
 - Avoids Kiro's opaque consumption model (their pricing failure is our warning)
+<!-- /docalign:skip -->
 
 **Usage transparency:**
 - Dashboard shows: claims checked, LLM tokens used, estimated cost

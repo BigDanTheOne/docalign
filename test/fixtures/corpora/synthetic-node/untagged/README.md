@@ -41,7 +41,9 @@ The server will start on port 3000. See `docs/guides/getting-started.md` for a f
 
 ## Configuration
 
-All environment variables are read through the central configuration module at `src/config/index.ts`. See `docs/guides/configuration.md` for the full variable reference.
+All environment variables are read through the central configuration module. See `docs/guides/configuration.md` for the full variable reference.
+
+Central config module: `src/config/index.ts`
 
 ## Project Structure
 

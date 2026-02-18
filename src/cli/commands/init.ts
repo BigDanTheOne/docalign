@@ -10,7 +10,7 @@
  *   .claude/skills/docalign/SKILL.md — Daily usage skill
  *   .claude/skills/docalign-setup/SKILL.md — Setup wizard skill
  *
- * Skill content lives in .claude/skills/{skill}/SKILL.md in the package root.
+ * Skill content lives in skills/{skill}/SKILL.md in the package root.
  * Edit those files directly to update skill prompts — no TypeScript needed.
  *
  * After running this command, restart Claude Code to begin interactive setup.
@@ -19,7 +19,7 @@
 import fs from "fs";
 import path from "path";
 
-// Skill files ship with the npm package under .claude/skills/.
+// Skill files ship with the npm package under skills/.
 // At runtime, __dirname is dist/cli/commands/ so the package root is 3 levels up.
 function readSkillFile(relPath: string): string {
   const packageRoot = path.join(__dirname, "../../..");
@@ -166,8 +166,8 @@ export async function runInit(
   write("  \u2713 .claude/settings.local.json (MCP server + hooks)");
 
   // 3. Read skill content from package files
-  const skillMd = readSkillFile(".claude/skills/docalign/SKILL.md");
-  const setupSkillMd = readSkillFile(".claude/skills/docalign-setup/SKILL.md");
+  const skillMd = readSkillFile("skills/docalign/SKILL.md");
+  const setupSkillMd = readSkillFile("skills/docalign-setup/SKILL.md");
 
   // 4. Write skills to BOTH project-level AND user-level (~/.claude/skills/)
   //    Project-level: available when Claude Code opens in this directory
