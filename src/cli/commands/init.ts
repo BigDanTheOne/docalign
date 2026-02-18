@@ -179,7 +179,7 @@ project directory is a git repository (has a .git folder).
 `;
 
 interface HookEntry {
-  matcher: string;
+  matcher: { tools: string[] };
   hooks: Array<{
     type: string;
     command: string;
@@ -257,16 +257,22 @@ export async function runInit(
   if (!settings.hooks) settings.hooks = {};
   if (!settings.hooks.PostToolUse) settings.hooks.PostToolUse = [];
 
+  // Migrate any old string-matcher entries to the object format
+  settings.hooks.PostToolUse = settings.hooks.PostToolUse
+    .filter((h) => h && typeof h === "object" && h.hooks !== undefined)
+    .map((h) => ({
+      ...h,
+      matcher: typeof h.matcher === "string" ? { tools: [h.matcher] } : h.matcher,
+    }));
+
   const hookCommand =
     'bash -c \'INPUT=$(cat); if echo "$INPUT" | grep -q "git commit"; then echo "[DocAlign] Code committed. Consider running get_doc_health or check_doc to verify documentation is still accurate."; fi\'';
-  const existingHook = settings.hooks.PostToolUse.find(
-    (h) =>
-      h.matcher === "Bash" &&
-      h.hooks?.some((hk) => hk.command.includes("DocAlign")),
+  const existingHook = settings.hooks.PostToolUse.find((h) =>
+    h.hooks?.some((hk) => hk.command.includes("DocAlign")),
   );
   if (!existingHook) {
     settings.hooks.PostToolUse.push({
-      matcher: "Bash",
+      matcher: { tools: ["Bash"] },
       hooks: [{ type: "command", command: hookCommand }],
     });
   }
