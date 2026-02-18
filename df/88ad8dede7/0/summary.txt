@@ -1,0 +1,17 @@
+All fixed. Here's a summary of what was done:
+
+---
+
+**4 pipeline fixes — all tests pass (1530), dogfood shows 0 drifted findings:**
+
+### Fix 1 — `preprocessing.ts`: Block-aware tag line detection
+Extended Step 8 to mark ALL lines inside `docalign:skip` and `docalign:semantic` blocks as `tag_lines`, not just the opening tag line. Extractors already check `tag_lines` and skip those lines — so now the pipeline correctly ignores content inside skip/semantic blocks. This eliminated 5 of the 11 false positives (health route, auth route, dist/index.js, express 3.x, .eslintrc.json).
+
+### Fix 2 — `extractors.ts`: `markdown_link_path` regex
+Changed `\.?\/?` to `(?:\.\/)?` in the markdown link path pattern. The old `\.?\/? ` consumed the first `.` of `../`, turning `../guides/mcp.md` into a captured `./guides/mcp.md` which resolved to a wrong path. The new pattern only optionally matches the literal `./` prefix, so `../` links get captured as-is and correctly rejected by `isValidPath` (which blocks `..`-containing paths). This eliminated 2 false positives.
+
+### Fix 3 — `extractors.ts`: `process.env` false positive
+Added a check in `passesPathFilters`: a bare path (no `/`) ending in `.env` that doesn't start with `.` is JS property access, not a dotfile. Dotfiles like `.env`, `.env.local` still pass; `process.env` is now filtered.
+
+### Fix 4 — `tier1-dependency-version.ts`: Runtime platform names in `RUNTIME_ALLOWLIST`
+Added `Node.js`, `Nodejs`, `Python`, `Ruby`, `Go`, `Rust`, `Java`, `Deno`, `Bun` (and lowercase variants) to the allowlist. Runtime version mentions in docs (e.g., "Node.js 18") are documentation facts, not package dependencies — the verifier now returns `verified` instead of `drifted` for these.
