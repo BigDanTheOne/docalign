@@ -225,11 +225,13 @@ launch_banner() {
 launch_same_window() {
     launch_banner
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS BSD script: command and args follow the output file
-        script -q /dev/null claude "/docalign-setup"
+        # macOS BSD script: command and args follow the output file.
+        # </dev/tty redirects script's own stdin to the real keyboard so it
+        # can proxy keystrokes into the fresh PTY it allocates for claude.
+        script -q /dev/null claude "/docalign-setup" </dev/tty
     else
-        # Linux util-linux script: -c takes the command as a string
-        script -q -c 'claude "/docalign-setup"' /dev/null
+        # Linux util-linux script: -c takes the command as a string.
+        script -q -c 'claude "/docalign-setup"' /dev/null </dev/tty
     fi
 }
 
