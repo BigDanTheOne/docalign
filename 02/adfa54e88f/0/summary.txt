@@ -1,0 +1,6 @@
+It's running in the background. You can monitor the output file, or I'll check when it completes. The key change: instead of 19 sequential Claude subprocesses, we now run up to 5 at the same time — so theoretical wall-clock time drops from ~38 min → ~8 min for 19 docs.
+
+The implementation is a simple inline semaphore (no new dependencies):
+- `acquireSem()` / `releaseSem()` gate how many Claude subprocesses run at once
+- `Promise.all` fans out all files simultaneously, but each one waits for the semaphore before calling `extractSemanticClaims`
+- Shared counters (`totalExtracted`, etc.) are safe because JS is single-threaded
