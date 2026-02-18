@@ -1,15 +1,20 @@
 /**
- * `docalign init` — Set up DocAlign for Claude Code in the current project.
+ * `docalign init` — Interactive setup for DocAlign in the current project.
+ *
+ * This command performs initial setup and installs both skills:
+ *   - docalign-setup: Interactive setup wizard (runs when config missing)
+ *   - docalign: Daily usage workflows (runs after setup complete)
  *
  * Writes:
  *   .claude/settings.local.json  — MCP server config + hooks
- *   .claude/skills/docalign/SKILL.md — Workflow skill
+ *   .claude/skills/docalign/SKILL.md — Daily usage skill
+ *   .claude/skills/docalign-setup/SKILL.md — Setup wizard skill
  *
- * Zero-dependency: does not need LocalPipeline or any scanning.
+ * After running this command, restart Claude Code to begin interactive setup.
  */
 
-import fs from 'fs';
-import path from 'path';
+import fs from "fs";
+import path from "path";
 
 const SKILL_MD = `---
 name: docalign
@@ -186,10 +191,13 @@ interface SettingsJson {
     allow?: string[];
     deny?: string[];
   };
-  mcpServers?: Record<string, {
-    command: string;
-    args: string[];
-  }>;
+  mcpServers?: Record<
+    string,
+    {
+      command: string;
+      args: string[];
+    }
+  >;
   hooks?: {
     PostToolUse?: HookEntry[];
     [key: string]: unknown;
@@ -203,26 +211,28 @@ export async function runInit(
   const cwd = process.cwd();
 
   // Check for git repo
-  if (!fs.existsSync(path.join(cwd, '.git'))) {
-    write('Error: Not a git repository. Run this from the root of your project.');
+  if (!fs.existsSync(path.join(cwd, ".git"))) {
+    write(
+      "Error: Not a git repository. Run this from the root of your project.",
+    );
     return 2;
   }
 
-  write('DocAlign: Setting up for Claude Code...\n');
+  write("DocAlign: Setting up for Claude Code...\n");
 
   // 1. Ensure .claude/ directory exists
-  const claudeDir = path.join(cwd, '.claude');
+  const claudeDir = path.join(cwd, ".claude");
   if (!fs.existsSync(claudeDir)) {
     fs.mkdirSync(claudeDir, { recursive: true });
   }
 
   // 2. Write/merge .claude/settings.local.json
-  const settingsPath = path.join(claudeDir, 'settings.local.json');
+  const settingsPath = path.join(claudeDir, "settings.local.json");
   let settings: SettingsJson = {};
 
   if (fs.existsSync(settingsPath)) {
     try {
-      settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+      settings = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
     } catch {
       // Corrupted file — overwrite
     }
@@ -231,50 +241,119 @@ export async function runInit(
   // Ensure permissions.allow includes docalign MCP tools
   if (!settings.permissions) settings.permissions = {};
   if (!settings.permissions.allow) settings.permissions.allow = [];
-  const docalignPerm = 'mcp__docalign__*';
+  const docalignPerm = "mcp__docalign__*";
   if (!settings.permissions.allow.includes(docalignPerm)) {
     settings.permissions.allow.push(docalignPerm);
   }
 
   // Add MCP server config
   if (!settings.mcpServers) settings.mcpServers = {};
-  settings.mcpServers['docalign'] = {
-    command: 'npx',
-    args: ['docalign', 'mcp', '--repo', '.'],
+  settings.mcpServers["docalign"] = {
+    command: "npx",
+    args: ["docalign", "mcp", "--repo", "."],
   };
 
   // Add post-commit hook (new hooks format with matcher + hooks array)
   if (!settings.hooks) settings.hooks = {};
   if (!settings.hooks.PostToolUse) settings.hooks.PostToolUse = [];
 
-  const hookCommand = 'bash -c \'INPUT=$(cat); if echo "$INPUT" | grep -q "git commit"; then echo "[DocAlign] Code committed. Consider running get_doc_health or check_doc to verify documentation is still accurate."; fi\'';
+  const hookCommand =
+    'bash -c \'INPUT=$(cat); if echo "$INPUT" | grep -q "git commit"; then echo "[DocAlign] Code committed. Consider running get_doc_health or check_doc to verify documentation is still accurate."; fi\'';
   const existingHook = settings.hooks.PostToolUse.find(
-    (h) => h.matcher === 'Bash' && h.hooks?.some((hk) => hk.command.includes('DocAlign')),
+    (h) =>
+      h.matcher === "Bash" &&
+      h.hooks?.some((hk) => hk.command.includes("DocAlign")),
   );
   if (!existingHook) {
     settings.hooks.PostToolUse.push({
-      matcher: 'Bash',
-      hooks: [{ type: 'command', command: hookCommand }],
+      matcher: "Bash",
+      hooks: [{ type: "command", command: hookCommand }],
     });
   }
 
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
-  write('  \u2713 .claude/settings.local.json (MCP server + hooks)');
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
+  write("  \u2713 .claude/settings.local.json (MCP server + hooks)");
 
-  // 3. Write skill
-  const skillDir = path.join(claudeDir, 'skills', 'docalign');
+  // 3. Write daily usage skill
+  const skillDir = path.join(claudeDir, "skills", "docalign");
   fs.mkdirSync(skillDir, { recursive: true });
 
-  const skillPath = path.join(skillDir, 'SKILL.md');
+  const skillPath = path.join(skillDir, "SKILL.md");
   fs.writeFileSync(skillPath, SKILL_MD);
-  write('  \u2713 .claude/skills/docalign/SKILL.md (workflow skill)');
+  write("  ✓ .claude/skills/docalign/SKILL.md (daily usage skill)");
 
-  write('');
-  write('Done. Restart Claude Code — DocAlign is ready.');
-  write('');
-  write('Try asking Claude: "Check my docs for drift"');
-  write('');
-  write('Tip: Run `docalign extract` to enable semantic claim tracking.');
+  // 4. Write setup skill
+  const setupSkillDir = path.join(claudeDir, "skills", "docalign-setup");
+  fs.mkdirSync(setupSkillDir, { recursive: true });
+
+  const setupSkillPath = path.join(setupSkillDir, "SKILL.md");
+  const setupSkillMd = getSetupSkillMd();
+  fs.writeFileSync(setupSkillPath, setupSkillMd);
+  write("  ✓ .claude/skills/docalign-setup/SKILL.md (setup wizard)");
+
+  write("");
+  write("✅ DocAlign installation complete!");
+  write("");
+  write("🚀 Next step: Restart Claude Code");
+  write("");
+  write("On restart, the interactive setup wizard will begin:");
+  write("  1. Discover your documentation");
+  write("  2. Let you select which docs to monitor");
+  write("  3. Configure and annotate your docs");
+  write("  4. Run initial verification");
+  write("");
+  write("This takes about 3-5 minutes for most projects.");
 
   return 0;
+}
+
+function getSetupSkillMd(): string {
+  try {
+    // Try to read from the package's skill directory
+    const skillPath = path.join(
+      __dirname,
+      "..",
+      "..",
+      "..",
+      ".claude",
+      "skills",
+      "docalign-setup",
+      "SKILL.md",
+    );
+    if (fs.existsSync(skillPath)) {
+      return fs.readFileSync(skillPath, "utf-8");
+    }
+  } catch {
+    // Fall back to reading from current working directory (development)
+    try {
+      const devPath = path.join(
+        process.cwd(),
+        ".claude",
+        "skills",
+        "docalign-setup",
+        "SKILL.md",
+      );
+      if (fs.existsSync(devPath)) {
+        return fs.readFileSync(devPath, "utf-8");
+      }
+    } catch {
+      // Final fallback
+    }
+  }
+
+  // Fallback content if file not found
+  return `---
+name: docalign-setup
+description: >
+  Interactive setup wizard for DocAlign. 
+  USE ONLY when .docalign/config.yml does not exist.
+metadata:
+  author: DocAlign
+  version: 0.3.0
+---
+
+# DocAlign Interactive Setup
+
+See full documentation at: https://github.com/yourname/docalign
+`;
 }
