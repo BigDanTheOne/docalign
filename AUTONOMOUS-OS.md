@@ -6,7 +6,6 @@
 
 ---
 
-<!-- docalign:skip reason="example_table" description="Team Structure table listing roles, evaluation criteria, and models — describes personas and their mandates, partially falsifiable but the model names are config values, not source code. The role/criteria columns are definitional descriptions of agent identity, not independently falsifiable behavior claims." -->
 ## 1. Team Structure
 
 Five AI personas + CEO (founder). Non-overlapping evaluation criteria are **hardcoded in each persona's system prompt** — no two agents evaluate the same dimension.
@@ -23,13 +22,10 @@ Five AI personas + CEO (founder). Non-overlapping evaluation criteria are **hard
 **Researcher** is stateless — spawned on-demand, no persistent identity. All others are persistent personas with consistent evaluation lenses.
 
 ---
-<!-- /docalign:skip -->
-
 ## 2. Pipeline Types
 
 Three tiers based on **complexity**. Classification at entry.
 
-<!-- docalign:skip reason="illustrative_example" description="Task Pipeline ASCII flow diagram — illustrative pipeline shape, not a falsifiable implementation claim" -->
 ### Task Pipeline
 ```
 Request → [Research?] → Build → Review → Done
@@ -39,9 +35,6 @@ Request → [Research?] → Build → Review → Done
 - **Research** is optional (only if task needs investigation)
 - **Review**: Critic only, 1 round, 1 retry max
 - Examples: bug fix, doc update, dependency upgrade, config change
-<!-- /docalign:skip -->
-
-<!-- docalign:skip reason="illustrative_example" description="Feature Pipeline ASCII flow diagram with bullet descriptions — illustrative; the real authority is feature.yml" -->
 ### Feature Pipeline
 ```
 Signal → Debate → Define → Spec → Spec Review → Build → Build Review → GTM Content → Content Review → Ship
@@ -55,8 +48,6 @@ Signal → Debate → Define → Spec → Spec Review → Build → Build Review
 - **Content Review**: CEO approves GTM content
 - Examples: new CLI command, new check type, new MCP tool
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="Epic Pipeline ASCII flow diagram with bullet descriptions — illustrative; the real authority is epic.yml" -->
 ### Epic Pipeline
 ```
 Signal → Strategic Debate → Decompose → [Feature Pipelines...] → Integration Review → Launch Content → Ship
@@ -69,7 +60,6 @@ Signal → Strategic Debate → Decompose → [Feature Pipelines...] → Integra
 
 ---
 
-<!-- /docalign:skip -->
 ## 3. Review Rules (All Parallel Reviews)
 
 1. **Rejection takes precedence.** Any rejector blocks. Approvals are invalidated.
@@ -104,7 +94,6 @@ Signal → Strategic Debate → Decompose → [Feature Pipelines...] → Integra
 
 ---
 
-<!-- docalign:skip reason="illustrative_example" description="ASCII architecture diagram showing agent depth/hierarchy — illustrative system overview, not independently falsifiable code assertions" -->
 ## 5. Technical Architecture
 
 ```
@@ -160,7 +149,6 @@ Signal → Strategic Debate → Decompose → [Feature Pipelines...] → Integra
 └─────────────────────────────────────────────────────────┘
 ```
 
-<!-- /docalign:skip -->
 ### Dispatch Model
 
 **Primary: Event-driven.** Sub-agent announces trigger immediate parent turns. Zero delay between pipeline steps.
@@ -231,7 +219,6 @@ CREATE TABLE fan_in_tracker (
 
 ---
 
-<!-- docalign:skip reason="illustrative_example" description="Memory Layer section including sample mem0 CLI invocations and recalled-context injection format — these are illustrative usage examples, not falsifiable implementation claims about the actual skill scripts" -->
 ## 7. Memory Layer (Custom Mem0 Skill)
 
 Mem0's core API supports full metadata filtering. The OpenClaw plugin doesn't expose it. Solution: custom skill calling the API directly.
@@ -271,8 +258,6 @@ Agents evaluate relevance rather than blindly incorporating.
 
 ---
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="Debate Mechanism prose with example structured output format blocks — the output format blocks are illustrative templates, not code" -->
 ## 8. Debate Mechanism
 
 Used in Feature "debate" stage and Epic "strategic debate" stage.
@@ -308,8 +293,6 @@ Used in Feature "debate" stage and Epic "strategic debate" stage.
 
 ---
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="Claude Code Handoff section including hypothetical handoff.md template — the markdown template content is an example, not a real file claim" -->
 ## 9. Claude Code Handoff
 
 When CEO wants to "dig deeper" or a build stage requires implementation:
@@ -349,12 +332,10 @@ When CEO wants to "dig deeper" or a build stage requires implementation:
 
 ---
 
-<!-- /docalign:skip -->
 ## 10. Persona System Prompts
 
 Chief uses `SOUL.md` (loaded at depth 0). All sub-agents use `AGENTS.md` (the only persona file loaded by OpenClaw at depth 1+). The prompts below are the core content — implementations add Context, Memory, and Boundaries sections.
 
-<!-- docalign:skip reason="illustrative_example" description="Persona system prompt code blocks (PM, Tech Lead, Critic, GTM, Researcher) — these are prompt templates embedded in the doc as illustration; they may or may not match AGENTS.md files on disk exactly" -->
 ### PM
 ```
 You are the Product Manager for DocAlign.
@@ -496,7 +477,6 @@ SOURCES: [links]
 
 ---
 
-<!-- /docalign:skip -->
 ## 11. OpenClaw Configuration
 
 OpenClaw model assignment uses two distinct fields:
@@ -583,7 +563,6 @@ For the chief (root agent handling Telegram DMs and cron), `model` is what matte
 
 ---
 
-<!-- docalign:skip reason="illustrative_example" description="File Structure section with directory tree — illustrative target layout, files shown may or may not exist" -->
 ## 12. File Structure
 
 OpenClaw sub-agents only load `AGENTS.md` + `TOOLS.md` into their context (NOT `SOUL.md`).
@@ -646,8 +625,6 @@ Therefore: persona prompts for sub-agents go in `AGENTS.md`. The chief (depth 0)
 
 ---
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="Implementation Sequence phase lists — aspirational plan, not falsifiable current-state claims" -->
 ## 13. Implementation Sequence
 
 **Phase 1 — Foundation:**
@@ -676,9 +653,6 @@ Therefore: persona prompts for sub-agents go in `AGENTS.md`. The chief (depth 0)
 - Add Claude Code handoff auto-resume (Heartbeat detects build completion)
 
 ---
-<!-- /docalign:skip -->
-
-<!-- docalign:skip reason="capability_description" description="What OpenClaw Gives Us list — describes platform capabilities, not this project's code" -->
 ## What OpenClaw Gives Us (No Code Needed)
 
 - Sub-agents with nested orchestration (maxSpawnDepth: 2)
@@ -695,8 +669,6 @@ Therefore: persona prompts for sub-agents go in `AGENTS.md`. The chief (depth 0)
 
 ---
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="What We Build table — aspirational component list; some components exist, some may not; too coarse to assert individually" -->
 ## What We Build (Custom Code)
 
 | Component | Description |
@@ -714,7 +686,6 @@ Therefore: persona prompts for sub-agents go in `AGENTS.md`. The chief (depth 0)
 
 ---
 
-<!-- /docalign:skip -->
 ## Design Decisions Log
 
 | Decision | Rationale |

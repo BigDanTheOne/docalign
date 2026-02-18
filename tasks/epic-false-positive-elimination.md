@@ -51,11 +51,9 @@ A full scan of DocAlign's own repository produces **95 drifted claims with 0 tru
 ### Tag Types
 
 ```markdown
-<!-- docalign:skip reason="example_table" -->
 | Category | Example |
 |----------|---------|
 | File paths | `src/auth.ts` referenced but doesn't exist |
-<!-- /docalign:skip -->
 ```
 
 ```markdown
@@ -64,7 +62,6 @@ This project uses express 4.21.
 ```
 
 ```markdown
-<!-- docalign:semantic claim="Uses JWT for authentication" id="a3f8c2" -->
 The AuthService validates JWT tokens on every request.
 ```
 

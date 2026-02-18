@@ -166,7 +166,7 @@ code_patterns:
 
 verification:
   min_severity: low
-  max_claims_per_doc: 100
+  max_claims_per_pr: 50
 
 llm:
   verification_model: claude-sonnet-4-20250514
@@ -224,55 +224,40 @@ Next: Processing documents to extract claims and add annotations...
 
 ### Phase 3: Document Processing (Parallel Sub-Agents)
 
-**Step 3.1: Spawn Sub-Agents**
+**Step 3.1: Prepare context, then spawn sub-agents**
 
-For EACH selected document, spawn a sub-agent using Task tool:
+Before spawning, do this once:
+1. Read the sub-agent spec: `skills/docalign-setup/document-processor.md`
+2. Create the output directory so sub-agents don't race to create it:
+   ```bash
+   mkdir -p .docalign/semantic
+   ```
+
+Then spawn one Task sub-agent per document. Use the context you already have from Phase 2 (you read each document when writing its YAML header) to populate the dynamic context block:
 
 ```
-Spawn sub-agent: Document Processor - {filename}
-```
+Read the Document Processor spec at: {absolute_path_to_repo}/skills/docalign-setup/document-processor.md
 
-**Sub-Agent Task Description:**
-
-```
-You are a Document Processor for DocAlign.
-
-Your task: Process this single document completely.
+Then process this document according to that spec.
 
 Document: {file_path}
+Repository root: {absolute_repo_root}
 
-What to do:
-1. READ the document thoroughly
-2. UNDERSTAND what code/concepts it describes
-3. EXTRACT all claims:
-   - Syntactic: file paths, commands, versions, API routes, env vars
-   - Semantic: behavior descriptions, architecture decisions, config defaults
-4. WRITE TAGS to the document:
-   - <!-- docalign:skip reason="..." --> for examples/tutorials
-   - <!-- docalign:semantic id="..." claim="..." --> for semantic claims
-   - <!-- docalign:claim id="..." type="..." status="..." --> for syntactic claims
-5. STORE semantic claims in .docalign/semantic/{file}.json:
-   - Include evidence entities (code symbols)
-   - Include evidence assertions (grep patterns)
-
-Context provided:
-- The document itself
-- Related source files (if referenced)
-- Package.json / project metadata
-- File tree structure
-
-Rules:
-- Be thorough but precise
-- Only mark clear examples as "skip"
-- Include strong evidence for semantic claims
-- Use ids like: claim-{hash}, semantic-{hash}, skip-{hash}
-
-Return: Summary of what you found and created
+--- Dynamic context ---
+{Add what you observed from briefly scanning the document, e.g.:}
+- Source directories referenced in this doc: src/layers/L1-claim-extractor/, src/cli/
+- Specific files mentioned: src/cli/real-pipeline.ts, package.json
+- Package manager: npm
+- Primary language: TypeScript (strict)
+- Any other notes relevant to finding evidence for claims in this doc
 ```
 
+2. Please ensure that the dynamic context you provide to each sub-agent is complete, relevant, and self-contained to provide the subagent with sufficient information to perform its task correctly.
+
+ 
 **Step 3.2: Parallel Execution**
 
-- All sub-agents run in parallel (one per doc)
+- Spawn ALL sub-agents in parallel
 - Track progress: "Processing 5/8 documents..."
 
 **Step 3.3: Retry Logic**

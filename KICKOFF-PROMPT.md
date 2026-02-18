@@ -10,7 +10,6 @@ Planning is 100% complete. You have everything needed to implement:
 - **Golden integration examples** (IE-01 through IE-04) with exact input→output
 - **Execution plan** with session groupings and dependency order
 
-<!-- docalign:skip reason="tutorial_example" description="Directory listing showing hypothetical state of empty src/, test/, migrations/ directories with illustrative descriptions" -->
 ## Where everything is
 
 ```
@@ -21,8 +20,6 @@ src/              ← empty, ready for code
 test/             ← empty, ready for tests
 migrations/       ← empty, ready for DB migrations
 ```
-<!-- /docalign:skip -->
-
 ## How to navigate
 
 1. **Start with** `tasks/INDEX.md` — master index with epic summary, dependency graph, and v2-deferred items
@@ -30,7 +27,6 @@ migrations/       ← empty, ready for DB migrations
 3. **Each epic file** (e.g., `tasks/e1-infrastructure.md`) lists every task with: files to create, TDD sections to implement, types to use, tests to write, and done-when criteria
 4. **Before implementing any task**, read the referenced TDD sections and `phases/phase4-api-contracts.md` for the exact type signatures
 
-<!-- docalign:skip reason="user_instruction" description="What to do first section — instructions directing the developer to start with specific tasks (Wave 1, Session 1.1), not factual claims about current codebase state" -->
 ## What to do first
 
 **Wave 1, Session 1.1** — Foundation (E1-01, E1-02, E1-03):
@@ -46,7 +42,6 @@ Read `tasks/e1-infrastructure.md` for full details on all 14 E1 tasks and their 
 **Parallel early start** (independent, zero cross-dependencies):
 - **E7-1**: Configuration system — `tasks/e7-fix-config.md`, spec: `phases/phase4d-config-spec.md`
 
-<!-- /docalign:skip -->
 ## Key rules
 
 - TDD is the authority on HOW. Task file is the authority on WHAT to build and test.

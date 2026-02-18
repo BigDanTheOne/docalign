@@ -390,7 +390,6 @@ Yaml
 download
 content_copy
 expand_less
-<!-- docalign:skip reason="illustrative_example" description="Example of a 'good' skill description for a hypothetical Figma design skill — not a claim about this codebase" -->
 # Good - specific and actionable
 description: Analyzes Figma design files and generates developer handoff documentation. Use when user uploads .fig files, asks for "design specs", "component documentation", or "design-to-code handoff".
 code
@@ -398,8 +397,6 @@ Yaml
 download
 content_copy
 expand_less
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="Example of a 'good' skill description for a hypothetical Linear workflow skill — not a claim about this codebase" -->
 # Good - includes trigger phrases
 description: Manages Linear project workflows including sprint planning, task creation, and status tracking. Use when user mentions "sprint", "Linear tasks", "project planning", or asks to "create tickets".
 code
@@ -407,8 +404,6 @@ Yaml
 download
 content_copy
 expand_less
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="illustrative_example" description="Examples of good and bad skill descriptions using hypothetical services (PayFlow, ProjectHub) — not claims about this codebase" -->
 # Good - clear value proposition
 description: End-to-end customer onboarding workflow for PayFlow. Handles account creation, payment setup, and subscription management. Use when user says "onboard new customer", "set up subscription", or "create PayFlow account".
 
@@ -444,8 +439,6 @@ name: your-skill
 description: [--.]
 ---
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="tutorial_example" description="Skill authoring tutorial with template structure, test suites, distribution guide, and troubleshooting — all using hypothetical skill names and workflows, not claims about this project" -->
 # Your Skill Name
 
 ## Instructions
@@ -830,8 +823,6 @@ Markdown
 download
 content_copy
 expand_less
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="tutorial_example" description="Skill workflow patterns (sequential orchestration, multi-MCP coordination, iterative refinement, etc.) with hypothetical MCP tools and services — not claims about this codebase" -->
 ## Workflow: Onboard New Customer
 
 ### Step 1: Create Account
@@ -1426,4 +1417,3 @@ Example Skills - Various workflow patterns
 Partner Skills Directory - View skills from various partners such as Asana, Atlassian, Canva, Figma, Sentry, Zapier, and more
 
 These repositories stay up-to-date and include additional examples beyond what's covered here. Clone them, modify them for your use case, and use them as templates.
-<!-- /docalign:skip -->

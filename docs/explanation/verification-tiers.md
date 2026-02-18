@@ -1,26 +1,7 @@
----
-title: "Verification Tiers"
-summary: "Describes DocAlign's four-tier claim verification system: deterministic checks, pattern-based heuristics, optional LLM verification, and human review."
-description: "Tier 1 (Deterministic): high-confidence direct checks for file paths, dependencies, commands, API routes, code examples, URLs, and anchor links at confidence 1.0. Tier 2 (Pattern-Based): heuristic checks at 0.7-0.9 confidence for env vars, conventions, engine versions, navigation configs, deprecation, license, changelog, frontmatter, and cross-doc consistency. Tier 3 (LLM, optional): Claude-based verification for behavioral, architectural, and config claims requiring ANTHROPIC_API_KEY. Tier 4 (Human Review): uncertain claims after all tiers. Claims only escalate if the current tier cannot decide."
-category: guide
-read_when:
-  - You need to understand why a claim was verified or marked uncertain
-  - You want to know what ANTHROPIC_API_KEY enables
-  - You are designing a new check and deciding which tier it belongs in
-related:
-  - docs/explanation/how-it-works.md
-  - docs/reference/checks.md
-  - docs/contributing/adding-a-check.md
-docalign:
-  setup_date: "2026-02-18T00:00:00Z"
-  monitored: true
----
-
 # Verification Tiers
 
 DocAlign verifies claims through a four-tier system, from fast deterministic checks to human review. Each tier handles the claims that the previous tier couldn't resolve.
 
-<!-- docalign:skip reason="capability_description" description="Tier 1 capability table listing claim types and checks — describes what the tool can detect using generic examples (file paths, dependencies, commands), not factual claims about codebase implementation" -->
 ## Tier 1: Deterministic Checks
 
 Direct evidence-based verification with high confidence. These are fast, reliable, and require no configuration.
@@ -35,13 +16,10 @@ Direct evidence-based verification with high confidence. These are fast, reliabl
 | URLs | Does HTTP HEAD/GET return status 200-399? |
 | Anchor links | Does the target heading exist? Slug generation matches? |
 
-<!-- docalign:semantic id="sem-76b8f056c4ea854c" claim="Tier 1 deterministic checks have confidence 1.0 (pass/fail with no ambiguity)" -->
 **Confidence:** 1.0 (pass/fail with no ambiguity)
 
 **When it can't decide:** File doesn't exist but might be generated at build time, URL returns an ambiguous status, import uses a path alias that DocAlign doesn't resolve.
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="capability_description" description="Tier 2 capability table listing pattern-based checks — describes what the tool can detect using generic examples (env vars, conventions, license), not factual claims about codebase implementation" -->
 ## Tier 2: Pattern-Based Checks
 
 Heuristic verification using well-known file patterns. Slightly lower confidence because patterns may have false positives.
@@ -58,13 +36,10 @@ Heuristic verification using well-known file patterns. Slightly lower confidence
 | Frontmatter | Does YAML `title:` match the first `# Heading`? |
 | Cross-doc consistency | Does the same entity have the same value across all docs? |
 
-<!-- docalign:semantic id="sem-0a48b586a6f06a82" claim="Tier 2 pattern-based checks have confidence 0.7-0.9" -->
 **Confidence:** 0.7-0.9 (high but not certain)
 
 **When it can't decide:** Env var is used in a non-standard way, convention claim is subjective, config file doesn't exist.
 
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="capability_description" description="Tier 3 description of how LLM verification works — the numbered steps and 'When it's used' examples are illustrative, not claims about specific code entities" -->
 ## Tier 3: LLM Verification (Optional)
 
 For claims that can't be checked deterministically, an LLM reads the relevant code and assesses whether the claim holds.
@@ -80,13 +55,10 @@ For claims that can't be checked deterministically, an LLM reads the relevant co
 - Config assumptions: "Rate limited to 100 req/min"
 - Any claim that Tier 1 and Tier 2 couldn't resolve
 
-<!-- docalign:semantic id="sem-c8310d5807f2c838" claim="Tier 3 LLM verification requires ANTHROPIC_API_KEY environment variable" -->
 **Requirements:** `ANTHROPIC_API_KEY` environment variable.
 
-<!-- docalign:semantic id="sem-tier3-confidence-0509" claim="Tier 3 LLM verification has confidence 0.5-0.9 (varies by claim complexity)" -->
 **Confidence:** 0.5-0.9 (varies by claim complexity)
 
-<!-- /docalign:skip -->
 ## Tier 4: Human Review
 
 Claims that remain uncertain after all automated tiers are flagged for human review. These appear with verdict `uncertain` in scan results.
@@ -97,7 +69,6 @@ Claims that remain uncertain after all automated tiers are flagged for human rev
 - Relevant code is obfuscated or uses unusual patterns
 - Claim references external systems not in the repo
 
-<!-- docalign:skip reason="illustrative_example" description="Tier progression ASCII diagram — illustrative flowchart showing the escalation path, not a direct code claim" -->
 ## Tier Progression
 
 ```
@@ -122,8 +93,6 @@ Claim arrives
 [Tier 4: Human Review] --> verdict: uncertain
 ```
 
-<!-- docalign:semantic id="sem-6d73d68918ae8db7" claim="Claims are only escalated to the next tier if the current tier cannot determine a verdict" -->
 Claims are only escalated to the next tier if the current tier cannot determine a verdict. Most claims (file paths, versions, commands) are resolved at Tier 1.
 
 
-<!-- /docalign:skip -->

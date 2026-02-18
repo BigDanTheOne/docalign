@@ -1,21 +1,3 @@
----
-title: "Testing"
-summary: "DocAlign's test structure, fixture helpers, and patterns for writing extraction tests, verification tests, and config tests using Vitest."
-description: "Commands: npm run test, npm run test:watch, npm run typecheck (must pass together after every change). Test structure mirrors src/ under test/layers/ (L0-L7), cli/, config/, shared/. Fixture helpers: makeClaim() (creates Claim with defaults, override specific fields), makeMockIndex() (fields: files, packages, scripts, engines, license, headings, envVars, exports). makeResult() is the production helper used in test assertions. Extraction tests: positive/negative/edge cases, verify claim_type/value/line_number. Verification tests: verified/drifted/fuzzy paths, correct severity. Config tests: defaults for empty config, numeric range validation. Coverage targets: L1 extractors (high), L3 verifiers (high), config (full), CLI (integration-level). Coverage report: npm run test -- --coverage."
-category: guide
-read_when:
-  - You are writing tests for a new extractor or verifier
-  - You need to know which fixture helper to use and its available fields
-  - You want to understand the test coverage expectations per layer
-related:
-  - docs/contributing/design-patterns.md
-  - docs/contributing/adding-a-check.md
-  - CONVENTIONS.md
-docalign:
-  setup_date: "2026-02-18T00:00:00Z"
-  monitored: true
----
-
 # Testing
 
 DocAlign uses Vitest for all testing. Tests mirror the source structure.
@@ -28,12 +10,9 @@ npm run test:watch     # Watch mode (re-run on changes)
 npm run typecheck      # TypeScript type checking (run before tests)
 ```
 
-<!-- docalign:semantic id="semantic-test-typecheck-rule" claim="npm run typecheck && npm run test must pass after every change" -->
 **Rule:** `npm run typecheck && npm run test` must pass after every change.
 
 ## Test Structure
-<!-- docalign:skip reason="tutorial_example" description="Target test/ directory structure diagram — aspirational layout matching the unimplemented src/ structure, not the actual current test/ contents (pre-existing docalign:skip block)" -->
-
 Tests mirror the `src/` directory:
 
 ```
@@ -53,11 +32,8 @@ test/
 ```
 
 ## Test Fixtures
-<!-- /docalign:skip -->
-
 ### makeClaim()
 
-<!-- docalign:skip reason="illustrative_example" description="makeClaim() usage example with hypothetical Claim fields — shows how the fixture would be called, not a real test (pre-existing docalign:skip block)" -->
 Creates a test `Claim` object with sensible defaults. Override only what matters for your test:
 
 ```typescript
@@ -72,9 +48,6 @@ const claim = makeClaim({
 ```
 
 ### makeMockIndex()
-<!-- /docalign:skip -->
-
-<!-- docalign:skip reason="illustrative_example" description="makeMockIndex() usage example with hypothetical CodebaseIndex fields — shows how the fixture would be called, not a real test (pre-existing docalign:skip block)" -->
 Creates a mock `CodebaseIndex` that verifiers use to check claims:
 
 ```typescript
@@ -98,8 +71,6 @@ const index = makeMockIndex({
 - `headings`: Object of file → heading slugs
 - `envVars`: Array of known environment variables
 - `exports`: Object of file → exported symbols
-<!-- /docalign:skip -->
-
 ### makeResult()
 
 Not a test fixture -- this is the production helper used to build `VerificationResult` objects. Tests use it to verify that verifiers produce expected outputs.
@@ -110,8 +81,7 @@ Extraction tests verify that regex patterns correctly identify claims in documen
 
 ```typescript
 describe('extractPathReferences', () => {
-<!-- docalign:skip reason="illustrative_example" description="Writing Extraction Tests section with hypothetical extractPathReferences test code — shows patterns contributors should follow, not actual test implementations (pre-existing docalign:skip block)" -->
-  it('extracts inline file paths', () => {
+it('extracts inline file paths', () => {
     const results = extractPathReferences('See `src/auth.ts` for details', 1, ctx);
     expect(results).toHaveLength(1);
     expect(results[0]).toMatchObject({
@@ -151,11 +121,8 @@ describe('verifyPathReference', () => {
 
     const result = verifyPathReference(claim, index);
     expect(result?.verdict).toBe('verified');
-<!-- /docalign:skip -->
-  });
-<!-- docalign:skip reason="illustrative_example" description="Writing Verification Tests section with hypothetical verifyPathReference test code — shows patterns contributors should follow, not actual test implementations (pre-existing docalign:skip block)" -->
-
-  it('drifts for missing file', () => {
+});
+it('drifts for missing file', () => {
     const claim = makeClaim({ claim_type: 'path_reference', value: 'src/missing.ts' });
     const index = makeMockIndex({ files: ['src/auth.ts'] });
 
@@ -194,16 +161,13 @@ describe('parseConfig', () => {
 
   it('validates numeric ranges', () => {
     const config = parseConfig('verification:\n  max_claims_per_pr: 999');
-<!-- /docalign:skip -->
-    // Should clamp to 200 or warn
-<!-- docalign:skip reason="illustrative_example" description="Config Tests section with hypothetical parseConfig test code — shows patterns contributors should follow, not actual test implementations (pre-existing docalign:skip block)" -->
-  });
+// Should clamp to 200 or warn
+});
 });
 ```
 
 ## Test Coverage
 
-<!-- docalign:semantic id="semantic-test-coverage-targets" claim="Coverage targets: L1 extractors high, L3 verifiers high, Config full coverage, CLI integration-level" -->
 Coverage targets vary by layer:
 - **L1 extractors**: High coverage (each regex pattern tested with positive + negative cases)
 - **L3 verifiers**: High coverage (verified + drifted + edge cases per claim type)
@@ -213,6 +177,5 @@ Coverage targets vary by layer:
 Run coverage report:
 
 ```bash
-<!-- /docalign:skip -->
 npm run test -- --coverage
 ```

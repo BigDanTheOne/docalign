@@ -1,21 +1,3 @@
----
-title: "DocAlign"
-summary: "DocAlign detects documentation drift from code reality and alerts AI agents and developers when docs go stale. Primary interface is MCP for Claude Code; also available as a CLI."
-description: "Product landing page covering installation, how DocAlign works (extract/verify/report pipeline), MCP tools (10 tools), CLI commands, configuration, and links to all documentation sections."
-category: reference
-read_when:
-  - You want to understand what DocAlign does and how to get started
-  - You need an overview of available MCP tools or CLI commands
-  - You are onboarding to the project for the first time
-related:
-  - docs/getting-started.md
-  - docs/reference/mcp-tools.md
-  - docs/reference/cli.md
-docalign:
-  setup_date: "2026-02-18T00:00:00Z"
-  monitored: true
----
-
 # DocAlign
 
 [![npm version](https://img.shields.io/npm/v/docalign)](https://www.npmjs.com/package/docalign)
@@ -34,28 +16,24 @@ Run this from the root of your project:
 curl -fsSL https://raw.githubusercontent.com/BigDanTheOne/docalign/main/scripts/install.sh | bash
 ```
 
-<!-- docalign:semantic id="semantic-install-prerequisites" claim="The script checks prerequisites (Node 18+, git), installs DocAlign globally, runs docalign init to configure the MCP server and skills, then launches Claude Code" -->
 The script checks prerequisites (Node 18+, git), installs DocAlign globally, runs `docalign init` to configure the MCP server and skills, then launches Claude Code. Claude walks you through selecting which docs to monitor and runs the initial extraction — one sub-agent per document, in parallel.
 
 After setup, Claude automatically checks documentation after code changes and answers "are my docs accurate?" directly. No further configuration required.
 
 ## How It Works
 
-<!-- docalign:semantic id="semantic-skill-workflow" claim="On every code change, Claude's DocAlign skill: 1) Finds docs that reference the changed files via get_docs_for_file, 2) Checks those docs for drift via check_doc, 3) Reports specific mismatches with suggested fixes" -->
 **On every code change**, Claude's DocAlign skill:
 
 1. Finds docs that reference the changed files (`get_docs_for_file`)
 2. Checks those docs for drift (`check_doc`)
 3. Reports specific mismatches with suggested fixes
 
-<!-- docalign:semantic id="semantic-parallel-extraction" claim="On first setup, Claude extracts semantic claims in parallel — one sub-agent per document. Subsequent checks use cached claims and are fast." -->
 **On first setup**, Claude walks through your doc files, selects which ones to monitor, and extracts semantic claims in parallel — one sub-agent per document. Subsequent checks use cached claims and are fast.
 
 ## What It Finds
 
 **Syntactic checks** (regex-based, instant):
 
-<!-- docalign:skip reason="example_table" description="Illustrative examples of claim types — hypothetical file paths, package names, commands used as examples" -->
 | Category | Example |
 |----------|---------|
 | File paths | `src/auth.ts` referenced but doesn't exist |
@@ -65,11 +43,8 @@ After setup, Claude automatically checks documentation after code changes and an
 | Code examples | Import from `./utils/helpers` but symbol not exported |
 | Env variables | `DATABASE_URL` documented but missing from `.env.example` |
 | Config values | "Defaults to port 3000" but code uses 8080 |
-<!-- /docalign:skip -->
-
 **Semantic checks** (LLM-powered, via Claude):
 
-<!-- docalign:semantic id="semantic-claims-cache-reverify" claim="Semantic claims are extracted once per document, cached, and re-verified on each scan" -->
 Behavior claims, architecture decisions, and config assumptions — verified against actual code. Extracted once per document, cached, re-verified on each scan.
 
 See [Checks Reference](docs/reference/checks.md) for all claim types.
@@ -109,7 +84,6 @@ See [CLI Reference](docs/reference/cli.md) for all commands and flags.
 
 Works with zero configuration. To customize, create `.docalign.yml`:
 
-<!-- docalign:skip reason="user_instruction" description="Sample .docalign.yml config block — illustrative values for user configuration" -->
 ```yaml
 doc_patterns:
   include: ['README.md', 'docs/**/*.md']
@@ -121,8 +95,6 @@ claim_types:
 verification:
   min_severity: medium   # Only report medium+ issues
 ```
-<!-- /docalign:skip -->
-
 See [Configuration Reference](docs/reference/configuration.md) for all options.
 
 ## Documentation

@@ -1,18 +1,3 @@
----
-title: "Repo Relocation Runbook"
-summary: "Operational runbook for relocating the DocAlign repository, including rollback triggers, symlink governance, and evidence checklist."
-description: "Defines owner (Tech Lead) and on-call role (EOC-primary). Hard rollback triggers: smoke command failure, check:path-hygiene or check:stage-artifacts non-zero, resolver errors, P1 incident or blocked CI >30 minutes. Rollback command: npm run migration:rollback. Compatibility symlink: /Users/kotkot/Discovery/docalign -> /Users/kotkot/docalign, 7-day sunset SLA, extension requires CEO approval. Build-exit evidence checklist: CI logs, local smoke proof, runbook execution record."
-category: reference
-read_when:
-  - You are executing a repository relocation for DocAlign
-  - You need to know when to trigger a rollback during relocation
-  - You need to validate that the relocation completed successfully
-related: []
-docalign:
-  setup_date: "2026-02-18T00:00:00Z"
-  monitored: true
----
-
 # Repo Relocation Runbook
 
 ## Owner / on-call
