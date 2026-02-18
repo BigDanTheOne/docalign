@@ -42,10 +42,17 @@ Scanning for documentation files...
 
 **Step 1.2: Discover Documentation**
 
-1. Use Glob tool to find all markdown files:
-   - `**/*.md`
-   - `**/*.mdx`
-   - Exclude: node_modules/**, .git/**, dist/**, build/**
+1. Run targeted globs first (these must never be missed), then the broad sweep:
+   - `docs/**/*.md` and `docs/**/*.mdx` — always run explicitly
+   - `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md` — root-level standalones
+   - `**/*.md` and `**/*.mdx` — broad sweep to catch everything else
+
+   **Why targeted first:** the broad glob returns at most 100 results and truncates on
+   large repos. Running `docs/**/*.md` explicitly guarantees the docs/ directory is
+   always fully represented even when the broad glob is cut off.
+
+   Deduplicate results across all glob calls. Exclude from all results:
+   node_modules/**, .git/**, dist/**, build/**
 
 2. Categorize each doc:
    - **Core docs:** README.md, docs/\*_/_.md, API docs
