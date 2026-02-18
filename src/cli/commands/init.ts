@@ -793,22 +793,28 @@ export async function runInit(
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
   write("  \u2713 .claude/settings.local.json (MCP server + hooks)");
 
-  // 3. Write daily usage skill
-  const skillDir = path.join(claudeDir, "skills", "docalign");
-  fs.mkdirSync(skillDir, { recursive: true });
+  // 3. Write skills to BOTH project-level AND user-level (~/.claude/skills/)
+  //    Project-level: available when Claude Code opens in this directory
+  //    User-level: always available globally, regardless of working directory
+  const userClaudeDir = path.join(
+    process.env["HOME"] ?? process.env["USERPROFILE"] ?? "~",
+    ".claude",
+  );
 
-  const skillPath = path.join(skillDir, "SKILL.md");
-  fs.writeFileSync(skillPath, SKILL_MD);
+  for (const baseDir of [claudeDir, userClaudeDir]) {
+    const skillDir = path.join(baseDir, "skills", "docalign");
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, "SKILL.md"), SKILL_MD);
+
+    const setupSkillDir = path.join(baseDir, "skills", "docalign-setup");
+    fs.mkdirSync(setupSkillDir, { recursive: true });
+    fs.writeFileSync(path.join(setupSkillDir, "SKILL.md"), SETUP_SKILL_MD);
+  }
+
   write("  ✓ .claude/skills/docalign/SKILL.md (daily usage skill)");
-
-  // 4. Write setup skill
-  const setupSkillDir = path.join(claudeDir, "skills", "docalign-setup");
-  fs.mkdirSync(setupSkillDir, { recursive: true });
-
-  const setupSkillPath = path.join(setupSkillDir, "SKILL.md");
-  const setupSkillMd = SETUP_SKILL_MD;
-  fs.writeFileSync(setupSkillPath, setupSkillMd);
   write("  ✓ .claude/skills/docalign-setup/SKILL.md (setup wizard)");
+  write("  ✓ ~/.claude/skills/docalign/SKILL.md (user-level, global)");
+  write("  ✓ ~/.claude/skills/docalign-setup/SKILL.md (user-level, global)");
 
   // 5. Write setup trigger to CLAUDE.md so setup starts automatically on next Claude Code launch
   const claudeMdPath = path.join(cwd, "CLAUDE.md");
