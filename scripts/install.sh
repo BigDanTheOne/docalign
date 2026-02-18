@@ -142,6 +142,45 @@ else
     exit 1
 fi
 
+# Step 4b: Fix hooks format in settings.local.json
+# The published npm package may write an outdated hooks format.
+# Rewrite to the format Claude Code currently requires.
+SETTINGS_FILE=".claude/settings.local.json"
+if [ -f "$SETTINGS_FILE" ]; then
+    node - <<'EOF'
+const fs = require('fs');
+const file = '.claude/settings.local.json';
+const settings = JSON.parse(fs.readFileSync(file, 'utf-8'));
+
+if (settings.hooks && settings.hooks.PostToolUse) {
+  settings.hooks.PostToolUse = settings.hooks.PostToolUse
+    // Drop malformed entries (missing hooks array)
+    .filter(h => h && typeof h === 'object')
+    .map(h => {
+      // Already correct format
+      if (Array.isArray(h.hooks)) {
+        return {
+          matcher: typeof h.matcher === 'string' ? { tools: [h.matcher] } : h.matcher,
+          hooks: h.hooks,
+        };
+      }
+      // Old flat format: { matcher, pattern, command } -> new nested format
+      if (h.command) {
+        return {
+          matcher: typeof h.matcher === 'string' ? { tools: [h.matcher] } : (h.matcher || { tools: ['Bash'] }),
+          hooks: [{ type: 'command', command: h.command }],
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
+}
+
+fs.writeFileSync(file, JSON.stringify(settings, null, 2) + '\n');
+EOF
+    log_success "Hooks format verified"
+fi
+
 echo ""
 
 # Step 5: Launch Claude Code
