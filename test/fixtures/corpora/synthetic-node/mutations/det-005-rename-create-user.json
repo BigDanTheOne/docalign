@@ -1,0 +1,20 @@
+{
+  "id": "det-005-rename-create-user",
+  "type": "deterministic",
+  "description": "Rename createUser to addUser in UserService.ts — claim C29 becomes false",
+  "changes": [
+    {
+      "file": "src/services/UserService.ts",
+      "operation": "replace_line_matching",
+      "find": "static async createUser(",
+      "replace": "  static async addUser({ name, email, password }: CreateUserInput): Promise<User> {"
+    }
+  ],
+  "expected_findings": [
+    {
+      "claim_id": "C29",
+      "claim_type": "semantic",
+      "verdict": "drifted"
+    }
+  ]
+}

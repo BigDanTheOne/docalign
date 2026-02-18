@@ -1,0 +1,18 @@
+{
+  "id": "det-011-delete-env-example",
+  "type": "deterministic",
+  "description": "Delete .env.example file — claim C09 becomes false",
+  "changes": [
+    {
+      "file": ".env.example",
+      "operation": "delete_file"
+    }
+  ],
+  "expected_findings": [
+    {
+      "claim_type": "path_reference",
+      "claim_text_contains": ".env.example",
+      "verdict": "drifted"
+    }
+  ]
+}

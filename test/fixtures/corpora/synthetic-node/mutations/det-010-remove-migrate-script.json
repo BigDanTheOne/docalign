@@ -1,0 +1,20 @@
+{
+  "id": "det-010-remove-migrate-script",
+  "type": "deterministic",
+  "description": "Rename 'migrate' script to 'db:migrate' in package.json — claim C17 becomes false",
+  "changes": [
+    {
+      "file": "package.json",
+      "operation": "replace_line_matching",
+      "find": "\"migrate\":",
+      "replace": "    \"db:migrate\": \"node-pg-migrate up\""
+    }
+  ],
+  "expected_findings": [
+    {
+      "claim_type": "command",
+      "claim_text_contains": "npm run migrate",
+      "verdict": "drifted"
+    }
+  ]
+}

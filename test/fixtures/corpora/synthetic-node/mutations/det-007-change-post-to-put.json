@@ -1,0 +1,20 @@
+{
+  "id": "det-007-change-post-to-put",
+  "type": "deterministic",
+  "description": "Change router.post to router.put for user creation — claim C25 becomes false",
+  "changes": [
+    {
+      "file": "src/routes/users.ts",
+      "operation": "replace_line_matching",
+      "find": "router.post('/api/v1/users',",
+      "replace": "router.put('/api/v1/users', async (req, res, next) => {"
+    }
+  ],
+  "expected_findings": [
+    {
+      "claim_type": "api_route",
+      "claim_text_contains": "POST /api/v1/users",
+      "verdict": "drifted"
+    }
+  ]
+}

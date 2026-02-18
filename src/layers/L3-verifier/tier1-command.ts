@@ -85,10 +85,11 @@ export async function verifyCommand(
   }
 
   // Step 3: Script not found
+  // Include the manifest file as evidence to avoid 3C-005 downgrade to uncertain.
   return makeResult(claim, {
     verdict: 'drifted',
     severity: 'high' as Severity,
-    evidence_files: [],
+    evidence_files: [getManifestFile(runner)],
     reasoning: `Script '${script}' not found.`,
     specific_mismatch: `Script '${script}' not found.`,
   });

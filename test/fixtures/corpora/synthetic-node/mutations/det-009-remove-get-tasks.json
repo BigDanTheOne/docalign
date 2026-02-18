@@ -1,0 +1,20 @@
+{
+  "id": "det-009-remove-get-tasks",
+  "type": "deterministic",
+  "description": "Change GET /api/v1/tasks path to unregistered path — claim C30 becomes false",
+  "changes": [
+    {
+      "file": "src/routes/tasks.ts",
+      "operation": "replace_line_matching",
+      "find": "router.get('/api/v1/tasks',",
+      "replace": "router.get('/api/v1/tasks-removed', async (req: Request, res, next) => {"
+    }
+  ],
+  "expected_findings": [
+    {
+      "claim_type": "api_route",
+      "claim_text_contains": "GET /api/v1/tasks",
+      "verdict": "drifted"
+    }
+  ]
+}

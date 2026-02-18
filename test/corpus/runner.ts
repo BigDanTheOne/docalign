@@ -14,6 +14,10 @@ import { evaluateSidecar } from './sidecar-evaluator';
 const SKIP_REGION_RE =
   /<!--\s*docalign:skip[^>]*-->[\s\S]*?<!--\s*\/docalign:skip\s*-->/g;
 
+// Regex for stripping docalign:semantic regions (content evaluated by sidecar, not L1)
+const SEMANTIC_REGION_RE =
+  /<!--\s*docalign:semantic[^>]*-->[\s\S]*?<!--\s*\/docalign:semantic\s*-->/g;
+
 /**
  * Recursively load all files under a directory.
  * Returns a Map of relative-path -> content.
@@ -206,36 +210,49 @@ export async function runCorpus(
   const mapper = createMapper(pool, index, learning);
   const verifier = createVerifier(pool, index, mapper);
 
-  // Run L0: index code files
-  const fileChanges: FileChange[] = Array.from(codeFiles.keys()).map((path) => ({
-    filename: path,
-    status: 'added' as const,
-    additions: (codeFiles.get(path) ?? '').split('\n').length,
-    deletions: 0,
-  }));
+  // Run L0: index ALL repo files for repo_files tracking.
+  // updateFromDiff will AST-parse supported code files; non-code files are only tracked in repo_files.
+  const allFileChanges: FileChange[] = Array.from(files.keys())
+    .filter((path) => !path.startsWith('.docalign/'))
+    .map((path) => ({
+      filename: path,
+      status: 'added' as const,
+      additions: (files.get(path) ?? '').split('\n').length,
+      deletions: 0,
+    }));
 
-  if (fileChanges.length > 0) {
-    await index.updateFromDiff(repoId, fileChanges, async (filePath) => {
-      return codeFiles.get(filePath) ?? null;
+  if (allFileChanges.length > 0) {
+    await index.updateFromDiff(repoId, allFileChanges, async (filePath) => {
+      return files.get(filePath) ?? null;
     });
   }
 
   // Run L1: extract claims from doc files
   let claimsExtracted = 0;
 
+  // Build knownPackages from manifest for accurate dep_version extraction
+  const manifest = await index.getManifestMetadata(repoId);
+  const knownPackages = new Set<string>();
+  if (manifest) {
+    for (const pkg of Object.keys(manifest.dependencies ?? {})) knownPackages.add(pkg);
+    for (const pkg of Object.keys(manifest.dev_dependencies ?? {})) knownPackages.add(pkg);
+  }
+
   if (preTags) {
-    // Use pre-tagged content with skip region stripping
+    // Use pre-tagged content with skip and semantic region stripping
     for (const [docPath, rawContent] of docFiles) {
-      // Strip docalign:skip regions before passing to extractor
-      const content = rawContent.replace(SKIP_REGION_RE, '');
-      const claims = await extractor.extractSyntactic(repoId, docPath, content);
+      // Strip docalign:skip and docalign:semantic regions before passing to extractor
+      const content = rawContent
+        .replace(SKIP_REGION_RE, '')
+        .replace(SEMANTIC_REGION_RE, '');
+      const claims = await extractor.extractSyntactic(repoId, docPath, content, undefined, knownPackages);
       claimsExtracted += claims.length;
     }
   } else {
     // For untagged state: run extractSyntactic on untagged content
     // llmFixtures mechanism can be added later when P-EXTRACT prompt API is available
     for (const [docPath, content] of docFiles) {
-      const claims = await extractor.extractSyntactic(repoId, docPath, content);
+      const claims = await extractor.extractSyntactic(repoId, docPath, content, undefined, knownPackages);
       claimsExtracted += claims.length;
     }
   }

@@ -1,0 +1,23 @@
+{
+  "id": "det-014-delete-mcp-json",
+  "type": "deterministic",
+  "description": "Delete .claude/mcp.json file — claims C50 and C57 become false",
+  "changes": [
+    {
+      "file": ".claude/mcp.json",
+      "operation": "delete_file"
+    }
+  ],
+  "expected_findings": [
+    {
+      "claim_type": "path_reference",
+      "claim_text_contains": ".claude/mcp.json",
+      "verdict": "drifted"
+    },
+    {
+      "claim_id": "C57",
+      "claim_type": "semantic",
+      "verdict": "drifted"
+    }
+  ]
+}

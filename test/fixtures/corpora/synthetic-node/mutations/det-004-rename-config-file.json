@@ -1,0 +1,44 @@
+{
+  "id": "det-004-rename-config-file",
+  "type": "deterministic",
+  "description": "Rename src/config/index.ts to src/config/config.ts — claims C04, C06, C12, C13, C14, C15 become false",
+  "changes": [
+    {
+      "operation": "rename_file",
+      "from": "src/config/index.ts",
+      "to": "src/config/config.ts"
+    }
+  ],
+  "expected_findings": [
+    {
+      "claim_type": "path_reference",
+      "claim_text_contains": "src/config/index.ts",
+      "verdict": "drifted"
+    },
+    {
+      "claim_id": "C06",
+      "claim_type": "semantic",
+      "verdict": "drifted"
+    },
+    {
+      "claim_id": "C12",
+      "claim_type": "semantic",
+      "verdict": "drifted"
+    },
+    {
+      "claim_id": "C13",
+      "claim_type": "semantic",
+      "verdict": "drifted"
+    },
+    {
+      "claim_id": "C14",
+      "claim_type": "semantic",
+      "verdict": "drifted"
+    },
+    {
+      "claim_id": "C15",
+      "claim_type": "semantic",
+      "verdict": "drifted"
+    }
+  ]
+}

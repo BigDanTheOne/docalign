@@ -1,0 +1,25 @@
+{
+  "id": "det-013-rename-complete-task-tool",
+  "type": "deterministic",
+  "description": "Rename MCP tool 'complete_task' to 'finish_task' in src/mcp/server.ts — claims C51 and C54 become false",
+  "changes": [
+    {
+      "file": "src/mcp/server.ts",
+      "operation": "replace_line_matching",
+      "find": "server.tool('complete_task',",
+      "replace": "server.tool('finish_task',"
+    }
+  ],
+  "expected_findings": [
+    {
+      "claim_id": "C51",
+      "claim_type": "semantic",
+      "verdict": "drifted"
+    },
+    {
+      "claim_id": "C54",
+      "claim_type": "semantic",
+      "verdict": "drifted"
+    }
+  ]
+}

@@ -150,10 +150,11 @@ export async function verifyPathReference(
   }
 
   // Step 3: No file, no similar match
+  // Use the source doc file as evidence to avoid 3C-005 downgrade to uncertain.
   return makeResult(claim, {
     verdict: 'drifted',
     severity: 'high' as Severity,
-    evidence_files: [],
+    evidence_files: [claim.source_file],
     reasoning: `File '${path}' not found.`,
     specific_mismatch: `File path '${path}' does not exist.`,
   });

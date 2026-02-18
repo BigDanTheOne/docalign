@@ -1,0 +1,28 @@
+{
+  "id": "det-015-delete-agents-file",
+  "type": "deterministic",
+  "description": "Delete .claude/agents/taskflow.md file — claims C55, C56, and C58 become false",
+  "changes": [
+    {
+      "file": ".claude/agents/taskflow.md",
+      "operation": "delete_file"
+    }
+  ],
+  "expected_findings": [
+    {
+      "claim_type": "path_reference",
+      "claim_text_contains": ".claude/agents/taskflow.md",
+      "verdict": "drifted"
+    },
+    {
+      "claim_id": "C56",
+      "claim_type": "semantic",
+      "verdict": "drifted"
+    },
+    {
+      "claim_id": "C58",
+      "claim_type": "semantic",
+      "verdict": "drifted"
+    }
+  ]
+}

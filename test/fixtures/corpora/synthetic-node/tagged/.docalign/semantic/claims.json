@@ -1,0 +1,209 @@
+{
+  "claims": [
+    {
+      "id": "C05",
+      "claim_text": "JWT authentication, rate limiting, and structured logging included",
+      "evidence_assertions": [
+        { "pattern": "import jwt from 'jsonwebtoken'", "scope": "src/middleware/auth.ts", "expect": "exists" },
+        { "pattern": "max: 100", "scope": "src/middleware/rateLimit.ts", "expect": "exists" },
+        { "pattern": "import pino from 'pino'", "scope": "src/middleware/logger.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C06",
+      "claim_text": "Server runs on port 3000 by default",
+      "evidence_assertions": [
+        { "pattern": "process.env.PORT ?? '3000'", "scope": "src/config/index.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C12",
+      "claim_text": "PORT default 3000",
+      "evidence_assertions": [
+        { "pattern": "process.env.PORT ?? '3000'", "scope": "src/config/index.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C13",
+      "claim_text": "RATE_LIMIT_MAX default 100",
+      "evidence_assertions": [
+        { "pattern": "process.env.RATE_LIMIT_MAX ?? '100'", "scope": "src/config/index.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C14",
+      "claim_text": "src/config/index.ts is the central config module",
+      "evidence_assertions": [
+        { "pattern": "DATABASE_URL", "scope": "src/config/index.ts", "expect": "exists" },
+        { "pattern": "JWT_SECRET", "scope": "src/config/index.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C15",
+      "claim_text": "All env vars have documented defaults except DATABASE_URL and JWT_SECRET",
+      "evidence_assertions": [
+        { "pattern": "DATABASE_URL: process.env.DATABASE_URL,", "scope": "src/config/index.ts", "expect": "exists" },
+        { "pattern": "JWT_SECRET: process.env.JWT_SECRET,", "scope": "src/config/index.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C19",
+      "claim_text": "All endpoints prefixed with /api/v1",
+      "evidence_assertions": [
+        { "pattern": "app.use('/api/v1'", "scope": "src/index.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C20",
+      "claim_text": "All responses are application/json",
+      "evidence_assertions": [
+        { "pattern": "app.use(express.json())", "scope": "src/index.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C21",
+      "claim_text": "Unauthenticated requests receive 401 Unauthorized",
+      "evidence_assertions": [
+        { "pattern": "res.status(401)", "scope": "src/middleware/auth.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C22",
+      "claim_text": "Rate limit: 100 requests per 15 minutes per IP",
+      "evidence_assertions": [
+        { "pattern": "max: 100", "scope": "src/middleware/rateLimit.ts", "expect": "exists" },
+        { "pattern": "windowMs: 15 * 60 * 1000", "scope": "src/middleware/rateLimit.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C28",
+      "claim_text": "POST /api/v1/users returns 201 Created with user object",
+      "evidence_assertions": [
+        { "pattern": "res.status(201)", "scope": "src/routes/users.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C29",
+      "claim_text": "UserService exposes a createUser method for user creation",
+      "evidence_assertions": [
+        { "pattern": "createUser", "scope": "src/services/UserService.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C34",
+      "claim_text": "Tasks are scoped to the authenticated user",
+      "evidence_assertions": [
+        { "pattern": "req.user.id", "scope": "src/routes/tasks.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C37",
+      "claim_text": "Request pipeline: Logger → Auth → RateLimit → Route Handler → ErrorHandler",
+      "evidence_assertions": [
+        { "pattern": "app.use(pinoHttp())", "scope": "src/index.ts", "expect": "exists" },
+        { "pattern": "app.use(errorHandler)", "scope": "src/index.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C39",
+      "claim_text": "Notifications use an event-driven model via src/events/emitter.ts",
+      "evidence_assertions": [
+        { "pattern": "emitter.emit('task.completed'", "scope": "src/services/TaskService.ts", "expect": "exists" },
+        { "pattern": "emitter.on('task.completed'", "scope": "src/services/NotificationService.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C41",
+      "claim_text": "Logger middleware attaches requestId and duration to every log line",
+      "evidence_assertions": [
+        { "pattern": "requestId", "scope": "src/middleware/logger.ts", "expect": "exists" },
+        { "pattern": "duration", "scope": "src/middleware/logger.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C42",
+      "claim_text": "Auth middleware attaches decoded payload to req.user",
+      "evidence_assertions": [
+        { "pattern": "req.user = decoded", "scope": "src/middleware/auth.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C43",
+      "claim_text": "ErrorHandler is registered last — catches all unhandled errors",
+      "evidence_assertions": [
+        { "pattern": "app.use(errorHandler)", "scope": "src/index.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C44",
+      "claim_text": "TaskService emits task.completed event when task status set to done",
+      "evidence_assertions": [
+        { "pattern": "emitter.emit('task.completed', task)", "scope": "src/services/TaskService.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C45",
+      "claim_text": "NotificationService subscribes to task.completed",
+      "evidence_assertions": [
+        { "pattern": "emitter.on('task.completed'", "scope": "src/services/NotificationService.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C46",
+      "claim_text": "UserService uses bcrypt with cost factor 12",
+      "evidence_assertions": [
+        { "pattern": "bcrypt.hash(password, 12)", "scope": "src/services/UserService.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C51",
+      "claim_text": "MCP server exposes 4 tools: get_tasks, create_task, complete_task, get_users",
+      "evidence_assertions": [
+        { "pattern": "complete_task", "scope": "src/mcp/server.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C52",
+      "claim_text": "create_task accepts title (string, required) and assigneeId (string, optional)",
+      "evidence_assertions": [
+        { "pattern": "assigneeId:", "scope": "src/mcp/server.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C53",
+      "claim_text": "MCP server shares the database connection with the REST API",
+      "evidence_assertions": [
+        { "pattern": "import { client } from '../db/client'", "scope": "src/mcp/server.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C54",
+      "claim_text": "complete_task sets task status to done and emits task.completed",
+      "evidence_assertions": [
+        { "pattern": "task.completed", "scope": "src/mcp/server.ts", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C56",
+      "claim_text": "The agent has access to all 4 MCP tools",
+      "evidence_assertions": [
+        { "pattern": "get_tasks", "scope": ".claude/agents/taskflow.md", "expect": "exists" },
+        { "pattern": "complete_task", "scope": ".claude/agents/taskflow.md", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C57",
+      "claim_text": "The agent is scoped to the current repository via cwd setting",
+      "evidence_assertions": [
+        { "pattern": "\"cwd\"", "scope": ".claude/mcp.json", "expect": "exists" }
+      ]
+    },
+    {
+      "id": "C58",
+      "claim_text": "Invoking /taskflow creates a task from current context",
+      "evidence_assertions": [
+        { "pattern": "/taskflow", "scope": ".claude/agents/taskflow.md", "expect": "exists" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "det-003-rename-dev-script",
+  "type": "deterministic",
+  "description": "Rename 'dev' script to 'start:dev' in package.json — claims C03 and C08 become false",
+  "changes": [
+    {
+      "file": "package.json",
+      "operation": "replace_line_matching",
+      "find": "\"dev\":",
+      "replace": "    \"start:dev\": \"tsx watch src/index.ts\","
+    }
+  ],
+  "expected_findings": [
+    {
+      "claim_type": "command",
+      "claim_text_contains": "npm run dev",
+      "verdict": "drifted"
+    }
+  ]
+}

@@ -150,7 +150,7 @@ const KNOWN_FILE_EXTENSIONS = new Set([
   '.md', '.mdx', '.rst', '.txt', '.html', '.htm', '.adoc', '.tex', '.pdf',
   // Config
   '.json', '.yaml', '.yml', '.toml', '.xml', '.ini', '.env', '.cfg', '.conf',
-  '.properties', '.lock', '.sum', '.mod',
+  '.properties', '.lock', '.sum', '.mod', '.example',
   // Build/infra
   '.sql', '.graphql', '.gql', '.proto', '.wasm', '.wat', '.log', '.csv',
   // Special dot-files

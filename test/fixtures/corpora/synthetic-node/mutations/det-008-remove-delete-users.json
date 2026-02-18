@@ -1,0 +1,20 @@
+{
+  "id": "det-008-remove-delete-users",
+  "type": "deterministic",
+  "description": "Change DELETE /api/v1/users/:id to /api/v2/users/:id — claim C27 becomes false",
+  "changes": [
+    {
+      "file": "src/routes/users.ts",
+      "operation": "replace_line_matching",
+      "find": "router.delete('/api/v1/users/:id',",
+      "replace": "router.delete('/api/v2/users/:id', async (req, res, next) => {"
+    }
+  ],
+  "expected_findings": [
+    {
+      "claim_type": "api_route",
+      "claim_text_contains": "DELETE /api/v1/users/:id",
+      "verdict": "drifted"
+    }
+  ]
+}

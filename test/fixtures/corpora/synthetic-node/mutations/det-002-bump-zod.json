@@ -1,0 +1,20 @@
+{
+  "id": "det-002-bump-zod",
+  "type": "deterministic",
+  "description": "Bump zod from 3.22.0 to 3.23.0 — claim C02 becomes false",
+  "changes": [
+    {
+      "file": "package.json",
+      "operation": "set_json_field",
+      "path": "dependencies.zod",
+      "value": "3.23.0"
+    }
+  ],
+  "expected_findings": [
+    {
+      "claim_type": "dependency_version",
+      "claim_text_contains": "3.22.0",
+      "verdict": "drifted"
+    }
+  ]
+}

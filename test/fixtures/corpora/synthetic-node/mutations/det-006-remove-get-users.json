@@ -1,0 +1,20 @@
+{
+  "id": "det-006-remove-get-users",
+  "type": "deterministic",
+  "description": "Change GET /api/v1/users path to unregistered path — claim C23 becomes false",
+  "changes": [
+    {
+      "file": "src/routes/users.ts",
+      "operation": "replace_line_matching",
+      "find": "router.get('/api/v1/users',",
+      "replace": "router.get('/api/v1/users-removed', async (_req, res, next) => {"
+    }
+  ],
+  "expected_findings": [
+    {
+      "claim_type": "api_route",
+      "claim_text_contains": "GET /api/v1/users",
+      "verdict": "drifted"
+    }
+  ]
+}

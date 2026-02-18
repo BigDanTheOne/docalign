@@ -1,0 +1,20 @@
+{
+  "id": "det-012-bump-pino",
+  "type": "deterministic",
+  "description": "Bump pino from 8.15.0 to 9.0.0 — claim C40 becomes false",
+  "changes": [
+    {
+      "file": "package.json",
+      "operation": "set_json_field",
+      "path": "dependencies.pino",
+      "value": "9.0.0"
+    }
+  ],
+  "expected_findings": [
+    {
+      "claim_type": "dependency_version",
+      "claim_text_contains": "pino 8.15.0",
+      "verdict": "drifted"
+    }
+  ]
+}
