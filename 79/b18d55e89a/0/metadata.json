@@ -1,0 +1,23 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "79b18d55e89a",
+  "session_id": "d2807ac8-396a-4177-93dd-f363775e2110",
+  "strategy": "auto-commit",
+  "created_at": "2026-02-18T15:01:38.648405Z",
+  "branch": "feature/interactive-install",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "dogfood-report.md"
+  ],
+  "agent": "Claude Code",
+  "transcript_identifier_at_start": "698ca42d-5267-483c-b0d0-b75008614d4c",
+  "checkpoint_transcript_start": 536,
+  "transcript_lines_at_start": 536,
+  "token_usage": {
+    "input_tokens": 4,
+    "cache_creation_tokens": 112219,
+    "cache_read_tokens": 201085,
+    "output_tokens": 2,
+    "api_call_count": 2
+  }
+}

@@ -1,0 +1,24 @@
+# Session Context
+
+**Session ID:** d2807ac8-396a-4177-93dd-f363775e2110
+
+**Commit Message:** Pls write it as a self-contained markdown report
+
+## Prompt
+
+pls write it as a self-contained markdown report
+
+## Summary
+
+Written to `dogfood-report.md` at the repo root. Here's what's in it:
+
+- **Numbers up front:** 42 flagged findings, 12 true positives, 28 false positives, ~29% precision
+- **True positives table:** All 10 genuine bugs with exact files, lines, what the doc says vs. what the code does
+- **False positives broken into 6 root-cause categories:** each with examples and the actual code evidence
+- **False negatives:** 5 things the pipeline missed
+- **Extract performance analysis:** table of all root causes and their impact
+- **Priority lists:** top bugs to fix, top verifier accuracy issues
+
+## Key Actions
+
+- - **Write**: /Users/kotkot/docalign/dogfood-report.md
