@@ -1,0 +1,40 @@
+Good — suppress rules removed. Now let me stop and discuss rather than immediately re-implementing.
+
+There are three distinct root causes producing the false positives, each with a different fix:
+
+---
+
+### Root Cause 1: Phase 1 skip classification doesn't know about document types
+
+The prompt lists 6 content patterns to skip (tables, CLI output, etc.) but doesn't reason about **document intent**. A naming conventions doc, a contributing guide, and a runbook are fundamentally different from a user guide — almost all examples in them are illustrative by nature. Claude doesn't have this context, so it defaults to "real claim, don't skip."
+
+**Fix option**: Teach Phase 1 to first classify the document's type, then apply type-specific rules. A "conventions guide" → all named examples are illustrations. A "contributing/tutorial guide" → template placeholders aren't real. A "runbook" → SLA/policy notes aren't codebase claims.
+
+---
+
+### Root Cause 2: L1 syntactic extractor runs before any skip tags are written
+
+`docalign check` and `docalign scan` read the raw file, strip HTML but **respect existing skip tags** — so skip tags do work. But skip tags are only written by `docalign extract`. If extract hasn't run (or didn't tag a region), the syntactic extractor catches everything. This creates a two-pass dependency that the user has to manage.
+
+**Fix option A**: Make `extract` mandatory / auto-run before `check`. Heavy.  
+**Fix option B**: Teach the syntactic extractor itself to detect and skip illustrative-example contexts (backtick-enclosed filenames inside a bullet list that starts with a naming rule phrase).  
+**Fix option C**: Keep the dependency but make Phase 1 reliably tag all the known FP patterns.
+
+---
+
+### Root Cause 3: L3 verifier probes wrong evidence entities for behavioral claims
+
+Claims like "docalign extract uses Claude" are extracted as semantic claims, then the verifier looks for a code entity called `claudeBridge` — wrong level of abstraction. The claim is about system behavior, the verifier checks for a specific symbol.
+
+**Fix option**: These behavioral/description claims probably shouldn't be extracted in the first place (Phase 2 should skip them — they fail the "specific and falsifiable" bar). The right fix is a tighter Phase 2 extraction filter, not suppression.
+
+---
+
+### Which to prioritize?
+
+My take:
+- **Root Cause 1** (Phase 1 type-awareness) is the highest leverage — it prevents the most FPs with a single prompt improvement, re-runnable on all docs
+- **Root Cause 3** (tighter Phase 2 filter) is also prompt-only and would clean up the behavioral claim FPs  
+- **Root Cause 2** (syntactic extractor) is inherent to the two-pass design and harder to fix without architecture changes
+
+What's your thinking — do you want to tackle all three, or focus on Phase 1 + 2 first?

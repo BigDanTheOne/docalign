@@ -1,0 +1,1 @@
+I can see that you are adding suppression rules manually, yet we don't want to create ad hocs. We want to systematically improve our product. There should be no need to manually pass these suppressions if we had a smart enough extraction step.
