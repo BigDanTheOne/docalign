@@ -1,7 +1,12 @@
 ---
 title: "Troubleshooting"
+summary: "Common errors, unexpected results, and debugging steps"
 description: "Use when DocAlign produces unexpected results, errors, or you need to debug issues."
 category: "guide"
+read_when:
+  - DocAlign is producing unexpected results or errors
+  - A scan result looks wrong and you need to debug it
+  - You want to understand why a specific claim was flagged
 related:
   - docs/reference/cli.md
   - docs/reference/configuration.md
@@ -14,6 +19,7 @@ related:
 **Symptom:** `docalign scan` reports 0 files scanned.
 
 **Cause:** DocAlign looks for files matching its default patterns (`README.md`, `docs/**/*.md`, etc.) from the directory where you run the command.
+<!-- docalign:skip reason="user_instruction" description="YAML config example showing how to configure doc_patterns — instructional content telling the user what to write, not a factual claim about current defaults" -->
 
 **Fix:** Run from your repository root. If your docs are in a non-standard location, configure `doc_patterns` in `.docalign.yml`:
 
@@ -24,6 +30,7 @@ doc_patterns:
     - 'wiki/**/*.md'
 ```
 
+<!-- /docalign:skip -->
 ## False positives on file paths
 
 **Symptom:** DocAlign reports a file path as drifted, but it exists.
@@ -32,12 +39,14 @@ doc_patterns:
 
 **Fix:** Either update the doc to use a repo-root-relative path, or suppress the finding:
 
+<!-- docalign:skip reason="user_instruction" description="YAML suppress config example — instructional snippet showing how to suppress path findings, not a claim about existing config" -->
 ```yaml
 suppress:
   - file: 'docs/examples.md'
     claim_type: path_reference
 ```
 
+<!-- /docalign:skip -->
 ## URL checks timing out
 
 **Symptom:** Many URL claims show as `uncertain` with timeout errors.
@@ -46,6 +55,7 @@ suppress:
 
 **Fix:** Increase the timeout or exclude slow domains:
 
+<!-- docalign:skip reason="user_instruction" description="YAML url_check config examples showing how to increase timeout or disable URL checking — instructional content, not factual claims" -->
 ```yaml
 url_check:
   timeout_ms: 10000
@@ -60,12 +70,14 @@ url_check:
   enabled: false
 ```
 
+<!-- /docalign:skip -->
 ## Too many findings
 
 **Symptom:** DocAlign reports dozens of drifted claims and the output is overwhelming.
 
 **Fix options:**
 
+<!-- docalign:skip reason="user_instruction" description="YAML config examples for min_severity and suppress options, plus CLI usage instruction — instructional remediation steps" -->
 1. Raise the severity floor to focus on important issues:
    ```yaml
    verification:
@@ -81,6 +93,7 @@ url_check:
 
 3. Use `docalign check <file>` to fix one file at a time instead of scanning everything.
 
+<!-- /docalign:skip -->
 ## Semantic extraction fails
 
 **Symptom:** `docalign extract` shows an error.
@@ -88,12 +101,14 @@ url_check:
 **Cause:** Semantic extraction requires the `claude` CLI to be installed and authenticated (part of Claude Code).
 
 **Fix:** Install Claude Code and authenticate:
+<!-- docalign:skip reason="user_instruction" description="Bash command block instructing user to install Claude Code and authenticate — user instruction, not a factual claim about the codebase" -->
 
 ```bash
 claude   # Follow the authentication prompts
 docalign extract
 ```
 
+<!-- /docalign:skip -->
 ## Config file not being picked up
 
 **Symptom:** Changes to `.docalign.yml` don't take effect.
@@ -111,6 +126,7 @@ docalign extract
 1. Run `docalign status` to check MCP integration status
 2. Verify `.claude/mcp.json` (or equivalent) has the correct entry:
    ```json
+<!-- docalign:skip reason="user_instruction" description="JSON MCP config example and list of remediation steps (restart client, run docalign init) — instructional content" -->
    {
      "mcpServers": {
        "docalign": {
@@ -123,6 +139,7 @@ docalign extract
 3. Restart your MCP client (Claude Code, Cursor, etc.)
 4. Try `docalign init` to reconfigure automatically
 
+<!-- /docalign:skip -->
 ## Exit code 1 but no visible drift
 
 **Symptom:** `docalign check` exits with code 1, but `--verbose` shows all claims verified.

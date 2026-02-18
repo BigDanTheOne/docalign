@@ -1,7 +1,12 @@
 ---
 title: "Design Patterns"
+summary: "Recurring code patterns and conventions used throughout DocAlign"
 description: "Use when you need to understand recurring code patterns and conventions used throughout DocAlign."
 category: "contributing"
+read_when:
+  - Writing a new verifier, extractor, or test
+  - Understanding makeResult, findCloseMatch, or other shared utilities
+  - Looking up the established convention for a specific pattern
 related:
   - docs/contributing/architecture.md
   - docs/contributing/adding-a-check.md

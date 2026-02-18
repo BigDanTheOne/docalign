@@ -10,6 +10,8 @@
  * - Output format (JSON with claims array)
  */
 
+import type { DocMapEntry } from '../doc-map';
+
 export const SEMANTIC_EXTRACT_SYSTEM_PROMPT = `You analyze documentation in two phases: first classify which regions are illustrative/instructional (not factual claims about the current codebase), then extract specific falsifiable semantic claims from the real content. For Phase 2 evidence gathering, use the Task tool to investigate multiple claims in parallel — launch all sub-agents simultaneously in a single message, not one-by-one. You are ruthlessly selective: skip vague descriptions, skip anything regex can catch (commands, paths, versions, env vars), skip marketing language. Only extract claims where you can find concrete code evidence. Return valid JSON.`;
 
 /**
@@ -17,14 +19,21 @@ export const SEMANTIC_EXTRACT_SYSTEM_PROMPT = `You analyze documentation in two 
  *
  * @param sectionText - Pre-formatted section content (heading + lines + body)
  * @param repoPath - Absolute path to the repository root
+ * @param docContext - Optional doc-map entry for this file (from Step 0)
  */
-export function buildSemanticExtractPrompt(sectionText: string, repoPath: string): string {
+export function buildSemanticExtractPrompt(
+  sectionText: string,
+  repoPath: string,
+  docContext?: DocMapEntry,
+): string {
+  const contextBlock = docContext ? buildDocContextBlock(docContext) : '';
+
   return `You are analyzing documentation in a codebase at: ${repoPath}
 
 Work in two phases. Return a single JSON object with both phases' results.
 
 ---
-
+${contextBlock}
 ## PHASE 1 — Document Classification (no tools needed)
 
 Read the documentation sections below and identify regions that should be SKIPPED by the claim extractor. These are regions that contain illustrative content, not factual claims about the current codebase.
@@ -180,4 +189,36 @@ It is completely fine to return \`{"skip_regions": [], "claims": []}\` if there 
 Documentation sections to analyze:
 
 ${sectionText}`;
+}
+
+/**
+ * Build the document context block injected at the top of Phase 1.
+ * Only included when a doc-map entry exists for the file.
+ */
+function buildDocContextBlock(entry: DocMapEntry): string {
+  const lines: string[] = [
+    '',
+    '## Document Context (pre-classified by Step 0)',
+    '',
+    `This document has been classified as **${entry.doc_type}** (audience: ${entry.audience}).`,
+  ];
+
+  if (entry.skip_hint) {
+    lines.push('');
+    lines.push(`**Skip guidance**: ${entry.skip_hint}`);
+    lines.push(
+      'Use this to inform Phase 1: if the skip guidance says this file is full of templates or examples, be more aggressive in marking code blocks and step-by-step sections as illustrative.',
+    );
+  }
+
+  if (entry.extraction_notes) {
+    lines.push('');
+    lines.push(`**Extraction notes**: ${entry.extraction_notes}`);
+  }
+
+  lines.push('');
+  lines.push('---');
+  lines.push('');
+
+  return lines.join('\n');
 }

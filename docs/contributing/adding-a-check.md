@@ -1,7 +1,12 @@
 ---
 title: "Adding a Check"
+summary: "Step-by-step guide for adding new claim types and verifiers to DocAlign"
 description: "Use when you want to add a new claim type or verification check to DocAlign."
 category: "contributing"
+read_when:
+  - Adding a new claim type to DocAlign
+  - Writing a new extractor or verifier function
+  - Understanding the extractor-verifier registration pattern
 related:
   - docs/contributing/design-patterns.md
   - docs/contributing/testing.md
@@ -36,6 +41,7 @@ export type ClaimType =
 
 In `src/config/schema.ts`, add it to the `claimTypeEnum` and `claim_types` config section so it can be enabled/disabled.
 
+<!-- docalign:skip reason="user_instruction" description="Step 2 code block showing a hypothetical extractor function template (extractYourNewType) — this is instructional scaffolding, not a factual claim about existing code" -->
 ## Step 2: Write the Extractor
 
 Add a function in `src/layers/L1-claim-extractor/extractors.ts`:
@@ -65,7 +71,9 @@ export function extractYourNewType(
 ```
 
 Register it in the extraction pipeline in `src/layers/L1-claim-extractor/syntactic.ts`.
+<!-- /docalign:skip -->
 
+<!-- docalign:skip reason="user_instruction" description="Step 3 code blocks showing a hypothetical verifier function template (verifyYourNewType) and router registration — instructional scaffolding, not existing code" -->
 ## Step 3: Write the Verifier
 
 Add a verification function. Follow the verifier pattern:
@@ -108,9 +116,11 @@ Register it in the verifier router in `src/layers/L3-verifier/index.ts`:
 case 'your_new_type':
   return verifyYourNewType(claim, index);
 ```
+<!-- /docalign:skip -->
 
 ## Step 4: Write Tests
 
+<!-- docalign:skip reason="illustrative_example" description="Extraction test scaffolding showing hypothetical test structure for extractYourNewType — illustrative template, not a real test" -->
 ### Extraction tests
 
 In `test/layers/L1-claim-extractor/`:
@@ -131,6 +141,8 @@ describe('extractYourNewType', () => {
 });
 ```
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="Verification test scaffolding showing hypothetical test structure for verifyYourNewType — illustrative template, not a real test" -->
 ### Verification tests
 
 In `test/layers/L3-verifier/`:
@@ -163,6 +175,7 @@ describe('verifyYourNewType', () => {
 });
 ```
 
+<!-- /docalign:skip -->
 ## Step 5: Verify
 
 ```bash

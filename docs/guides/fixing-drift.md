@@ -1,7 +1,12 @@
 ---
 title: "Fixing Drift"
+summary: "Generate and apply fix suggestions for drifted documentation claims"
 description: "Use when you want to generate and apply fix suggestions for drifted documentation claims."
 category: "guide"
+read_when:
+  - DocAlign has found drift and you want suggested fixes
+  - Applying or reviewing auto-generated documentation fixes
+  - Understanding how the fix workflow works
 related:
   - docs/guides/checking-files.md
   - docs/reference/cli.md
@@ -35,6 +40,7 @@ Use fix_doc with file="README.md"
 
 Fix suggestions come in two forms:
 
+<!-- docalign:skip reason="illustrative_example" description="Deterministic fixes section shows hypothetical examples of fix suggestions (version numbers, script names, paths) that illustrate what the tool produces, not real claims about this project's code" -->
 ### Deterministic fixes
 
 For claims with clear correct values, DocAlign suggests exact replacements:
@@ -43,6 +49,7 @@ For claims with clear correct values, DocAlign suggests exact replacements:
 - **Missing script**: "Change `npm run deploy` to `npm run build`" (closest match)
 - **Wrong path**: "Change `src/auth.ts` to `src/auth/index.ts`" (fuzzy match)
 
+<!-- /docalign:skip -->
 ### LLM-generated fixes
 
 For complex claims, an LLM reads the relevant code and suggests line-level replacements. These include the original text, suggested replacement, and reasoning.
@@ -69,6 +76,7 @@ verification:
 
 Auto-fix applies changes directly to your documentation files. Only deterministic fixes (version numbers, paths) with confidence above the threshold are applied. LLM suggestions are never auto-applied.
 
+<!-- docalign:skip reason="illustrative_example" description="Report drift manually section shows a hypothetical MCP usage example with invented file/claim values, not a factual claim about the current codebase" -->
 ## Report drift manually
 
 If you notice a doc error during work that DocAlign didn't catch:
@@ -82,3 +90,5 @@ Use report_drift via MCP:
 ```
 
 Reports are stored in `.docalign/reports/` for tracking.
+
+<!-- /docalign:skip -->

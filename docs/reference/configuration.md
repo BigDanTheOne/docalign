@@ -1,7 +1,12 @@
 ---
 title: "Configuration Reference"
+summary: ".docalign.yml schema — all fields, types, and defaults"
 description: "Use when you need the exact field names, types, defaults, and validation rules for .docalign.yml."
 category: "reference"
+read_when:
+  - Configuring DocAlign for a specific repository
+  - Looking up an exact field name or its default value
+  - Understanding what a configuration option does
 related:
   - docs/guides/custom-configuration.md
   - docs/guides/suppressing-findings.md
@@ -21,6 +26,7 @@ With no config file, DocAlign:
 - Checks up to 50 claims per PR
 - Checks URLs with 5s timeout, max 5 per domain
 
+<!-- docalign:skip reason="illustrative_example" description="Full Example .docalign.yml block showing all configuration options — this is a reference example of what a config file looks like, not a factual claim about the current project state" -->
 ## Full Example
 
 ```yaml
@@ -101,6 +107,7 @@ coverage:
   min_entity_importance: exported
 ```
 
+<!-- /docalign:skip -->
 ## Sections
 
 ### doc_patterns

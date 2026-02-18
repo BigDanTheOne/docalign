@@ -66,6 +66,17 @@ import {
 } from '../layers/L1-claim-extractor/semantic-extractor';
 import { writeSkipTagsToFile, stripSkipTags } from '../tags/writer';
 import type { DocAlignConfig } from '../shared/types';
+import {
+  loadDocMap,
+  saveDocMap,
+  getDocMapEntry,
+  buildDocFileSnippets,
+  renderDocFileSnippets,
+  writeFrontmatterFields,
+  type DocMap,
+  type DocMapEntry,
+} from './doc-map';
+import { DOC_MAP_SYSTEM_PROMPT, buildDocMapPrompt } from './prompts/doc-map';
 
 const MAX_FILE_SIZE = 100 * 1024; // 100KB
 const DEFAULT_VERIFY_MODEL = 'claude-sonnet-4-5-20250929';
@@ -327,6 +338,74 @@ export class LocalPipeline implements CliPipeline {
   }
 
   /**
+   * Build (or rebuild) the documentation mind map (Step 0).
+   *
+   * Sends all doc file snippets (path + frontmatter + headings) to Claude
+   * in a single call (no code tools) and saves the classification result to
+   * `.docalign/doc-map.json`.
+   *
+   * Returns null if Claude is not available.
+   */
+  async buildDocMap(docFiles: string[]): Promise<DocMap | null> {
+    if (!isClaudeAvailable()) return null;
+    if (docFiles.length === 0) return null;
+
+    const snippets = buildDocFileSnippets(this.repoRoot, docFiles);
+    const rendered = renderDocFileSnippets(snippets);
+    const prompt = buildDocMapPrompt(rendered);
+
+    const DocMapOutputSchema = z.object({
+      entries: z.array(
+        z.object({
+          file: z.string(),
+          doc_type: z.string(),
+          audience: z.string(),
+          summary: z.string().optional(),
+          read_when: z.array(z.string()).optional(),
+          skip_hint: z.string().optional(),
+          extraction_notes: z.string().optional(),
+        }),
+      ),
+    });
+
+    const result = await invokeClaudeStructured(prompt, DocMapOutputSchema, {
+      allowedTools: [],
+      appendSystemPrompt: DOC_MAP_SYSTEM_PROMPT,
+      cwd: this.repoRoot,
+      preprocess: (data: unknown) => {
+        if (Array.isArray(data)) return { entries: data };
+        return data;
+      },
+    });
+
+    if (!result.ok) return null;
+
+    const docMap: DocMap = {
+      generated_at: new Date().toISOString(),
+      repo_path: this.repoRoot,
+      entries: result.data.entries as DocMapEntry[],
+    };
+
+    // Write summary + read_when back into doc file frontmatter for files
+    // that don't already have those fields. This makes the doc self-describing
+    // for both human readers and future Step 0 runs.
+    for (const entry of docMap.entries) {
+      if (entry.summary || entry.read_when?.length) {
+        const absPath = path.join(this.repoRoot, entry.file);
+        if (fs.existsSync(absPath)) {
+          writeFrontmatterFields(absPath, {
+            summary: entry.summary,
+            read_when: entry.read_when,
+          });
+        }
+      }
+    }
+
+    saveDocMap(this.repoRoot, docMap);
+    return docMap;
+  }
+
+  /**
    * Extract semantic claims from doc files using Claude CLI.
    * One `claude -p` call per file with changed sections.
    */
@@ -362,6 +441,15 @@ export class LocalPipeline implements CliPipeline {
       // large planning content with lots of code examples that produce FPs and
       // take a long time to process with Claude.
       docFiles = docFiles.filter((f) => f.startsWith('docs/'));
+    }
+
+    // Step 0: load or build the documentation mind map.
+    // The doc-map provides per-file classification hints that improve Phase 1
+    // skip-region accuracy by telling Claude the document type upfront.
+    let docMap = loadDocMap(this.repoRoot);
+    if (!docMap) {
+      docMap = await this.buildDocMap(docFiles);
+      // If doc-map build fails (Claude unavailable, etc.) we continue without it.
     }
 
     let totalExtracted = 0;
@@ -432,10 +520,12 @@ export class LocalPipeline implements CliPipeline {
       if (onProgress) onProgress(i + 1, docFiles.length, docFile, 'extracting');
 
       try {
+        const docContext = docMap ? getDocMapEntry(docMap, docFile) : undefined;
         const result = await extractSemanticClaims(
           docFile,
           sectionsToExtract,
           this.repoRoot,
+          docContext,
         );
 
         if (result.errors.length > 0) {

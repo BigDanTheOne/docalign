@@ -10,6 +10,7 @@ import { invokeClaudeStructured, type ClaudeBridgeOptions, type ClaudeBridgeErro
 import { hashContent, generateClaimId, type SemanticClaimRecord } from '../../cli/semantic-store';
 import { parseHeadings } from '../../cli/local-pipeline';
 import { SEMANTIC_EXTRACT_SYSTEM_PROMPT, buildSemanticExtractPrompt } from '../../cli/prompts/semantic-extract';
+import type { DocMapEntry } from '../../cli/doc-map';
 
 // === Output schema ===
 
@@ -111,12 +112,16 @@ export function buildDocSections(file: string, content: string): DocSection[] {
 /**
  * Build the extraction prompt for one doc file's changed sections.
  */
-export function buildExtractionPrompt(sections: DocSection[], repoPath: string): string {
+export function buildExtractionPrompt(
+  sections: DocSection[],
+  repoPath: string,
+  docContext?: DocMapEntry,
+): string {
   const sectionText = sections.map((s) =>
     `### Section: "${s.heading}" (lines ${s.startLine}-${s.endLine})\n\n${s.content}`,
   ).join('\n\n---\n\n');
 
-  return buildSemanticExtractPrompt(sectionText, repoPath);
+  return buildSemanticExtractPrompt(sectionText, repoPath, docContext);
 }
 
 /**
@@ -127,13 +132,14 @@ export async function extractSemanticClaims(
   sourceFile: string,
   sections: DocSection[],
   repoPath: string,
+  docContext?: DocMapEntry,
   options?: ClaudeBridgeOptions,
 ): Promise<ExtractionResult> {
   if (sections.length === 0) {
     return { claims: [], skipRegions: [], errors: [] };
   }
 
-  const prompt = buildExtractionPrompt(sections, repoPath);
+  const prompt = buildExtractionPrompt(sections, repoPath, docContext);
 
   const result = await invokeClaudeStructured(
     prompt,

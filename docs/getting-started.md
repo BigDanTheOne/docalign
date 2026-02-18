@@ -1,7 +1,12 @@
 ---
 title: "Getting Started"
+summary: "Install DocAlign and run your first documentation health scan"
 description: "Use when setting up DocAlign for the first time. Covers installation, first scan, reading output, and next steps."
 category: "tutorial"
+read_when:
+  - Setting up DocAlign for the first time
+  - Running your first documentation health check
+  - Understanding what the scan output means
 related:
   - docs/reference/cli.md
   - docs/guides/checking-files.md

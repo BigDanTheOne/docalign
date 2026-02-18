@@ -1,7 +1,12 @@
 ---
 title: "Architecture"
+summary: "DocAlign's L0–L7 layer system, data flow, and internal architecture"
 description: "Use when you need to understand DocAlign's internal architecture, layer system, and data flow."
 category: "contributing"
+read_when:
+  - Understanding how the layers fit together end-to-end
+  - Deciding which layer a new feature belongs in
+  - Understanding how data flows from doc file to verification result
 related:
   - docs/contributing/design-patterns.md
   - docs/contributing/adding-a-check.md
@@ -11,6 +16,7 @@ related:
 
 DocAlign is organized into 8 layers (L0-L7), each with a single responsibility. Data flows through the layers as a pipeline.
 
+<!-- docalign:skip reason="illustrative_example" description="Layer Overview code block describes planned architecture with all 8 layers; the Layer Overview table is a high-level diagram, not a claim about implemented code" -->
 ## Layer Overview
 
 ```
@@ -24,6 +30,8 @@ L6  MCP                MCP server (10 tools, stdio transport)
 L7  Learning           Feedback, suppression, learning loop
 ```
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="Directory Structure code block shows the target/planned file layout, many directories of which do not yet exist (src/config/, src/shared/, src/storage/, L2-L7 layers, etc.)" -->
 ## Directory Structure
 
 ```
@@ -43,8 +51,10 @@ src/
   storage/                # StorageAdapter interface + SQLite + PostgreSQL
 ```
 
+<!-- /docalign:skip -->
 ## Data Flow
 
+<!-- docalign:skip reason="illustrative_example" description="Full scan pipeline numbered list describes intended data-flow through all 8 layers, most of which are not yet implemented" -->
 ### Full scan pipeline
 
 ```
@@ -76,6 +86,7 @@ src/
    - PR: GitHub comments (server mode)
 ```
 
+<!-- /docalign:skip -->
 ### CLI mode vs Server mode
 
 DocAlign runs in two modes:

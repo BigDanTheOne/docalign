@@ -1,7 +1,12 @@
 ---
 title: "MCP Tools Reference"
+summary: "MCP tool parameters, return values, and behavior for AI agent integration"
 description: "Use when you need the exact parameters, return values, and behavior of each DocAlign MCP tool."
 category: "reference"
+read_when:
+  - Building an AI agent or MCP client that uses DocAlign tools
+  - Looking up a specific MCP tool's input schema
+  - Debugging MCP tool responses
 related:
   - docs/guides/mcp-integration.md
   - docs/reference/checks.md

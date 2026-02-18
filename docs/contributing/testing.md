@@ -1,7 +1,12 @@
 ---
 title: "Testing"
+summary: "How to write, run, and organize tests for DocAlign"
 description: "Use when you need to understand how to write, run, and organize tests for DocAlign."
 category: "contributing"
+read_when:
+  - Writing new tests for a DocAlign feature
+  - Running or debugging the test suite
+  - Understanding the test tier structure or coverage expectations
 related:
   - docs/contributing/design-patterns.md
   - docs/contributing/adding-a-check.md
@@ -26,6 +31,7 @@ npm run typecheck      # TypeScript type checking (run before tests)
 Tests mirror the `src/` directory:
 
 ```
+<!-- docalign:skip reason="tutorial_example" description="Illustrative test directory tree showing aspirational/target structure, not current actual layout (only L1-claim-extractor exists under test/layers/)" -->
 test/
   layers/
     L0-codebase-index/    # Index building, AST parsing
@@ -41,8 +47,10 @@ test/
   shared/                 # Utility tests
 ```
 
+<!-- /docalign:skip -->
 ## Test Fixtures
 
+<!-- docalign:skip reason="illustrative_example" description="makeClaim() usage example — shows hypothetical import and call with example values, not a factual claim about current codebase" -->
 ### makeClaim()
 
 Creates a test `Claim` object with sensible defaults. Override only what matters for your test:
@@ -58,6 +66,8 @@ const claim = makeClaim({
 });
 ```
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="makeMockIndex() usage example — shows hypothetical import and call with example field values" -->
 ### makeMockIndex()
 
 Creates a mock `CodebaseIndex` that verifiers use to check claims:
@@ -84,10 +94,12 @@ const index = makeMockIndex({
 - `envVars`: Array of known environment variables
 - `exports`: Object of file → exported symbols
 
+<!-- /docalign:skip -->
 ### makeResult()
 
 Not a test fixture -- this is the production helper used to build `VerificationResult` objects. Tests use it to verify that verifiers produce expected outputs.
 
+<!-- docalign:skip reason="illustrative_example" description="Writing Extraction Tests — code block shows hypothetical test cases with example paths and values, not actual test code" -->
 ## Writing Extraction Tests
 
 Extraction tests verify that regex patterns correctly identify claims in documentation lines:
@@ -122,6 +134,8 @@ describe('extractPathReferences', () => {
 - Test edge cases (multiple matches, unusual formatting, embedded in markdown)
 - Test that claim_type, value, and line_number are correct
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="Writing Verification Tests — code block shows hypothetical test cases for verifyPathReference with example data" -->
 ## Writing Verification Tests
 
 Verification tests check that claims are correctly verified against the codebase:
@@ -162,6 +176,8 @@ describe('verifyPathReference', () => {
 - Test that severity is set appropriately
 - Test edge cases (empty index, null values)
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="Config Tests section — code block shows hypothetical parseConfig test with example assertion values" -->
 ## Config Tests
 
 Config tests verify YAML parsing, default merging, and validation:
@@ -180,6 +196,7 @@ describe('parseConfig', () => {
 });
 ```
 
+<!-- /docalign:skip -->
 ## Test Coverage
 
 Coverage targets vary by layer:

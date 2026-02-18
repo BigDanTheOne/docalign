@@ -1,7 +1,12 @@
 ---
 title: "Checks Reference"
+summary: "All claim types, how they're extracted, and how they're verified"
 description: "Use when you need to understand what DocAlign checks, how each claim type is extracted, and how it is verified."
 category: "reference"
+read_when:
+  - Looking up what DocAlign detects and verifies
+  - Understanding what a specific claim type means
+  - Knowing whether a claim type is deterministic or LLM-verified
 related:
   - docs/explanation/verification-tiers.md
   - docs/reference/configuration.md
