@@ -211,38 +211,54 @@ launch_banner() {
     echo ""
 }
 
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS: open a new Terminal window with a proper PTY.
-    # We can't exec Claude Code directly from a curl|bash pipe because
-    # the piped shell has no controlling TTY — TUI apps receive no keystrokes.
-    # osascript opens a fresh window with full terminal capabilities.
-    osascript << APPLESCRIPT
+# Try to launch Claude Code in the same terminal window using 'script', which
+# allocates a fresh PTY for the child process. This bypasses the broken-TTY
+# problem that occurs when a TUI app is launched from inside a curl|bash pipe:
+# the pipe destroys the controlling terminal's interactivity, but 'script'
+# allocates a new PTY so claude gets a clean, fully interactive terminal.
+#
+# macOS syntax:  script -q /dev/null <cmd> [args...]
+# Linux syntax:  script -q -c '<cmd> [args...]' /dev/null
+#
+# We try same-window first; fall back to new window if script is unavailable.
+
+launch_same_window() {
+    launch_banner
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS BSD script: command and args follow the output file
+        script -q /dev/null claude "/docalign-setup"
+    else
+        # Linux util-linux script: -c takes the command as a string
+        script -q -c 'claude "/docalign-setup"' /dev/null
+    fi
+}
+
+launch_new_window() {
+    launch_banner
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        osascript << APPLESCRIPT
 tell application "Terminal"
     activate
     do script "cd '$PROJ_DIR' && claude '/docalign-setup'"
 end tell
 APPLESCRIPT
-    launch_banner
-    echo "  ➜  A new Terminal window is opening now."
+        echo "  ➜  A new Terminal window is opening now."
+    elif command -v gnome-terminal &>/dev/null; then
+        gnome-terminal -- bash -c "cd '$PROJ_DIR' && claude '/docalign-setup'; exec bash" &
+        echo "  ➜  A new gnome-terminal window is opening now."
+    elif command -v xterm &>/dev/null; then
+        xterm -e "bash -c \"cd '$PROJ_DIR' && claude '/docalign-setup'\"" &
+        echo "  ➜  A new xterm window is opening now."
+    else
+        echo "  ➜  Open a new terminal in this directory, then run:"
+        echo ""
+        echo "         claude"
+    fi
     echo ""
+}
 
-elif command -v gnome-terminal &>/dev/null; then
-    gnome-terminal -- bash -c "cd '$PROJ_DIR' && claude '/docalign-setup'; exec bash" &
-    launch_banner
-    echo "  ➜  A new gnome-terminal window is opening now."
-    echo ""
-
-elif command -v xterm &>/dev/null; then
-    xterm -e "bash -c \"cd '$PROJ_DIR' && claude '/docalign-setup'\"" &
-    launch_banner
-    echo "  ➜  A new xterm window is opening now."
-    echo ""
-
+if command -v script &>/dev/null; then
+    launch_same_window
 else
-    # Fallback: can't detect a terminal emulator — give manual instructions
-    launch_banner
-    echo "  ➜  Open a new terminal in this directory, then run:"
-    echo ""
-    echo "         claude"
-    echo ""
+    launch_new_window
 fi
