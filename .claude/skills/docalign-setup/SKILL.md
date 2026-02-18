@@ -388,7 +388,16 @@ Top Issues:
 3. docs/setup.md line 56: Wrong version
 ```
 
-**Step 4.3: Final Summary**
+**Step 4.3: Clean Up Setup Trigger**
+
+Remove the auto-trigger notice from `CLAUDE.md`:
+
+1. Read `CLAUDE.md` from the project root
+2. Remove the block between `<!-- docalign:setup-pending -->` and `<!-- /docalign:setup-pending -->` (inclusive, including the trailing blank line)
+3. Write the updated content back
+4. If `CLAUDE.md` is now empty, delete it
+
+**Step 4.4: Final Summary**
 
 Say:
 
@@ -406,7 +415,6 @@ Next Steps:
 • Use "docalign fix" to apply suggested fixes
 
 The docalign skill is now active for daily usage.
-Restarting Claude Code to complete setup...
 ```
 
 ---

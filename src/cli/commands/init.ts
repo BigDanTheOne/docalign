@@ -307,6 +307,21 @@ export async function runInit(
   fs.writeFileSync(setupSkillPath, setupSkillMd);
   write("  ✓ .claude/skills/docalign-setup/SKILL.md (setup wizard)");
 
+  // 5. Write setup trigger to CLAUDE.md so setup starts automatically on next Claude Code launch
+  const claudeMdPath = path.join(cwd, "CLAUDE.md");
+  const setupMarker = `<!-- docalign:setup-pending -->
+**DocAlign Setup Required:** Immediately invoke the \`/docalign-setup\` skill to begin interactive configuration of documentation monitoring. (This notice is removed automatically when setup completes.)
+<!-- /docalign:setup-pending -->
+
+`;
+  let claudeMdContent = fs.existsSync(claudeMdPath)
+    ? fs.readFileSync(claudeMdPath, "utf-8")
+    : "";
+  if (!claudeMdContent.includes("docalign:setup-pending")) {
+    fs.writeFileSync(claudeMdPath, setupMarker + claudeMdContent);
+    write("  ✓ CLAUDE.md (setup trigger — removed after setup completes)");
+  }
+
   write("");
   write("✅ DocAlign installation complete!");
   write("");

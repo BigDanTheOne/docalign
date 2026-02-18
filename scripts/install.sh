@@ -190,17 +190,12 @@ echo "════════════════════════�
 echo ""
 echo "  🎉 Installation complete!"
 echo ""
-echo "  Next: Claude Code will guide you through:"
-echo "    1. Discovering your documentation"
-echo "    2. Selecting which docs to monitor"
-echo "    3. Configuring DocAlign"
-echo "    4. Annotating your docs with claims"
-echo "    5. Running initial verification"
-echo ""
-echo "  Estimated time: 3-5 minutes"
+echo "  Claude Code is launching now."
+echo "  When it opens, press Enter (or say anything) to begin."
+echo "  The setup wizard will start automatically."
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
-# Launch Claude Code with an initial message that triggers the setup skill
-exec claude "DocAlign was just installed. Please start the interactive setup wizard (/docalign-setup) to configure documentation monitoring for this project."
+# Launch Claude Code — setup wizard triggers automatically via CLAUDE.md notice
+exec claude
