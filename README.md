@@ -4,29 +4,35 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](tsconfig.json)
 
-Detects when your documentation drifts from code reality.
+Detects when your documentation drifts from code reality — and tells your AI coding agent about it.
 
-DocAlign extracts verifiable claims from your docs — file paths, dependency versions, CLI commands, API routes, code examples, config values, URLs — and checks each one against the actual codebase. Zero config. Works as a **CLI** or as an **MCP server** for AI coding agents.
+DocAlign extracts verifiable claims from your docs — file paths, dependency versions, CLI commands, API routes, code examples, config values — and checks each one against the actual codebase. Works as an **MCP server** for Claude Code (primary) or as a standalone **CLI**.
 
-## Quick Start
-
-```bash
-npx docalign scan
-```
-
-Check a single file:
+## Setup
 
 ```bash
-npx docalign check README.md --verbose
+npx docalign init
 ```
 
-No configuration needed. DocAlign auto-discovers doc files and applies sensible defaults.
+This configures the MCP server and installs the DocAlign skill into Claude Code. Restart Claude Code when prompted — that's it.
+
+After restart, Claude automatically checks documentation after code changes and answers "are my docs accurate?" directly. No further configuration required.
+
+## How It Works
+
+**On every code change**, Claude's DocAlign skill:
+
+1. Finds docs that reference the changed files (`get_docs_for_file`)
+2. Checks those docs for drift (`check_doc`)
+3. Reports specific mismatches with suggested fixes
+
+**On first setup**, Claude walks through your doc files, selects which ones to monitor, and extracts semantic claims in parallel — one sub-agent per document. Subsequent checks use cached claims and are fast.
 
 ## What It Finds
 
-**Syntactic checks** (regex-based, zero config):
+**Syntactic checks** (regex-based, instant):
 
-<!-- docalign:skip reason="example_table" description="What It Finds capability table with hypothetical file paths, package names, command names, and route paths used as illustrative examples of what the tool detects" -->
+<!-- docalign:skip reason="example_table" description="Illustrative examples of claim types — hypothetical file paths, package names, commands used as examples" -->
 | Category | Example |
 |----------|---------|
 | File paths | `src/auth.ts` referenced but doesn't exist |
@@ -36,97 +42,64 @@ No configuration needed. DocAlign auto-discovers doc files and applies sensible 
 | Code examples | Import from `./utils/helpers` but symbol not exported |
 | Env variables | `DATABASE_URL` documented but missing from `.env.example` |
 | Config values | "Defaults to port 3000" but code uses 8080 |
-| URLs | Dead links (HTTP 404) in documentation |
-
-Plus: anchor validation, cross-doc consistency, frontmatter checks, nav config links, deprecation detection, license/changelog consistency, and fuzzy suggestions.
 <!-- /docalign:skip -->
 
-**Semantic checks** (LLM-powered, optional):
+**Semantic checks** (LLM-powered, via Claude):
 
-Behavior claims, architecture decisions, and config assumptions — verified against actual code using Claude.
+Behavior claims, architecture decisions, and config assumptions — verified against actual code. Extracted once per document, cached, re-verified on each scan.
 
-See [Checks Reference](docs/reference/checks.md) for all claim types and cross-cutting checks.
+See [Checks Reference](docs/reference/checks.md) for all claim types.
 
-## Commands
+## MCP Tools
 
-| Command | Description |
-|---------|-------------|
-| `docalign scan` | Scan entire repository |
-| `docalign check <file>` | Check a single doc file |
-| `docalign extract [file]` | Extract semantic claims using Claude |
-| `docalign fix [file]` | Apply suggested fixes |
-| `docalign init` | Set up Claude Code integration (MCP + skill) |
-| `docalign viz` | Generate interactive knowledge graph |
+Claude Code gets 10 documentation tools:
 
-See [CLI Reference](docs/reference/cli.md) for all commands, flags, and output formats.
+| Tool | What it does |
+|------|-------------|
+| `check_doc` | Check a doc file for drift |
+| `check_section` | Check a specific section |
+| `get_doc_health` | Repo-wide health score |
+| `list_drift` | All drifted docs, ordered by severity |
+| `get_docs_for_file` | Find docs that reference a code file |
+| `get_docs` | Search docs by topic with verification status |
+| `fix_doc` | Get fix suggestions for drifted claims |
+| `report_drift` | Track a doc inaccuracy for later |
+| `deep_check` | Full audit: syntactic + semantic + coverage |
+| `register_claims` | Persist semantic claims found during analysis |
 
-## MCP Integration
+See [MCP Tools Reference](docs/reference/mcp-tools.md) for parameters and return values.
 
-DocAlign works as an MCP server, giving AI coding agents live access to documentation verification:
+## CLI
 
-```bash
-docalign init    # Auto-configures MCP + installs skill for Claude Code
-```
-<!-- docalign:skip reason="user_instruction" description="MCP config JSON block showing a user instruction on how to add docalign to their MCP config — not a factual claim about the current project's state" -->
-
-Or add manually to your MCP config:
-
-```json
-{
-  "mcpServers": {
-    "docalign": {
-      "command": "npx",
-      "args": ["docalign", "mcp", "--repo", "."]
-    }
-  }
-<!-- /docalign:skip -->
-}
-```
-
-10 tools available: `check_doc`, `check_section`, `get_doc_health`, `list_drift`, `get_docs_for_file`, `get_docs`, `fix_doc`, `report_drift`, `deep_check`, `register_claims`.
-
-See [MCP Integration Guide](docs/guides/mcp-integration.md) for setup, or [MCP Tools Reference](docs/reference/mcp-tools.md) for tool details.
-
-## Semantic Extraction
-
-`docalign extract` uses Claude to find claims that regex can't catch — behavior descriptions, architecture decisions, config assumptions:
+For one-off checks or CI use:
 
 ```bash
-docalign extract                    # All doc files
-docalign extract README.md          # Single file
-docalign extract README.md --force  # Re-extract even if unchanged
+npx docalign scan              # Scan entire repository
+npx docalign check README.md   # Check a single file
+npx docalign init              # Set up Claude Code integration
 ```
 
-See [Semantic Extraction Guide](docs/guides/semantic-extraction.md) for details.
+See [CLI Reference](docs/reference/cli.md) for all commands and flags.
 
 ## Configuration
 
-DocAlign works with zero configuration. To customize, create `.docalign.yml`:
+Works with zero configuration. To customize, create `.docalign.yml`:
 
+<!-- docalign:skip reason="user_instruction" description="Sample .docalign.yml config block — illustrative values for user configuration" -->
 ```yaml
 doc_patterns:
   include: ['README.md', 'docs/**/*.md']
-<!-- docalign:skip reason="user_instruction" description="Configuration YAML block showing a sample .docalign.yml with example values — instruction for users to customize their config, not a claim about current project defaults" -->
   exclude: ['docs/archive/**']
 
 claim_types:
-  url_reference: false  # Skip dead link checks
+  url_reference: false   # Skip dead link checks
 
 verification:
-  min_severity: medium  # Only report medium+ issues
-
-suppress:
-  - file: 'docs/legacy.md'  # Ignore this file entirely
+  min_severity: medium   # Only report medium+ issues
 ```
-
 <!-- /docalign:skip -->
+
 See [Configuration Reference](docs/reference/configuration.md) for all options.
-
-## How It Works
-
-**Extract** verifiable claims from docs (regex + table parsing) → **Verify** each claim against the codebase (file existence, version comparison, AST symbol resolution) → **Report** results via CLI, MCP tools, or PR comments. Optional LLM verification handles claims that can't be checked deterministically.
-
-See [How It Works](docs/explanation/how-it-works.md) for the full pipeline explanation.
 
 ## Documentation
 
