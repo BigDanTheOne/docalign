@@ -143,8 +143,12 @@ export function preProcess(content: string, format: DocFormat): PreProcessedDoc 
   const tagLines = new Set<number>();
   const OPEN_TAG_PATTERN = /^\s*<!--\s*docalign:(\w+)(?:\s[^>]*)?\s*-->\s*$/;
   const CLOSE_TAG_PATTERN = /^\s*<!--\s*\/docalign:(\w+)\s*-->\s*$/;
-  // These block types suppress claim extraction for their content
-  const SKIP_BLOCK_TAGS = new Set(['skip', 'semantic']);
+  // These block types suppress claim extraction for their content.
+  // 'semantic' is intentionally excluded: docalign:semantic is an inline tag
+  // (placed before a single claim line), not a block tag with open/close pairs.
+  // Claim-line suppression for semantic tags is handled by blankSemanticClaimLines()
+  // in src/tags/writer.ts, which is called before L1 extraction runs.
+  const SKIP_BLOCK_TAGS = new Set(['skip']);
   let activeBlockTag: string | null = null;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];

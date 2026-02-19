@@ -1,20 +1,17 @@
 /**
- * Tag parser for inline DocAlign claim tags in markdown documents.
+ * Tag parser for inline DocAlign semantic tags in markdown documents.
  *
- * Tag syntax: <!-- docalign:claim id="<uuid>" type="<claim_type>" status="<status>" -->
+ * Tag syntax: <!-- docalign:semantic id="<16-char-hex>" -->
+ * After verification: <!-- docalign:semantic id="<16-char-hex>" status="verified|drifted|uncertain" -->
  *
  * Tags are HTML comments, invisible in rendered markdown.
  */
 
-import type { ClaimType } from '../shared/types';
-
 export interface DocTag {
-  /** UUID of the tagged claim. */
+  /** 16-char hex ID of the tagged semantic claim. */
   id: string;
-  /** Claim type (path_reference, dependency_version, etc.). */
-  type: ClaimType;
-  /** Last known verification status. */
-  status: string;
+  /** Last known verification status. Null if not yet verified. */
+  status: string | null;
   /** 1-based line number in the source document. */
   line: number;
   /** Original raw tag string for round-trip preservation. */
@@ -22,10 +19,10 @@ export interface DocTag {
 }
 
 /**
- * Regex to match a docalign claim tag.
- * Captures the inner content between `docalign:claim` and `-->`.
+ * Regex to match a docalign semantic tag.
+ * Captures the inner content between `docalign:semantic` and `-->`.
  */
-const TAG_PATTERN = /^(\s*)<!--\s*docalign:claim\s+(.*?)\s*-->\s*$/;
+const TAG_PATTERN = /^(\s*)<!--\s*docalign:semantic\s+(.*?)\s*-->\s*$/;
 
 /**
  * Parse key="value" pairs from tag content.
@@ -41,7 +38,7 @@ function parseKeyValues(content: string): Record<string, string> {
 }
 
 /**
- * Parse a single line for a docalign tag.
+ * Parse a single line for a docalign semantic tag.
  * Returns a DocTag if the line contains a valid tag, or null otherwise.
  */
 export function parseTag(line: string, lineNumber = 1): DocTag | null {
@@ -51,20 +48,19 @@ export function parseTag(line: string, lineNumber = 1): DocTag | null {
   const kvContent = match[2];
   const kv = parseKeyValues(kvContent);
 
-  // Require at minimum id and type
-  if (!kv.id || !kv.type) return null;
+  // Require at minimum id
+  if (!kv.id) return null;
 
   return {
     id: kv.id,
-    type: kv.type as ClaimType,
-    status: kv.status || 'pending',
+    status: kv.status ?? null,
     line: lineNumber,
     raw: line,
   };
 }
 
 /**
- * Parse all docalign tags from a document string.
+ * Parse all docalign semantic tags from a document string.
  * Returns an array of DocTag objects for all valid tags found.
  * Malformed tags (missing required fields) are silently skipped.
  */

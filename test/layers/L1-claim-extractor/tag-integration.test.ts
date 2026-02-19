@@ -26,7 +26,7 @@ describe('tag-aware extraction integration', () => {
   it('tag lines are not extracted as path references', () => {
     const doc = makeDoc([
       'Real path: `src/index.ts`',
-      '<!-- docalign:claim id="tagged-1" type="path_reference" status="verified" -->',
+      '<!-- docalign:semantic id="sem-tagged0000000001" status="verified" -->',
       'Another real path: `src/app.ts`',
     ].join('\n'));
     const results = extractPaths(doc, 'README.md');
@@ -35,13 +35,13 @@ describe('tag-aware extraction integration', () => {
     expect(paths).toContain('src/index.ts');
     expect(paths).toContain('src/app.ts');
     // Tag line should not produce any extraction
-    expect(results.every(r => !r.claim_text.includes('docalign:claim'))).toBe(true);
+    expect(results.every(r => !r.claim_text.includes('docalign:semantic'))).toBe(true);
   });
 
   it('tag lines in code blocks are not treated as real tags', () => {
     const content = [
       '```markdown',
-      '<!-- docalign:claim id="in-code" type="path_reference" status="verified" -->',
+      '<!-- docalign:semantic id="sem-incode0000000001" status="verified" -->',
       '```',
       'Real path: `src/utils.ts`',
     ].join('\n');
@@ -69,9 +69,9 @@ describe('tag-aware extraction integration', () => {
   it('mixed tagged and untagged content handled correctly', () => {
     const doc = makeDoc([
       'Path 1: `src/a.ts`',
-      '<!-- docalign:claim id="tag-a" type="path_reference" status="verified" -->',
+      '<!-- docalign:semantic id="sem-tagged0000000001" status="verified" -->',
       'Path 2: `src/b.ts`',
-      '<!-- docalign:claim id="tag-b" type="path_reference" status="drifted" -->',
+      '<!-- docalign:semantic id="sem-tagged0000000002" status="drifted" -->',
       'Path 3: `src/c.ts`',
     ].join('\n'));
     const results = extractPaths(doc, 'README.md');
@@ -88,13 +88,13 @@ describe('tag-aware extraction integration', () => {
     const content = [
       '# Title',
       '<p>HTML paragraph</p>',
-      '<!-- docalign:claim id="preserved" type="path_reference" status="verified" -->',
+      '<!-- docalign:semantic id="sem-preserved000001" status="verified" -->',
       '<div>More HTML</div>',
     ].join('\n');
     const format = detectFormat('test.md');
     const preprocessed = preProcess(content, format);
     // The docalign tag should be preserved
-    expect(preprocessed.cleaned_content).toContain('docalign:claim');
+    expect(preprocessed.cleaned_content).toContain('docalign:semantic');
     // But other HTML should be stripped
     expect(preprocessed.cleaned_content).not.toContain('<p>');
     expect(preprocessed.cleaned_content).not.toContain('<div>');
@@ -102,12 +102,12 @@ describe('tag-aware extraction integration', () => {
     expect(preprocessed.tag_lines.has(2)).toBe(true);
   });
 
-  it('preprocessing detects tag lines correctly', () => {
+  it('preprocessing detects semantic tag lines correctly', () => {
     const content = [
       '# Title',
-      '<!-- docalign:claim id="t1" type="path_reference" status="verified" -->',
+      '<!-- docalign:semantic id="sem-detect00000001" status="verified" -->',
       'Content',
-      '<!-- docalign:claim id="t2" type="command" status="drifted" -->',
+      '<!-- docalign:semantic id="sem-detect00000002" status="drifted" -->',
     ].join('\n');
     const format = detectFormat('test.md');
     const preprocessed = preProcess(content, format);

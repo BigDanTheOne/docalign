@@ -83,7 +83,7 @@ From the non-skipped content, find claims that are **specific, falsifiable, and 
 For each semantic claim, insert a tag immediately BEFORE the line where the claim appears in the document:
 
 ```markdown
-<!-- docalign:semantic id="sem-{16-char-hex}" claim="exact claim text" -->
+<!-- docalign:semantic id="sem-{16-char-hex}" -->
 The authentication middleware validates JWT tokens on every request.
 ```
 

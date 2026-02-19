@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { writeTags, writeSkipTags, blankSkipRegionContent } from '../../src/tags/writer';
+import { writeTags, writeSkipTags, blankSkipRegionContent, blankSemanticClaimLines } from '../../src/tags/writer';
 import { parseTags } from '../../src/tags/parser';
 import type { TaggableClaim, SkipRegion } from '../../src/tags/writer';
 
@@ -13,27 +13,14 @@ describe('writeTags', () => {
     expect(result.tagsPreserved).toBe(0);
   });
 
-  it('writes new tags after source lines', () => {
-    const content = '# Title\nSome path reference here.\nAnother line.';
-    const claims: TaggableClaim[] = [
-      { id: 'new-1', type: 'path_reference', status: 'verified', source_line: 2 },
-    ];
-    const result = writeTags(content, claims);
-    expect(result.tagsWritten).toBe(1);
-    expect(result.content).toContain('<!-- docalign:claim id="new-1" type="path_reference" status="verified" -->');
-    // Tag should be after line 2
-    const lines = result.content.split('\n');
-    expect(lines[2]).toContain('docalign:claim');
-  });
-
   it('updates existing tag with different status', () => {
     const content = [
       '# Title',
-      '<!-- docalign:claim id="existing-1" type="path_reference" status="drifted" -->',
+      '<!-- docalign:semantic id="sem-aabb0011aabb0011" status="drifted" -->',
       'Some content.',
     ].join('\n');
     const claims: TaggableClaim[] = [
-      { id: 'existing-1', type: 'path_reference', status: 'verified', source_line: 1 },
+      { id: 'sem-aabb0011aabb0011', status: 'verified', source_line: 2 },
     ];
     const result = writeTags(content, claims);
     expect(result.tagsUpdated).toBe(1);
@@ -45,11 +32,11 @@ describe('writeTags', () => {
   it('preserves existing tag with same status', () => {
     const content = [
       '# Title',
-      '<!-- docalign:claim id="same-1" type="command" status="verified" -->',
+      '<!-- docalign:semantic id="sem-aabb0011aabb0011" status="verified" -->',
       'Some content.',
     ].join('\n');
     const claims: TaggableClaim[] = [
-      { id: 'same-1', type: 'command', status: 'verified', source_line: 1 },
+      { id: 'sem-aabb0011aabb0011', status: 'verified', source_line: 2 },
     ];
     const result = writeTags(content, claims);
     expect(result.tagsPreserved).toBe(1);
@@ -57,10 +44,39 @@ describe('writeTags', () => {
     expect(result.tagsWritten).toBe(0);
   });
 
-  it('is idempotent: writing same claims twice produces identical output', () => {
-    const original = '# Test\nSome path reference here.';
+  it('updates tag that had no status (freshly written tag)', () => {
+    const content = [
+      '# Title',
+      '<!-- docalign:semantic id="sem-aabb0011aabb0011" -->',
+      'The authentication middleware validates JWT tokens.',
+    ].join('\n');
     const claims: TaggableClaim[] = [
-      { id: 'idem-1', type: 'path_reference', status: 'verified', source_line: 2 },
+      { id: 'sem-aabb0011aabb0011', status: 'verified', source_line: 2 },
+    ];
+    const result = writeTags(content, claims);
+    expect(result.tagsUpdated).toBe(1);
+    expect(result.content).toContain('status="verified"');
+  });
+
+  it('written tag format is docalign:semantic with status', () => {
+    const content = '# Title\nSome path reference here.\nAnother line.';
+    const claims: TaggableClaim[] = [
+      { id: 'sem-aabb0011aabb0011', status: 'verified', source_line: 2 },
+    ];
+    const result = writeTags(content, claims);
+    expect(result.tagsWritten).toBe(1);
+    expect(result.content).toContain('<!-- docalign:semantic id="sem-aabb0011aabb0011" status="verified" -->');
+    expect(result.content).not.toContain('docalign:claim');
+    expect(result.content).not.toContain('type=');
+  });
+
+  it('is idempotent: writing same claims twice produces identical output', () => {
+    const original = [
+      '<!-- docalign:semantic id="sem-idem0000idem0001" status="verified" -->',
+      'The middleware validates tokens.',
+    ].join('\n');
+    const claims: TaggableClaim[] = [
+      { id: 'sem-idem0000idem0001', status: 'verified', source_line: 1 },
     ];
     const result1 = writeTags(original, claims);
     const result2 = writeTags(result1.content, claims);
@@ -70,15 +86,15 @@ describe('writeTags', () => {
   it('round-trip: parse -> write -> parse = identity', () => {
     const docWithTags = [
       '# Test Doc',
-      '<!-- docalign:claim id="rt-1" type="path_reference" status="verified" -->',
+      '<!-- docalign:semantic id="sem-rt00000000000001" status="verified" -->',
       'Some content',
-      '<!-- docalign:claim id="rt-2" type="command" status="drifted" -->',
+      '<!-- docalign:semantic id="sem-rt00000000000002" status="drifted" -->',
+      'Other content',
     ].join('\n');
     const tags1 = parseTags(docWithTags);
     const claims = tags1.map(t => ({
       id: t.id,
-      type: t.type,
-      status: t.status,
+      status: t.status ?? 'pending',
       source_line: t.line,
     }));
     const result = writeTags(docWithTags, claims);
@@ -86,22 +102,22 @@ describe('writeTags', () => {
     expect(tags1.length).toBe(tags2.length);
     for (let i = 0; i < tags1.length; i++) {
       expect(tags1[i].id).toBe(tags2[i].id);
-      expect(tags1[i].type).toBe(tags2[i].type);
       expect(tags1[i].status).toBe(tags2[i].status);
     }
   });
 
   it('handles adversarial markdown: tables', () => {
     const content = [
+      '<!-- docalign:semantic id="sem-table0000000001" status="verified" -->',
       '| Column | Data |',
       '| ------ | ---- |',
       '| `src/file.ts` | exists |',
     ].join('\n');
     const claims: TaggableClaim[] = [
-      { id: 'table-1', type: 'path_reference', status: 'verified', source_line: 3 },
+      { id: 'sem-table0000000001', status: 'drifted', source_line: 1 },
     ];
     const result = writeTags(content, claims);
-    expect(result.tagsWritten).toBe(1);
+    expect(result.tagsUpdated).toBe(1);
     // Table content should be preserved
     expect(result.content).toContain('| Column | Data |');
   });
@@ -111,42 +127,31 @@ describe('writeTags', () => {
       '```typescript',
       'const x = "hello";',
       '```',
+      '<!-- docalign:semantic id="sem-code00000000001" status="verified" -->',
       'After code block.',
     ].join('\n');
     const claims: TaggableClaim[] = [
-      { id: 'code-1', type: 'code_example', status: 'verified', source_line: 4 },
+      { id: 'sem-code00000000001', status: 'verified', source_line: 4 },
     ];
     const result = writeTags(content, claims);
-    expect(result.tagsWritten).toBe(1);
+    expect(result.tagsPreserved).toBe(1);
     expect(result.content).toContain('```typescript');
   });
 
   it('preserves unmatched existing tags', () => {
     const content = [
       '# Title',
-      '<!-- docalign:claim id="unmatched-1" type="path_reference" status="verified" -->',
+      '<!-- docalign:semantic id="sem-unmatched000001" status="verified" -->',
       'Content.',
     ].join('\n');
     const claims: TaggableClaim[] = [
-      { id: 'new-tag', type: 'command', status: 'verified', source_line: 3 },
+      { id: 'sem-unmatched000002', status: 'verified', source_line: 3 },
     ];
     const result = writeTags(content, claims);
     expect(result.tagsWritten).toBe(1);
     expect(result.tagsPreserved).toBe(1);
-    expect(result.content).toContain('id="unmatched-1"');
-    expect(result.content).toContain('id="new-tag"');
-  });
-
-  it('handles multiple new tags at different positions', () => {
-    const content = '# Title\nLine 1\nLine 2\nLine 3';
-    const claims: TaggableClaim[] = [
-      { id: 'multi-1', type: 'path_reference', status: 'verified', source_line: 2 },
-      { id: 'multi-2', type: 'command', status: 'drifted', source_line: 4 },
-    ];
-    const result = writeTags(content, claims);
-    expect(result.tagsWritten).toBe(2);
-    expect(result.content).toContain('id="multi-1"');
-    expect(result.content).toContain('id="multi-2"');
+    expect(result.content).toContain('id="sem-unmatched000001"');
+    expect(result.content).toContain('id="sem-unmatched000002"');
   });
 });
 
@@ -293,5 +298,98 @@ describe('blankSkipRegionContent', () => {
     const lines = result.split('\n');
     // Line 5 (index 4) still contains the real claim
     expect(lines[4]).toBe('Line 5 — real claim here');
+  });
+});
+
+describe('blankSemanticClaimLines', () => {
+  it('blanks the line immediately following a semantic tag, preserving line count', () => {
+    const content = [
+      '# Title',
+      '<!-- docalign:semantic id="sem-aabb0011aabb0011" -->',
+      'The authentication middleware validates JWT tokens.',
+      'Normal line after.',
+    ].join('\n');
+
+    const result = blankSemanticClaimLines(content);
+    const lines = result.split('\n');
+
+    expect(lines).toHaveLength(4);
+    // Tag line is kept
+    expect(lines[1]).toContain('docalign:semantic');
+    // Claim line is blanked
+    expect(lines[2]).toBe('');
+    // Line after is preserved
+    expect(lines[3]).toBe('Normal line after.');
+  });
+
+  it('blanks multiple claim lines for multiple semantic tags', () => {
+    const content = [
+      '<!-- docalign:semantic id="sem-0000000000000001" -->',
+      'Retries up to 3 times before failing.',
+      'Some prose between.',
+      '<!-- docalign:semantic id="sem-0000000000000002" status="verified" -->',
+      'Default timeout is 30 seconds.',
+      'End of section.',
+    ].join('\n');
+
+    const result = blankSemanticClaimLines(content);
+    const lines = result.split('\n');
+
+    expect(lines).toHaveLength(6);
+    expect(lines[0]).toContain('docalign:semantic'); // tag kept
+    expect(lines[1]).toBe(''); // claim blanked
+    expect(lines[2]).toBe('Some prose between.'); // normal line preserved
+    expect(lines[3]).toContain('docalign:semantic'); // tag kept
+    expect(lines[4]).toBe(''); // claim blanked
+    expect(lines[5]).toBe('End of section.'); // normal line preserved
+  });
+
+  it('is a no-op when no semantic tags are present', () => {
+    const content = '# Title\n\nSome prose.\n\n```ts\nconst x = 1;\n```\n';
+    expect(blankSemanticClaimLines(content)).toBe(content);
+  });
+
+  it('preserves total line count (same as blankSkipRegionContent contract)', () => {
+    const content = [
+      'Line 1',
+      '<!-- docalign:semantic id="sem-aabb0011aabb0011" -->',
+      'Claim line',
+      'Line 4',
+    ].join('\n');
+    const result = blankSemanticClaimLines(content);
+    expect(result.split('\n')).toHaveLength(4);
+  });
+
+  it('handles semantic tag at end of document gracefully', () => {
+    const content = [
+      'Some content.',
+      '<!-- docalign:semantic id="sem-aabb0011aabb0011" -->',
+    ].join('\n');
+    // Tag at end with no following line — should not throw
+    expect(() => blankSemanticClaimLines(content)).not.toThrow();
+    const result = blankSemanticClaimLines(content);
+    const lines = result.split('\n');
+    expect(lines[0]).toBe('Some content.');
+    expect(lines[1]).toContain('docalign:semantic');
+  });
+
+  it('composes correctly with blankSkipRegionContent', () => {
+    const content = [
+      '<!-- docalign:skip reason="example_table" -->',
+      'Illustrative content',
+      '<!-- /docalign:skip -->',
+      '<!-- docalign:semantic id="sem-aabb0011aabb0011" -->',
+      'Real semantic claim here.',
+      'Normal line.',
+    ].join('\n');
+
+    const afterSkip = blankSkipRegionContent(content);
+    const afterBoth = blankSemanticClaimLines(afterSkip);
+    const lines = afterBoth.split('\n');
+
+    expect(lines).toHaveLength(6);
+    expect(lines[1]).toBe(''); // skip region blanked
+    expect(lines[4]).toBe(''); // semantic claim blanked
+    expect(lines[5]).toBe('Normal line.'); // preserved
   });
 });

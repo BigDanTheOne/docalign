@@ -2,21 +2,27 @@ import { describe, it, expect } from 'vitest';
 import { parseTags, parseTag } from '../../src/tags/parser';
 
 describe('parseTag', () => {
-  it('parses a valid tag with all fields', () => {
-    const line = '<!-- docalign:claim id="abc-123" type="path_reference" status="verified" -->';
+  it('parses a valid tag with id and status', () => {
+    const line = '<!-- docalign:semantic id="sem-a3f291bc7e041d82" status="verified" -->';
     const tag = parseTag(line);
     expect(tag).not.toBeNull();
-    expect(tag!.id).toBe('abc-123');
-    expect(tag!.type).toBe('path_reference');
+    expect(tag!.id).toBe('sem-a3f291bc7e041d82');
     expect(tag!.status).toBe('verified');
   });
 
-  it('parses a tag with leading whitespace', () => {
-    const line = '  <!-- docalign:claim id="x-1" type="command" status="drifted" -->';
+  it('parses a tag with id only (no status — freshly written)', () => {
+    const line = '<!-- docalign:semantic id="sem-a3f291bc7e041d82" -->';
     const tag = parseTag(line);
     expect(tag).not.toBeNull();
-    expect(tag!.id).toBe('x-1');
-    expect(tag!.type).toBe('command');
+    expect(tag!.id).toBe('sem-a3f291bc7e041d82');
+    expect(tag!.status).toBeNull();
+  });
+
+  it('parses a tag with leading whitespace', () => {
+    const line = '  <!-- docalign:semantic id="sem-x1y2z3a4b5c6d7e8" status="drifted" -->';
+    const tag = parseTag(line);
+    expect(tag).not.toBeNull();
+    expect(tag!.id).toBe('sem-x1y2z3a4b5c6d7e8');
     expect(tag!.status).toBe('drifted');
   });
 
@@ -31,32 +37,38 @@ describe('parseTag', () => {
   });
 
   it('returns null for tag missing id', () => {
-    const result = parseTag('<!-- docalign:claim type="path_reference" status="verified" -->');
+    const result = parseTag('<!-- docalign:semantic status="verified" -->');
     expect(result).toBeNull();
   });
 
-  it('returns null for tag missing type', () => {
-    const result = parseTag('<!-- docalign:claim id="abc-123" status="verified" -->');
+  it('returns null for old docalign:claim format', () => {
+    const result = parseTag('<!-- docalign:claim id="abc-123" type="path_reference" status="verified" -->');
     expect(result).toBeNull();
   });
 
-  it('defaults status to pending when missing', () => {
-    const tag = parseTag('<!-- docalign:claim id="abc-123" type="path_reference" -->');
+  it('status is null when missing', () => {
+    const tag = parseTag('<!-- docalign:semantic id="sem-0011223344556677" -->');
     expect(tag).not.toBeNull();
-    expect(tag!.status).toBe('pending');
+    expect(tag!.status).toBeNull();
   });
 
   it('uses provided line number', () => {
-    const tag = parseTag('<!-- docalign:claim id="x" type="command" status="verified" -->', 42);
+    const tag = parseTag('<!-- docalign:semantic id="sem-aabbccddeeff0011" status="verified" -->', 42);
     expect(tag).not.toBeNull();
     expect(tag!.line).toBe(42);
   });
 
   it('preserves raw line', () => {
-    const line = '<!-- docalign:claim id="raw-test" type="config" status="drifted" -->';
+    const line = '<!-- docalign:semantic id="sem-aabbccddeeff0011" status="drifted" -->';
     const tag = parseTag(line);
     expect(tag).not.toBeNull();
     expect(tag!.raw).toBe(line);
+  });
+
+  it('parses status="uncertain"', () => {
+    const tag = parseTag('<!-- docalign:semantic id="sem-aabbccddeeff0011" status="uncertain" -->');
+    expect(tag).not.toBeNull();
+    expect(tag!.status).toBe('uncertain');
   });
 });
 
@@ -71,66 +83,77 @@ describe('parseTags', () => {
   });
 
   it('parses single tag', () => {
-    const doc = '<!-- docalign:claim id="single" type="path_reference" status="verified" -->';
+    const doc = '<!-- docalign:semantic id="sem-aabb0011aabb0011" status="verified" -->';
     const tags = parseTags(doc);
     expect(tags).toHaveLength(1);
-    expect(tags[0].id).toBe('single');
+    expect(tags[0].id).toBe('sem-aabb0011aabb0011');
     expect(tags[0].line).toBe(1);
+  });
+
+  it('parses single tag without status', () => {
+    const doc = '<!-- docalign:semantic id="sem-aabb0011aabb0011" -->';
+    const tags = parseTags(doc);
+    expect(tags).toHaveLength(1);
+    expect(tags[0].id).toBe('sem-aabb0011aabb0011');
+    expect(tags[0].status).toBeNull();
   });
 
   it('parses multiple tags in mixed content', () => {
     const doc = [
       '# My Document',
       '',
-      'Some content here.',
-      '<!-- docalign:claim id="claim-1" type="path_reference" status="verified" -->',
+      '<!-- docalign:semantic id="sem-claim00000001" -->',
+      'The authentication middleware validates JWT tokens.',
       '',
       'More content.',
-      '<!-- docalign:claim id="claim-2" type="dependency_version" status="drifted" -->',
+      '<!-- docalign:semantic id="sem-claim00000002" status="verified" -->',
+      'Default timeout is 30 seconds.',
       '',
       'End of doc.',
     ].join('\n');
     const tags = parseTags(doc);
     expect(tags).toHaveLength(2);
-    expect(tags[0].id).toBe('claim-1');
-    expect(tags[0].line).toBe(4);
-    expect(tags[1].id).toBe('claim-2');
+    expect(tags[0].id).toBe('sem-claim00000001');
+    expect(tags[0].line).toBe(3);
+    expect(tags[0].status).toBeNull();
+    expect(tags[1].id).toBe('sem-claim00000002');
     expect(tags[1].line).toBe(7);
+    expect(tags[1].status).toBe('verified');
   });
 
   it('skips malformed tags and parses valid ones', () => {
     const doc = [
-      '<!-- docalign:claim id="valid" type="command" status="verified" -->',
-      '<!-- docalign:claim type="command" status="verified" -->', // missing id
-      '<!-- docalign:claim id="also-valid" type="path_reference" status="drifted" -->',
+      '<!-- docalign:semantic id="sem-valid0000000001" status="verified" -->',
+      '<!-- docalign:semantic status="verified" -->', // missing id
+      '<!-- docalign:semantic id="sem-valid0000000002" status="drifted" -->',
     ].join('\n');
     const tags = parseTags(doc);
     expect(tags).toHaveLength(2);
-    expect(tags[0].id).toBe('valid');
-    expect(tags[1].id).toBe('also-valid');
+    expect(tags[0].id).toBe('sem-valid0000000001');
+    expect(tags[1].id).toBe('sem-valid0000000002');
   });
 
   it('handles unicode content around tags', () => {
     const doc = [
       '# Documentation \u{1F4DA}',
-      '<!-- docalign:claim id="unicode-test" type="path_reference" status="verified" -->',
+      '<!-- docalign:semantic id="sem-aabb0011aabb0011" status="verified" -->',
       'Content with \u00E9m\u00F8j\u00EFs and speci\u00E4l chars.',
     ].join('\n');
     const tags = parseTags(doc);
     expect(tags).toHaveLength(1);
-    expect(tags[0].id).toBe('unicode-test');
+    expect(tags[0].id).toBe('sem-aabb0011aabb0011');
   });
 
   it('handles adjacent tags on consecutive lines', () => {
     const doc = [
-      '<!-- docalign:claim id="a" type="path_reference" status="verified" -->',
-      '<!-- docalign:claim id="b" type="command" status="drifted" -->',
-      '<!-- docalign:claim id="c" type="dependency_version" status="uncertain" -->',
+      '<!-- docalign:semantic id="sem-aaaa0000aaaa0001" status="verified" -->',
+      '<!-- docalign:semantic id="sem-aaaa0000aaaa0002" status="drifted" -->',
+      '<!-- docalign:semantic id="sem-aaaa0000aaaa0003" status="uncertain" -->',
     ].join('\n');
     const tags = parseTags(doc);
     expect(tags).toHaveLength(3);
-    expect(tags[0].id).toBe('a');
-    expect(tags[1].id).toBe('b');
-    expect(tags[2].id).toBe('c');
+    expect(tags[0].id).toBe('sem-aaaa0000aaaa0001');
+    expect(tags[1].id).toBe('sem-aaaa0000aaaa0002');
+    expect(tags[2].id).toBe('sem-aaaa0000aaaa0003');
   });
 });

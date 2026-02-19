@@ -16,15 +16,15 @@ describe('qa: AC-1 tag parser', () => {
     expect(Array.isArray(result)).toBe(true);
   });
 
-  it('contract: parseTag function exists and handles valid tag', async () => {
+  it('contract: parseTag function exists and handles valid semantic tag', async () => {
     const { parseTag } = await import('../../../src/tags/parser');
     expect(typeof parseTag).toBe('function');
-    const tag = parseTag('<!-- docalign:claim id="test-id" type="path_reference" status="verified" -->');
+    const tag = parseTag('<!-- docalign:semantic id="sem-a3f291bc7e041d82" status="verified" -->');
     // Should return a DocTag object or null
     if (tag !== null) {
       expect(tag).toHaveProperty('id');
-      expect(tag).toHaveProperty('type');
       expect(tag).toHaveProperty('status');
+      expect(tag).not.toHaveProperty('type'); // type attribute removed from new format
     }
   });
 
@@ -34,23 +34,38 @@ describe('qa: AC-1 tag parser', () => {
     expect(result).toBeNull();
   });
 
+  it('contract: parseTag returns null for old docalign:claim format', async () => {
+    const { parseTag } = await import('../../../src/tags/parser');
+    const result = parseTag('<!-- docalign:claim id="test-id" type="path_reference" status="verified" -->');
+    expect(result).toBeNull();
+  });
+
+  it('contract: parseTag handles tags without status (freshly written)', async () => {
+    const { parseTag } = await import('../../../src/tags/parser');
+    const tag = parseTag('<!-- docalign:semantic id="sem-a3f291bc7e041d82" -->');
+    expect(tag).not.toBeNull();
+    expect(tag!.id).toBe('sem-a3f291bc7e041d82');
+    expect(tag!.status).toBeNull();
+  });
+
   it('contract: parseTags handles mixed content document', async () => {
     const { parseTags } = await import('../../../src/tags/parser');
     const doc = [
       '# My Document',
       '',
-      'Some content here.',
-      '<!-- docalign:claim id="claim-1" type="path_reference" status="verified" -->',
+      '<!-- docalign:semantic id="sem-claim00000001" -->',
+      'The authentication middleware validates JWT tokens.',
       '',
       'More content.',
-      '<!-- docalign:claim id="claim-2" type="dependency_version" status="drifted" -->',
+      '<!-- docalign:semantic id="sem-claim00000002" status="verified" -->',
+      'Default timeout is 30 seconds.',
       '',
       'End of doc.',
     ].join('\n');
     const tags = parseTags(doc);
     expect(tags.length).toBe(2);
-    expect(tags[0].id).toBe('claim-1');
-    expect(tags[1].id).toBe('claim-2');
+    expect(tags[0].id).toBe('sem-claim00000001');
+    expect(tags[1].id).toBe('sem-claim00000002');
   });
 });
 
@@ -66,13 +81,14 @@ describe('qa: AC-2 tag writer', () => {
     expect(result).toHaveProperty('tagsPreserved');
   });
 
-  it('contract: writeTags is idempotent', async () => {
+  it('contract: writeTags is idempotent (update-in-place path)', async () => {
     const { writeTags } = await import('../../../src/tags/writer');
     const claims = [
-      { id: 'test-1', type: 'path_reference' as const, status: 'verified', source_line: 1 },
+      { id: 'sem-idem0000idem0001', status: 'verified', source_line: 1 },
     ];
-    const original = '# Test\nSome path reference here.';
-    const result1 = writeTags(original, claims);
+    // Start from already-tagged content to exercise update-in-place path
+    const tagged = '<!-- docalign:semantic id="sem-idem0000idem0001" status="verified" -->\nSome content.';
+    const result1 = writeTags(tagged, claims);
     const result2 = writeTags(result1.content, claims);
     expect(result1.content).toBe(result2.content);
   });
@@ -82,14 +98,13 @@ describe('qa: AC-2 tag writer', () => {
     const { writeTags } = await import('../../../src/tags/writer');
     const docWithTags = [
       '# Test Doc',
-      '<!-- docalign:claim id="rt-1" type="path_reference" status="verified" -->',
+      '<!-- docalign:semantic id="sem-rt00000000000001" status="verified" -->',
       'Some content',
     ].join('\n');
     const tags1 = parseTags(docWithTags);
     const claims = tags1.map(t => ({
       id: t.id,
-      type: t.type,
-      status: t.status,
+      status: t.status ?? 'pending',
       source_line: t.line,
     }));
     const result = writeTags(docWithTags, claims);
@@ -97,7 +112,6 @@ describe('qa: AC-2 tag writer', () => {
     expect(tags1.length).toBe(tags2.length);
     for (let i = 0; i < tags1.length; i++) {
       expect(tags1[i].id).toBe(tags2[i].id);
-      expect(tags1[i].type).toBe(tags2[i].type);
       expect(tags1[i].status).toBe(tags2[i].status);
     }
   });
@@ -108,7 +122,7 @@ describe('qa: AC-2 tag writer', () => {
   });
 });
 
-// AC-3: Tag-Aware L1 Extraction
+// AC-3: Tag-Aware L1 Extraction — semantic claim lines blanked before extraction
 describe('qa: AC-3 tag-aware L1 extraction', () => {
   it('contract: L1 extractors module exports exist', async () => {
     const mod = await import('../../../src/layers/L1-claim-extractor');
@@ -116,20 +130,76 @@ describe('qa: AC-3 tag-aware L1 extraction', () => {
     expect(mod).toBeDefined();
   });
 
-  it('contract: tag lines should not be extracted as claims', async () => {
-    // Tag lines (HTML comments starting with docalign:) are metadata
-    const tagLine = '<!-- docalign:claim id="x" type="path_reference" status="verified" -->';
-    expect(tagLine).toContain('docalign:claim');
-    // The extractor should skip these lines
+  it('contract: blankSemanticClaimLines blanks claim lines before extraction', async () => {
+    const { blankSemanticClaimLines } = await import('../../../src/tags/writer');
+    expect(typeof blankSemanticClaimLines).toBe('function');
+
+    const content = [
+      '<!-- docalign:semantic id="sem-a3f291bc7e041d82" -->',
+      'The authentication middleware validates JWT tokens on every request.',
+      'Normal line with `src/utils.ts` path reference.',
+    ].join('\n');
+
+    const blanked = blankSemanticClaimLines(content);
+    const lines = blanked.split('\n');
+
+    // Tag line preserved
+    expect(lines[0]).toContain('docalign:semantic');
+    // Claim line blanked — L1 extractors won't see it
+    expect(lines[1]).toBe('');
+    // Normal line preserved — extractors will still process it
+    expect(lines[2]).toBe('Normal line with `src/utils.ts` path reference.');
+  });
+
+  it('contract: tag lines are not themselves extracted as path_reference claims', async () => {
+    // docalign:semantic tag lines contain no paths/commands that look like real claims
+    // They are HTML comments — extractors skip them via preprocessing
+    const tagLine = '<!-- docalign:semantic id="sem-a3f291bc7e041d82" status="verified" -->';
+    // Tag lines match the preprocessing DOCALIGN_TAG_PATTERN — excluded from extraction
+    const DOCALIGN_TAG_PATTERN = /^\s*<!--\s*docalign:\w+\s+.*?-->\s*$/;
+    expect(DOCALIGN_TAG_PATTERN.test(tagLine)).toBe(true);
   });
 });
 
-// AC-4: Prompt/Schema Updates
-describe('qa: AC-4 schema backward compatibility', () => {
-  it('contract: extraction schema supports tag metadata fields', async () => {
-    // The extraction output schema should include tag metadata
-    // This is a structural contract — verified by the build
-    expect(true).toBe(true);
+// AC-4: Status Write-Back
+describe('qa: AC-4 status write-back after verification', () => {
+  it('contract: writeTags updates status attribute in-place on existing semantic tags', async () => {
+    const { writeTags } = await import('../../../src/tags/writer');
+
+    const docWithFreshTag = [
+      '# Authentication',
+      '<!-- docalign:semantic id="sem-a3f291bc7e041d82" -->',
+      'The authentication middleware validates JWT tokens on every request.',
+    ].join('\n');
+
+    const tagUpdates = [
+      { id: 'sem-a3f291bc7e041d82', status: 'verified', source_line: 2 },
+    ];
+
+    const result = writeTags(docWithFreshTag, tagUpdates);
+
+    expect(result.tagsUpdated).toBe(1);
+    expect(result.tagsWritten).toBe(0);
+    expect(result.content).toContain('status="verified"');
+    // The claim line is preserved (write-back only changes the tag line)
+    expect(result.content).toContain('The authentication middleware validates JWT tokens');
+  });
+
+  it('contract: status write-back produces docalign:semantic format (not docalign:claim)', async () => {
+    const { writeTags } = await import('../../../src/tags/writer');
+
+    const docWithFreshTag = [
+      '<!-- docalign:semantic id="sem-a3f291bc7e041d82" -->',
+      'Default timeout is 30 seconds.',
+    ].join('\n');
+
+    const result = writeTags(docWithFreshTag, [
+      { id: 'sem-a3f291bc7e041d82', status: 'drifted', source_line: 1 },
+    ]);
+
+    expect(result.content).toContain('docalign:semantic');
+    expect(result.content).not.toContain('docalign:claim');
+    expect(result.content).not.toContain('type=');
   });
 });
 

@@ -7,7 +7,6 @@
  */
 
 import fs from 'fs';
-import type { ClaimType } from '../shared/types';
 import { parseTags } from './parser';
 
 // ============================================================
@@ -83,6 +82,35 @@ export function blankSkipRegionContent(content: string): string {
     }
     return inSkip ? '' : line; // Blank content inside skip regions
   });
+  return result.join('\n');
+}
+
+const SEMANTIC_TAG_RE = /^\s*<!--\s*docalign:semantic\b/;
+
+/**
+ * Blank out lines immediately following docalign:semantic tag lines, preserving line count.
+ *
+ * The claim text line that follows each semantic tag is replaced with an empty string so that
+ * L1 regex extractors do not double-extract semantic (non-deterministic) claims.
+ * Tag lines themselves are kept unchanged.
+ *
+ * Use this after blankSkipRegionContent(), before running L1 syntactic extraction.
+ */
+export function blankSemanticClaimLines(content: string): string {
+  const lines = content.split('\n');
+  const result: string[] = [];
+  let skipNext = false;
+  for (const line of lines) {
+    if (skipNext) {
+      result.push('');
+      skipNext = false;
+    } else {
+      result.push(line);
+      if (SEMANTIC_TAG_RE.test(line)) {
+        skipNext = true;
+      }
+    }
+  }
   return result.join('\n');
 }
 
@@ -180,13 +208,11 @@ export async function writeSkipTagsToFile(
 }
 
 export interface TaggableClaim {
-  /** UUID of the claim. */
+  /** 16-char hex ID of the semantic claim. */
   id: string;
-  /** Claim type. */
-  type: ClaimType | string;
-  /** Verification status. */
+  /** Verification status (verified | drifted | uncertain). */
   status: string;
-  /** 1-based line number of the claim's source line in the document. */
+  /** 1-based line number of the tag itself in the document. */
   source_line: number;
 }
 
@@ -202,10 +228,10 @@ export interface TagWriteResult {
 }
 
 /**
- * Format a claim as an inline tag string.
+ * Format a claim as an inline semantic tag string.
  */
 function formatTag(claim: TaggableClaim): string {
-  return `<!-- docalign:claim id="${claim.id}" type="${claim.type}" status="${claim.status}" -->`;
+  return `<!-- docalign:semantic id="${claim.id}" status="${claim.status}" -->`;
 }
 
 /**
