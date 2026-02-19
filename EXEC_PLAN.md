@@ -3,7 +3,7 @@
 Run ID: `2dffc059-e2c2-4b19-86b2-e9bd13cc5926`
 Pipeline type: task
 Branch: `feature/2dffc059`
-Generated: 2026-02-18T23:23:08.424Z
+Generated: 2026-02-19T01:34:51.787Z
 
 ## Purpose / Big Picture
 
@@ -14,6 +14,22 @@ Task: T4: CHANGELOG + Version Hygiene
 - [ ] Complete all build tasks
 - [ ] Push branch and open PR
 - [ ] All tests pass (`npm run typecheck && npm run test`)
+
+## Prior Code Review Feedback (MUST ADDRESS)
+
+The previous build was rejected. Address ALL of the following feedback:
+
+### critic
+VERDICT: request_changes
+
+FINDINGS:
+- **CRITICAL — `semantic` in SKIP_BLOCK_TAGS blanks entire documents**: Adding `semantic` to the block-tag skip set in `preprocessing.ts` causes `activeBlockTag` to be set on inline `docalign:semantic` tags (which have no closing `<!-- /docalign:semantic -->` pair). Once set, every subsequent line is suppressed from claim extraction until EOF. 30+ docs files affected. Silent data loss — no errors, just missing claims.
+- **CRITICAL — Parser tag format changed without migration**: `parser.ts` TAG_PATTERN changed from `docalign:semantic` to `docalign:claim` and now requires `type` field. 30+ existing `<!-- docalign:semantic ... -->` tags in docs/ are orphaned — `parseTags()` returns empty arrays. No migration script or tag rewrite included.
+- **Version downgrade**: `package.json` changes from 0.3.6 → 0.3.5 while CHANGELOG lists 0.3.6 as the latest release. Contradictory.
+- **Undocumented feature removal**: `writeTagStatusBack` and `blankSemanticClaimLines` removed (features listed as Added in CHANGELOG 0.3.6), but CHANGELOG doesn't mention their removal. Misleading history.
+- **Stale line numbers**: Reverting from tag-first to store-only semantic claim loading means line numbers come from JSON store snapshots, not live tag positions. Doc edits will produce wrong line numbers.
+
+CONFIDENCE: high
 
 ## Context and Orientation
 
@@ -29,7 +45,7 @@ Task: T4: CHANGELOG + Version Hygiene
 - See `CONVENTIONS.md` for coding style reference
 
 ### Stage History
-(no prior stages recorded)
+- **code_review** (critic): rejected — Critical: semantic in SKIP_BLOCK_TAGS blanks documents, parser tag format changed without migration, version downgrade 0.3.6→0.3.5, undocumented feature removal, stale line numbers
 
 ## Validation and Acceptance
 

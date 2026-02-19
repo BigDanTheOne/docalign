@@ -7,18 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.3.6] - 2026-02-18
-
-### Added
-- Write verification status back to inline `docalign:semantic` tags (Epic 1.4)
-- Tag-first semantic claim discovery in `checkFile` and `scanRepo` (Epic 1.2)
-
-### Changed
-- Unified tag format to `docalign:semantic` with tag-first parsing (Epic 1.1)
-- Blank semantic claim lines before L1 regex extraction (Epic 1.3)
+## [0.3.6] - 2026-02-19
 
 ### Fixed
-- Reduced false positives and false negatives from dogfood report
+- **CRITICAL**: Removed `semantic` from `SKIP_BLOCK_TAGS` in preprocessing — was causing entire documents to be blanked after inline `docalign:semantic` tags (no closing tag exists, so activeBlockTag remained set until EOF)
+- Reverted tag-first semantic claim loading to avoid stale line numbers from JSON snapshots
+
+### Removed
+- Tag-first semantic claim discovery (`writeTagStatusBack`, `blankSemanticClaimLines`) — reverted to store-only approach for accurate line number tracking
+- Parser support for `docalign:claim` tags — returned to `docalign:semantic` inline tags without migration
 
 ## [0.3.5] - 2026-02-15
 
