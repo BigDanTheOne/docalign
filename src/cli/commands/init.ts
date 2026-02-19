@@ -93,16 +93,18 @@ export async function runInit(
     settings.permissions.allow.push(docalignPerm);
   }
 
-  // Register MCP server via the official claude mcp add command.
-  // This writes to Claude Code's own config rather than settings.local.json,
-  // which is the reliable way to make MCP tools available in a session.
+  // Register MCP server globally via the official claude mcp add command.
+  // --scope user writes to the user-level config (~/.config/claude/mcp.json),
+  // making docalign available in every project without per-repo setup.
+  // No --repo flag: the server defaults to process.cwd() at startup, which is
+  // whatever directory Claude Code is opened in.
   const mcpResult = spawnSync(
     "claude",
-    ["mcp", "add", "--scope", "project", "docalign", "--", "npx", "docalign", "mcp", "--repo", "."],
+    ["mcp", "add", "--scope", "user", "docalign", "--", "npx", "docalign", "mcp"],
     { cwd, stdio: "pipe" },
   );
   if (mcpResult.status === 0) {
-    write("  \u2713 MCP server registered (claude mcp add)");
+    write("  \u2713 MCP server registered globally (claude mcp add --scope user)");
   } else {
     write("  \u26a0 Could not register MCP server via claude mcp add — is Claude Code installed?");
   }
