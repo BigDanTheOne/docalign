@@ -8,6 +8,12 @@ SCAN_PATH="${1:-.}"
 CONFIG_PATH="${2:-}"
 FAIL_ON_STALE="${3:-true}"
 
+# Check for required dependencies
+if ! command -v jq &> /dev/null; then
+  echo "::error::jq is required but not installed. Please add a step to install jq before this action."
+  exit 1
+fi
+
 echo "::group::Installing DocAlign"
 npm install -g docalign
 echo "::endgroup::"
@@ -16,7 +22,7 @@ echo "::group::Running DocAlign scan"
 cd "$SCAN_PATH"
 
 # Build scan command
-SCAN_CMD="docalign scan --json"
+SCAN_CMD=("docalign" "scan" "--json")
 
 # Add config if specified
 if [ -n "$CONFIG_PATH" ]; then
@@ -24,35 +30,37 @@ if [ -n "$CONFIG_PATH" ]; then
     echo "::error::Config file not found: $CONFIG_PATH"
     exit 1
   fi
-  # Note: The CLI doesn't currently accept --config flag, it auto-loads .docalign.yml from repo root
-  # If a custom config path is provided, we need to ensure it's at .docalign.yml or copy it
-  if [ "$CONFIG_PATH" != ".docalign.yml" ]; then
-    echo "::warning::Custom config path specified but CLI auto-loads from .docalign.yml. Config will be used if it exists at repo root."
-  fi
+  SCAN_CMD+=("--config" "$CONFIG_PATH")
 fi
 
-# Run scan and capture output
-SCAN_OUTPUT=$(eval "$SCAN_CMD" 2>&1) || SCAN_EXIT=$?
-SCAN_EXIT=${SCAN_EXIT:-0}
+# Run scan and capture output, separating stdout from stderr
+SCAN_EXIT=0
+SCAN_OUTPUT=$("${SCAN_CMD[@]}" 2>/dev/null) || SCAN_EXIT=$?
+
+# Check if scan failed
+if [ "$SCAN_EXIT" -ne 0 ]; then
+  echo "::error::DocAlign scan failed with exit code $SCAN_EXIT"
+  echo "::endgroup::"
+  exit "$SCAN_EXIT"
+fi
 
 echo "$SCAN_OUTPUT"
 echo "::endgroup::"
 
 # Parse JSON output
 STALE_COUNT=$(echo "$SCAN_OUTPUT" | jq -r '.drifted // 0' 2>/dev/null || echo "0")
-HEALTH_PERCENT=$(echo "$SCAN_OUTPUT" | jq -r '.healthPercent // 100' 2>/dev/null || echo "100")
 
-# Write outputs
+# Write outputs using unique heredoc delimiter to prevent injection
+HEREDOC_DELIMITER="DOCALIGN_REPORT_EOF_DELIMITER_$(date +%s%N)"
 echo "stale-found=$([ "$STALE_COUNT" -gt 0 ] && echo 'true' || echo 'false')" >> "$GITHUB_OUTPUT"
-echo "report<<EOF" >> "$GITHUB_OUTPUT"
+echo "report<<${HEREDOC_DELIMITER}" >> "$GITHUB_OUTPUT"
 echo "$SCAN_OUTPUT" >> "$GITHUB_OUTPUT"
-echo "EOF" >> "$GITHUB_OUTPUT"
+echo "${HEREDOC_DELIMITER}" >> "$GITHUB_OUTPUT"
 
 # Write job summary
 {
   echo "## DocAlign Scan Results"
   echo ""
-  echo "📊 **Health Score:** ${HEALTH_PERCENT}%"
   echo "📝 **Stale Claims:** ${STALE_COUNT}"
   echo ""
   if [ "$STALE_COUNT" -gt 0 ]; then
