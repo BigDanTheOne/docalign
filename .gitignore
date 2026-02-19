@@ -6,12 +6,32 @@ dist/
 !.env.example
 coverage/
 *.tsbuildinfo
-.entire/
 *.tgz
-.claude/settings.local.json
+debug-*.mjs
+worktree/
+
+# Runtime / local state
+.entire/
 .docalign/
+.openclaw/
+.claude/settings.local.json
 .agent-dev.json
 .env.agent
 _team/
-debug-*.mjs
-worktree/
+
+# Internal planning & development artifacts (not for public consumption)
+_planning/
+phases/
+prd/
+tasks/
+AGENTS.md
+AUTONOMOUS-OS.md
+BACKLOG.md
+CONVENTIONS.md
+EXEC_PLAN.md
+HOW_TO_SKILL_GUID.md
+KICKOFF-PROMPT.md
+PLAN-MCP-GAPS.md
+PRD.md
+PRODUCT-VISION.md
+dogfood-report.md
