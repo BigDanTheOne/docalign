@@ -143,9 +143,7 @@ else
 fi
 
 # Step 4b: Repair settings.local.json written by any older published package.
-# Fixes two things independently:
-#   (a) hooks.PostToolUse entries that use the old flat {matcher,command} format
-#   (b) missing or wrong mcpServers entry (the original cause of MCP not appearing)
+# Fixes hooks.PostToolUse entries that use the old flat {matcher,command} format.
 SETTINGS_FILE=".claude/settings.local.json"
 if [ -f "$SETTINGS_FILE" ]; then
     node - <<'EOF'
@@ -175,17 +173,7 @@ if (settings.hooks && settings.hooks.PostToolUse) {
     .filter(Boolean);
 }
 
-// (b) Ensure mcpServers is present and correct ---------------------------------
-// Older published versions of `docalign init` did not write mcpServers, so MCP
-// tools never appeared in Claude Code.  Always overwrite with the canonical
-// value so the script is self-sufficient regardless of package version.
-if (!settings.mcpServers) settings.mcpServers = {};
-settings.mcpServers.docalign = {
-  command: 'npx',
-  args: ['docalign', 'mcp', '--repo', '.'],
-};
-
-// (c) Ensure permissions.allow includes the MCP wildcard ----------------------
+// (b) Ensure permissions.allow includes the MCP wildcard ----------------------
 if (!settings.permissions) settings.permissions = {};
 if (!Array.isArray(settings.permissions.allow)) settings.permissions.allow = [];
 if (!settings.permissions.allow.includes('mcp__docalign__*')) {

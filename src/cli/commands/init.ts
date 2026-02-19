@@ -18,6 +18,7 @@
 
 import fs from "fs";
 import path from "path";
+import { spawnSync } from "child_process";
 
 // Skill files ship with the npm package under skills/.
 // At runtime, __dirname is dist/cli/commands/ so the package root is 3 levels up.
@@ -44,13 +45,6 @@ interface SettingsJson {
     allow?: string[];
     deny?: string[];
   };
-  mcpServers?: Record<
-    string,
-    {
-      command: string;
-      args: string[];
-    }
-  >;
   hooks?: {
     PostToolUse?: HookEntry[];
     [key: string]: unknown;
@@ -99,12 +93,19 @@ export async function runInit(
     settings.permissions.allow.push(docalignPerm);
   }
 
-  // Add MCP server config
-  if (!settings.mcpServers) settings.mcpServers = {};
-  settings.mcpServers["docalign"] = {
-    command: "npx",
-    args: ["docalign", "mcp", "--repo", "."],
-  };
+  // Register MCP server via the official claude mcp add command.
+  // This writes to Claude Code's own config rather than settings.local.json,
+  // which is the reliable way to make MCP tools available in a session.
+  const mcpResult = spawnSync(
+    "claude",
+    ["mcp", "add", "--scope", "project", "docalign", "npx", "docalign", "mcp", "--repo", "."],
+    { cwd, stdio: "pipe" },
+  );
+  if (mcpResult.status === 0) {
+    write("  \u2713 MCP server registered (claude mcp add)");
+  } else {
+    write("  \u26a0 Could not register MCP server via claude mcp add — is Claude Code installed?");
+  }
 
   // Add post-commit hook (new hooks format with matcher + hooks array)
   if (!settings.hooks) settings.hooks = {};
