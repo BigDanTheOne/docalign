@@ -1,12 +1,12 @@
 ---
 title: "Fixing Drift"
-summary: "Guide to generating and applying fix suggestions for drifted documentation claims."
-description: "Covers generating fixes via docalign fix (all files or specific file) and fix_doc MCP tool, two fix types (deterministic: version/path/script suggestions; LLM-generated: requires ANTHROPIC_API_KEY), the recommended workflow (find → review → apply manually → re-check), auto-fix configuration (auto_fix: true, auto_fix_threshold), and reporting drift manually via report_drift MCP tool."
+summary: "Guide to fixing drifted documentation — understanding the workflow and letting Claude Code apply fixes directly."
+description: "Explains how drift is reported (check_doc, scan_docs), how Claude Code fixes documentation directly by reading the drift evidence and editing the doc, when auto-fix configuration applies, and how to suppress findings that are intentionally out of sync."
 category: guide
 read_when:
-  - You have found drifted claims and want fix suggestions
-  - You want to enable auto-fix for high-confidence findings
-  - You want to manually report a doc error
+  - You have found drifted claims and want to fix them
+  - You want to understand how Claude Code applies documentation fixes
+  - You want to enable or configure auto-fix behavior
 related:
   - docs/guides/checking-files.md
   - docs/reference/cli.md
@@ -18,59 +18,49 @@ docalign:
 
 # Fixing Drift
 
-After finding drifted claims, DocAlign can suggest fixes.
+When DocAlign finds drifted documentation claims, the fix workflow is straightforward: Claude Code reads the drift evidence, checks the actual code, and edits the documentation to match reality.
 
-## Generate fix suggestions
+## How Claude Code fixes documentation
 
-### Fix all files with drift
+When the `docalign` skill detects drift after a code change, it reports specific mismatches — including the claim text, line number, evidence files, and what the code actually does. Claude Code then:
+
+1. Reads the referenced evidence files to understand the current code behavior
+2. Edits the documentation to accurately reflect what the code does
+3. Re-checks with `check_doc` to confirm the drift is resolved
+
+No separate `docalign fix` command is needed — Claude Code handles the edit directly as part of its coding workflow.
+
+## Finding what needs fixing
+
+### Via CLI
 
 ```bash
-docalign fix
+docalign scan                    # Repo-wide overview with hotspots
+docalign check README.md         # Specific file details
+docalign check README.md --deep  # Full audit including unchecked sections
 ```
 
-### Fix a specific file
-
-```bash
-docalign fix README.md
-```
-
-### Fix via MCP
+### Via MCP
 
 ```
-Use fix_doc with file="README.md"
+Use scan_docs to get a health score and hotspot list
+Use check_doc with file="README.md" for specific findings
+Use check_doc with file="README.md", deep=true for a full audit
 ```
 
-## What fixes look like
+## What drift looks like
 
-Fix suggestions come in two forms:
+Each drifted finding includes:
+- **Claim:** The text in the doc that is wrong
+- **Actual:** What the code actually does (from the verifier)
+- **Evidence:** The code files that prove the discrepancy
+- **Severity:** High / Medium / Low
 
-### Deterministic fixes
-
-For claims with clear correct values, DocAlign suggests exact replacements:
-
-<!-- docalign:skip reason="illustrative_example" description="Example fix suggestion strings using hypothetical package versions, script names, and paths" -->
-- **Version mismatch**: "Change `express@4.17` to `express@4.18.2`" (from package.json)
-- **Missing script**: "Change `npm run deploy` to `npm run build`" (closest match)
-- **Wrong path**: "Change `src/auth.ts` to `src/auth/index.ts`" (fuzzy match)
-<!-- /docalign:skip -->
-
-### LLM-generated fixes
-
-<!-- docalign:semantic id="sem-cc0ea0eefb5dc20c" claim="LLM-generated fixes include the original text, suggested replacement, and reasoning" -->
-For complex claims, an LLM reads the relevant code and suggests line-level replacements. These include the original text, suggested replacement, and reasoning.
-
-LLM fixes require `ANTHROPIC_API_KEY` to be set. Without it, only deterministic suggestions are available.
-
-## Workflow
-
-1. **Find drift**: `docalign scan` or `list_drift` via MCP
-2. **Review suggestions**: `docalign fix <file>` or `fix_doc` via MCP
-3. **Apply manually**: Review each suggestion and apply the ones you agree with
-4. **Re-check**: `docalign check <file>` to verify the fixes
+Claude Code uses this information to make the right edit without guessing.
 
 ## Auto-fix (experimental)
 
-For high-confidence deterministic fixes, you can enable auto-fix:
+For high-confidence deterministic fixes (version numbers, file paths, script names), you can enable auto-fix:
 
 ```yaml
 # .docalign.yml
@@ -79,20 +69,17 @@ verification:
   auto_fix_threshold: 0.9    # Only auto-fix when confidence >= 90%
 ```
 
-Auto-fix applies changes directly to your documentation files. <!-- docalign:semantic id="sem-95eb03dcca99c446" claim="Only deterministic fixes (version numbers, paths) with confidence above the threshold are applied. LLM suggestions are never auto-applied." -->Only deterministic fixes (version numbers, paths) with confidence above the threshold are applied. LLM suggestions are never auto-applied.
+<!-- docalign:semantic id="sem-95eb03dcca99c446" -->
+Only deterministic fixes (version numbers, paths) with confidence above the threshold are applied. LLM suggestions are never auto-applied.
 
-## Report drift manually
+## Suppressing intentional drift
 
-If you notice a doc error during work that DocAlign didn't catch:
+If a doc section is intentionally out of sync with the code (examples, tutorials, aspirational descriptions), suppress it:
 
-<!-- docalign:skip reason="user_instruction" description="Example report_drift MCP call with placeholder values showing how to invoke the tool" -->
-```
-Use report_drift via MCP:
-  doc_file: "README.md"
-  claim_text: "Uses Redis for caching"
-  actual_behavior: "Switched to in-memory LRU cache in v2.0"
-  evidence_files: ["src/cache/index.ts"]
-```
+```markdown
+<!-- docalign:skip reason="illustrative_example" description="Shows hypothetical API usage, not actual code" -->
+...example content...
 <!-- /docalign:skip -->
+```
 
-Reports are stored in `.docalign/reports/` for tracking.
+See [Suppressing Findings](suppressing-findings.md) for all reason codes.

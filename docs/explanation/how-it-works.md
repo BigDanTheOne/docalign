@@ -86,8 +86,8 @@ Each claim is verified against the codebase through a tiered system. See [Verifi
 Results flow to multiple outputs:
 
 - **CLI:** `docalign scan` and `docalign check` print formatted results to the terminal
-<!-- docalign:semantic id="sem-0e699b5a8fbabcbe" claim="MCP: 10 tools expose results to AI coding agents" -->
-- **MCP:** 10 tools expose results to AI coding agents
+<!-- docalign:semantic id="sem-0e699b5a8fbabcbe" -->
+- **MCP:** 4 tools expose results to AI coding agents
 - **PR Comments:** In server mode, posts verification results as GitHub PR comments
 <!-- docalign:semantic id="sem-3a386ac2b08c5113" claim="Health score: 0-100 based on verified / (verified + drifted) ratio" -->
 - **Health Score:** 0-100 based on verified / (verified + drifted) ratio

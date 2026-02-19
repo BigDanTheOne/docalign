@@ -24,7 +24,7 @@ After setup, Claude automatically checks documentation after code changes and an
 
 **On every code change**, Claude's DocAlign skill:
 
-1. Finds docs that reference the changed files (`get_docs_for_file`)
+1. Finds docs that reference the changed files (`get_docs` with `code_file` param)
 2. Checks those docs for drift (`check_doc`)
 3. Reports specific mismatches with suggested fixes
 
@@ -51,19 +51,13 @@ See [Checks Reference](docs/reference/checks.md) for all claim types.
 
 ## MCP Tools
 
-Claude Code gets 10 documentation tools:
+Claude Code gets 4 documentation tools:
 
 | Tool | What it does |
 |------|-------------|
-| `check_doc` | Check a doc file for drift |
-| `check_section` | Check a specific section |
-| `get_doc_health` | Repo-wide health score |
-| `list_drift` | All drifted docs, ordered by severity |
-| `get_docs_for_file` | Find docs that reference a code file |
-| `get_docs` | Search docs by topic with verification status |
-| `fix_doc` | Get fix suggestions for drifted claims |
-| `report_drift` | Track a doc inaccuracy for later |
-| `deep_check` | Full audit: syntactic + semantic + coverage |
+| `check_doc` | Check a doc file for drift — optionally scoped to a section (`section=`) or with full audit (`deep=true`) |
+| `scan_docs` | Repo-wide health score + ordered drift hotspot list |
+| `get_docs` | Search docs by topic or reverse-lookup docs that reference a code file (`code_file=`) |
 | `register_claims` | Persist semantic claims found during analysis |
 
 See [MCP Tools Reference](docs/reference/mcp-tools.md) for parameters and return values.

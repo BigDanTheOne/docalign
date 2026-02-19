@@ -1,7 +1,7 @@
 ---
 title: "CLI Reference"
 summary: "Complete reference for all DocAlign CLI commands, flags, environment variables, and exit codes."
-description: "Documents all 9 CLI commands: scan (full repo scan, --json, --exclude), check (single file, --verbose), extract (semantic claims, --force, --dry-run), fix (drift fixes), status (config and MCP status), configure (interactive config, --exclude, --min-severity, --reset), init (Claude Code MCP setup), viz (knowledge graph, --output, --no-open, --exclude), mcp (start MCP server, --repo). Also covers ANTHROPIC_API_KEY environment variable and exit codes (0/1/2)."
+description: "Documents all 8 CLI commands: scan (full repo scan, --json, --exclude, --max), check (single file, --section, --deep, --json), search (topic search + code-file reverse lookup), extract (semantic claims, --force, --dry-run), status (config and MCP status), configure (interactive config, --exclude, --min-severity, --reset), init (Claude Code MCP setup), viz (knowledge graph, --output, --no-open, --exclude), mcp (start MCP server, --repo). Also covers ANTHROPIC_API_KEY environment variable and exit codes (0/1/2)."
 category: reference
 read_when:
   - You need the exact syntax for a docalign command
@@ -40,6 +40,7 @@ docalign scan --exclude=docs/archive/old.md,docs/legacy.md
 | Flag | Description |
 |------|-------------|
 | `--json` | Output results as JSON instead of formatted text |
+| `--max=N` | Limit hotspot results in JSON output (default: all) |
 | `--exclude=FILE[,FILE]` | Comma-separated list of files to skip |
 
 **Output:** Lists each doc file with its claim count and drift status. Summary shows total verified, drifted, and health score.
@@ -50,10 +51,38 @@ Check a single documentation file for drift.
 
 ```bash
 docalign check README.md
-docalign check README.md --verbose
+docalign check README.md --section "Installation"
+docalign check README.md --deep
+docalign check README.md --json
 ```
 
-**Output:** Each claim found in the file with its verification result (drifted claims only).
+| Flag | Description |
+|------|-------------|
+| `--section=HEADING` | Scope the check to a specific section heading |
+| `--deep` | Include semantic claims, unchecked sections, and coverage metrics |
+| `--json` | Output results as JSON |
+
+**Output:** Each drifted claim with severity, line number, mismatch description, and evidence files.
+
+### docalign search \<query\>
+
+Search project documentation by topic or find all docs that reference a code file.
+
+```bash
+docalign search "authentication"
+docalign search --code-file src/auth/middleware.ts
+docalign search "jwt" --verified-only
+docalign search "api" --json
+```
+
+| Flag | Description |
+|------|-------------|
+| `--code-file=PATH` | Reverse lookup: find docs that reference this code file |
+| `--verified-only` | Only return sections where all claims are verified |
+| `--max=N` | Maximum results to return (default 10) |
+| `--json` | Output results as JSON |
+
+**Output:** Matching doc sections with file, heading, verification status, and content preview.
 
 ### docalign extract [file]
 
@@ -75,18 +104,6 @@ docalign extract --dry-run          # Preview without saving
 
 <!-- docalign:semantic id="sem-e23ce2967fee2194" claim="Extracted claims saved to .docalign/semantic/" -->
 **Storage:** Extracted claims saved to `.docalign/semantic/`, included in future `check` and `scan` runs.
-
-### docalign fix [file]
-
-Generate and apply fix suggestions for drifted documentation.
-
-```bash
-docalign fix                # Fix all files with drift
-docalign fix README.md      # Fix a specific file
-```
-
-<!-- docalign:semantic id="sem-88b10afe24b64a20" claim="Without ANTHROPIC_API_KEY, only deterministic suggestions (version replacements, path corrections) are available for fix" -->
-**Requirements:** `ANTHROPIC_API_KEY` for LLM-powered fixes. Without it, only deterministic suggestions (version replacements, path corrections) are available.
 
 ### docalign status
 
@@ -178,7 +195,7 @@ docalign help
 
 | Variable | Purpose |
 |----------|---------|
-| `ANTHROPIC_API_KEY` | Enables LLM verification (Tier 3), fix generation, and semantic extraction |
+| `ANTHROPIC_API_KEY` | Enables LLM verification (Tier 3) and semantic extraction |
 
 ## Exit Codes
 
