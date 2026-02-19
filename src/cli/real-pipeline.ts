@@ -67,7 +67,7 @@ import {
   buildDocSections,
   extractSemanticClaims,
 } from '../layers/L1-claim-extractor/semantic-extractor';
-import { writeSkipTagsToFile, blankSkipRegionContent } from '../tags/writer';
+import { writeSkipTagsToFile, blankSkipRegionContent, blankSemanticClaimLines } from '../tags/writer';
 import { parseTags } from '../tags/parser';
 import type { DocAlignConfig } from '../shared/types';
 import {
@@ -752,8 +752,10 @@ If an assertion is correct and the code genuinely doesn't match (real drift), re
 
     // Blank out content inside <!-- docalign:skip --> regions so L1 regex
     // extractors do not pick up illustrative/template code from skip-tagged
-    // blocks. Line numbers are preserved (blanked lines stay as empty strings).
-    const blanked = blankSkipRegionContent(content);
+    // blocks. Then blank lines following <!-- docalign:semantic --> tags so
+    // semantic claim lines are not double-extracted by the regex extractors.
+    // Both functions preserve line count so line numbers remain accurate.
+    const blanked = blankSemanticClaimLines(blankSkipRegionContent(content));
     const preprocessed = preProcess(blanked, format);
 
     const rawExtractions = [
