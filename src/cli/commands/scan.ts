@@ -19,6 +19,7 @@ export async function runScan(
   },
   exclude: string[] = [],
   json = false,
+  max?: number,
 ): Promise<number> {
   try {
     if (!json) write(`DocAlign: Scanning repository...`);
@@ -91,7 +92,7 @@ export async function runScan(
         drifted: totalDrifted,
         totalClaims: result.totalClaims,
         findings,
-        hotspots: hotspots.map((h) => ({ file: h.file, drifted: h.driftedCount })),
+        hotspots: (max ? hotspots.slice(0, max) : hotspots).map((h) => ({ file: h.file, drifted: h.driftedCount })),
       }));
     } else {
       const output = formatScanResults({

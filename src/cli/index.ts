@@ -11,6 +11,7 @@
 
 import { runCheck } from './commands/check';
 import { runScan } from './commands/scan';
+import { runSearch } from './commands/search';
 import { runInit } from './commands/init';
 import { runStatus } from './commands/status';
 import { runConfigure } from './commands/configure';
@@ -86,7 +87,16 @@ export async function run(
       }, write);
 
     case 'scan':
-      return runScan(pipeline, write, undefined, exclude, !!flags.json);
+      return runScan(pipeline, write, undefined, exclude, !!flags.json,
+        options.max ? parseInt(options.max, 10) : undefined);
+
+    case 'search':
+      return runSearch(pipeline, args[0], {
+        codeFile: options['code-file'],
+        verifiedOnly: !!flags['verified-only'],
+        json: !!flags.json,
+        max: options.max ? parseInt(options.max, 10) : undefined,
+      }, write);
 
     case 'status':
       return runStatus(write);
