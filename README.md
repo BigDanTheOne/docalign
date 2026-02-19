@@ -22,15 +22,19 @@ The result is a living map of what your docs claim vs. what your code does, kept
 
 These are the claims that really go stale — and that no regex can catch.
 
-**On every commit**, the DocAlign skill narrows the scope before checking anything:
+**On every commit**, a Claude Code **PostToolUse hook** fires automatically when Claude runs `git commit` via the Bash tool. The hook:
 
-1. **Identifies what changed** — reads the list of source files modified in the commit (ignoring docs, config, and lockfiles)
-2. **Reverse-looks up affected docs** — finds only the documents whose extracted claims reference those specific files
-3. **Re-verifies targeted claims** — checks those docs against the updated code and reports any mismatches: claim text, location, and what the code actually does now
+1. **Reads what changed** — pulls the source files modified in the commit (ignoring `.md`, `.docalign/`, and lockfiles)
+2. **Emits an instruction** — tells Claude to invoke the `/docalign` skill with the list of changed files
 
-Nothing outside that scope is touched. If you change `src/auth.ts`, only docs that were found to describe authentication behaviour are checked — not your entire doc tree. This keeps verification fast and signal-to-noise high regardless of repo size.
+The skill then takes over:
 
-Extraction runs once per document. Verification runs on every commit, scoped to what actually changed.
+3. **Reverse-looks up affected docs** — queries the claim index for documents whose stored claims reference those specific files
+4. **Re-verifies targeted claims** — checks only those docs against the updated code and reports mismatches: claim text, line, and what the code actually does now
+
+Nothing outside that scope is touched. Change `src/auth.ts` and only docs describing authentication behaviour are re-checked — not your entire doc tree. Signal-to-noise stays high regardless of repo size.
+
+Extraction runs once per document. Verification runs on every commit, scoped automatically to what changed.
 
 ## What It Finds
 
@@ -48,15 +52,17 @@ Extraction runs once per document. Verification runs on every commit, scoped to 
 
 **Semantic checks** (LLM-powered, via Claude):
 
-Behavioral claims that regex can't verify — extracted from prose, stored as structured claims, re-checked against source on every scan:
+Behavioral claims that regex can't verify — extracted from prose, stored as structured claims with stable IDs, re-checked against source on every scan. Every claim falls into one of three types:
 
-| Claim type | Example |
-|------------|---------|
-| Auth behavior | *"JWT is validated on every request"* — but middleware was removed |
-| Retry logic | *"Failed jobs retry 3 times"* — but retry count is now 5 |
-| Error handling | *"Errors are sent to Sentry"* — but Sentry SDK was uninstalled |
-| Data flow | *"Results are cached in Redis"* — but Redis call was replaced with a DB query |
-| Default values | *"Timeout defaults to 30 s"* — but the constant was changed to 10 |
+| Type | Example claim | Would drift when… |
+|------|---------------|-------------------|
+| `behavior` | *"Uses JWT for authentication"* | Auth switches to sessions or middleware is removed |
+| `behavior` | *"Retries failed jobs up to 3 times"* | Retry count changes or retry logic is deleted |
+| `behavior` | *"Returns 404 for unknown routes"* | Error handling is restructured |
+| `architecture` | *"Processes files in parallel using worker threads"* | Parallelism replaced with sequential execution |
+| `architecture` | *"Claims are extracted once and cached per section"* | Caching removed or extraction always re-runs |
+| `config` | *"Defaults to port 3000"* | The port constant is updated in source |
+| `config` | *"Timeout defaults to 30 seconds"* | The timeout value is changed |
 
 Semantic claims are extracted once per document, assigned stable IDs, cached alongside the doc, and re-verified automatically whenever related code changes.
 
