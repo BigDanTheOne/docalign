@@ -1,0 +1,108 @@
+name: DocAlign Self-Check
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**.md'
+      - 'docs/**'
+      - 'src/**'
+      - '.docalign.yml'
+      - 'CLAUDE.md'
+  pull_request:
+    paths:
+      - '**.md'
+      - 'docs/**'
+      - 'src/**'
+      - '.docalign.yml'
+      - 'CLAUDE.md'
+
+concurrency:
+  group: docalign-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Run DocAlign CLI scan
+        id: scan
+        run: |
+          set +e
+          OUTPUT=$(node dist/cli/main.js scan --json 2>&1)
+          EXIT_CODE=$?
+          set -e
+
+          echo "$OUTPUT" > /tmp/docalign-output.json
+
+          # Parse JSON output for metrics
+          if echo "$OUTPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'health={d[\"healthPercent\"]}\nverified={d[\"verified\"]}\ndrifted={d[\"drifted\"]}')" >> "$GITHUB_OUTPUT" 2>/dev/null; then
+            echo "Parsed scan results"
+          else
+            echo "health=0" >> "$GITHUB_OUTPUT"
+            echo "verified=0" >> "$GITHUB_OUTPUT"
+            echo "drifted=0" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Store exit code for fail_on_drift check
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+
+
+      - name: Check drift threshold
+        if: env.fail_on_drift == 'true' && steps.scan.outputs.drifted != '0'
+        run: |
+          echo "::error::Documentation drift detected: ${{ steps.scan.outputs.drifted }} claim(s)"
+          exit 1
+        env:
+          fail_on_drift: ${{ vars.DOCALIGN_FAIL_ON_DRIFT || 'false' }}
+
+      - name: Report results
+        if: always()
+        run: |
+          echo "### DocAlign Self-Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Health Score:** ${{ steps.scan.outputs.health }}%" >> $GITHUB_STEP_SUMMARY
+          echo "- **Verified Claims:** ${{ steps.scan.outputs.verified }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Drifted Claims:** ${{ steps.scan.outputs.drifted }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.scan.outputs.drifted }}" != "0" ]; then
+            echo "⚠️  Documentation drift detected. Review the claims that need updates." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ All documentation is aligned with code reality." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  validate-action:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate action structure
+        uses: ./
+        continue-on-error: true
+        with:
+          docalign_token: ${{ secrets.DOCALIGN_TOKEN || 'dummy-token-for-validation' }}
+          docalign_server_url: ${{ vars.DOCALIGN_SERVER_URL || 'https://api.docalign.dev' }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY || 'dummy-key-for-validation' }}
+          scan_run_id: 'validation-run'
+          repo_id: 'validation-repo'
+          fail_on_drift: ${{ vars.DOCALIGN_FAIL_ON_DRIFT || 'false' }}

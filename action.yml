@@ -1,0 +1,55 @@
+name: 'DocAlign'
+description: 'Verify documentation against code reality using LLM-powered analysis'
+author: 'DocAlign'
+
+inputs:
+  docalign_token:
+    description: 'DOCALIGN_TOKEN for authenticating with the DocAlign server'
+    required: true
+  docalign_server_url:
+    description: 'URL of the DocAlign server'
+    required: true
+  anthropic_api_key:
+    description: 'Anthropic API key for Claude LLM calls'
+    required: true
+  openai_api_key:
+    description: 'OpenAI API key for embeddings (text-embedding-3-small)'
+    required: false
+  scan_run_id:
+    description: 'Scan run ID (provided via repository_dispatch payload)'
+    required: true
+  repo_id:
+    description: 'Repository ID (provided via repository_dispatch payload)'
+    required: true
+  config_path:
+    description: 'Path to .docalign.yml config file'
+    required: false
+    default: '.docalign.yml'
+  max_tasks:
+    description: 'Maximum number of tasks to process before exiting'
+    required: false
+    default: '100'
+  poll_interval_ms:
+    description: 'Milliseconds between task polling requests'
+    required: false
+    default: '2000'
+  fail_on_drift:
+    description: 'Whether to fail the workflow if documentation drift is detected'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run DocAlign Action
+      uses: ./agent-action
+      with:
+        docalign_token: ${{ inputs.docalign_token }}
+        docalign_server_url: ${{ inputs.docalign_server_url }}
+        anthropic_api_key: ${{ inputs.anthropic_api_key }}
+        openai_api_key: ${{ inputs.openai_api_key }}
+        scan_run_id: ${{ inputs.scan_run_id }}
+        repo_id: ${{ inputs.repo_id }}
+        config_path: ${{ inputs.config_path }}
+        max_tasks: ${{ inputs.max_tasks }}
+        poll_interval_ms: ${{ inputs.poll_interval_ms }}
