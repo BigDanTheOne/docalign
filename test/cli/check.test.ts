@@ -242,16 +242,5 @@ describe('CLI check command', () => {
     expect(medIdx).toBeLessThan(lowIdx);
   });
 
-  it('passes verbose flag to pipeline', async () => {
-    const pipeline = makePipeline({
-      claims: [],
-      results: [],
-      fixes: [],
-      durationMs: 0,
-    });
-
-    await runCheck(pipeline, 'README.md', { verbose: true }, () => {});
-
-    expect(pipeline.checkFile).toHaveBeenCalledWith('README.md', true);
-  });
 });
+

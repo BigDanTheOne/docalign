@@ -10,7 +10,9 @@ import { filterUncertain, countVerdicts } from '../local-pipeline';
 import { formatCheckResults, type CheckFinding, type Severity } from '../output';
 
 export interface CheckOptions {
-  verbose?: boolean;
+  section?: string;
+  deep?: boolean;
+  json?: boolean;
 }
 
 export async function runCheck(
@@ -25,7 +27,9 @@ export async function runCheck(
   }
 
   try {
-    const result = await pipeline.checkFile(filePath, options.verbose);
+    const result = options.section
+      ? await pipeline.checkSection(filePath, options.section)
+      : await pipeline.checkFile(filePath);
 
     // Filter uncertain claims (GATE42-021)
     const visibleResults = filterUncertain(result.results);
@@ -40,7 +44,6 @@ export async function runCheck(
       })
       .map((r) => {
         const claim = result.claims.find((c) => c.id === r.claim_id);
-        const fix = result.fixes.find((f) => f.claim_id === r.claim_id);
         return {
           severity: (r.severity ?? 'low') as Severity,
           file: claim?.source_file ?? filePath,
@@ -48,7 +51,6 @@ export async function runCheck(
           claimText: claim?.claim_text ?? '',
           actual: r.specific_mismatch ?? r.reasoning ?? 'Documentation drift detected',
           evidenceFiles: r.evidence_files ?? [],
-          fix: fix?.new_text,
         };
       });
 

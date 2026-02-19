@@ -11,7 +11,7 @@ import type {
   Claim,
   VerificationResult,
 } from '../shared/types';
-import type { CliPipeline, CheckResult, ScanResult, ScanFileResult, DocFix, SectionInfo } from './local-pipeline';
+import type { CliPipeline, CheckResult, ScanResult, ScanFileResult, SectionInfo } from './local-pipeline';
 import { InMemoryIndex } from './local-index';
 import { findSection, listHeadings } from './local-pipeline';
 
@@ -42,14 +42,12 @@ import { verifyCommand } from '../layers/L3-verifier/tier1-command';
 import { verifyCodeExample } from '../layers/L3-verifier/tier1-code-example';
 import { verifyTier2 } from '../layers/L3-verifier/tier2-patterns';
 
-// LLM: Tier 3 verification + fix generation
+// LLM: Tier 3 verification
 import type { LLMClient } from './llm-client';
 import { createAnthropicClient, getLLMApiKey, llmCallWithRetry } from './llm-client';
 import { buildEvidence } from './evidence-builder';
 import { buildVerifyPrompt } from './prompts/verify';
-import { buildFixPrompt } from './prompts/fix';
 import { PVerifyOutputSchema } from './prompts/schemas';
-import { PFixOutputSchema } from './prompts/schemas';
 
 // Semantic claim support
 import {
@@ -85,7 +83,6 @@ import { DOC_MAP_SYSTEM_PROMPT, buildDocMapPrompt } from './prompts/doc-map';
 
 const MAX_FILE_SIZE = 100 * 1024; // 100KB
 const DEFAULT_VERIFY_MODEL = 'claude-sonnet-4-5-20250929';
-const DEFAULT_FIX_MODEL = 'claude-sonnet-4-5-20250929';
 
 export interface ExtractSemanticResult {
   totalFiles: number;
@@ -100,7 +97,6 @@ export class LocalPipeline implements CliPipeline {
   private index: InMemoryIndex;
   private initialized = false;
   private knownPackages = new Set<string>();
-  private fixCache: DocFix[] = [];
   private llmClient: LLMClient | null = null;
   private semanticStoreCache = new Map<string, SemanticClaimFile | null>();
   private suppressRules: Array<{ file?: string; pattern?: string; claim_type?: string }> = [];
@@ -184,23 +180,8 @@ export class LocalPipeline implements CliPipeline {
     // Uses the current tag positions from parseTags() so line numbers are always fresh.
     await this.writeTagStatusBack(absPath, content, results);
 
-    // Generate fixes for drifted claims (LLM)
-    const fixes: DocFix[] = [];
-    if (this.llmClient) {
-      for (const result of results) {
-        if (result.verdict === 'drifted') {
-          const claim = claims.find((c) => c.id === result.claim_id);
-          if (claim) {
-            const fix = await this.generateFix(claim, result);
-            if (fix) fixes.push(fix);
-          }
-        }
-      }
-      this.fixCache.push(...fixes);
-    }
-
     const durationMs = Date.now() - startTime;
-    return { claims, results, fixes, durationMs };
+    return { claims, results, durationMs };
   }
 
   async checkSection(filePath: string, heading: string): Promise<CheckResult & { section: SectionInfo }> {
@@ -236,23 +217,8 @@ export class LocalPipeline implements CliPipeline {
     // Write verification status back to inline docalign:semantic tags in-place.
     await this.writeTagStatusBack(absPath, content, results);
 
-    // Generate fixes for drifted claims (LLM)
-    const fixes: DocFix[] = [];
-    if (this.llmClient) {
-      for (const result of results) {
-        if (result.verdict === 'drifted') {
-          const claim = sectionClaims.find((c) => c.id === result.claim_id);
-          if (claim) {
-            const fix = await this.generateFix(claim, result);
-            if (fix) fixes.push(fix);
-          }
-        }
-      }
-      this.fixCache.push(...fixes);
-    }
-
     const durationMs = Date.now() - startTime;
-    return { claims: sectionClaims, results, fixes, durationMs, section };
+    return { claims: sectionClaims, results, durationMs, section };
   }
 
   listSections(filePath: string): string[] {
@@ -309,21 +275,6 @@ export class LocalPipeline implements CliPipeline {
         if (result) results.push(result);
       }
 
-      // Generate fixes for drifted claims (LLM)
-      const fixes: DocFix[] = [];
-      if (this.llmClient) {
-        for (const r of results) {
-          if (r.verdict === 'drifted') {
-            const claim = claims.find((c) => c.id === r.claim_id);
-            if (claim) {
-              const fix = await this.generateFix(claim, r);
-              if (fix) fixes.push(fix);
-            }
-          }
-        }
-        this.fixCache.push(...fixes);
-      }
-
       totalClaims += claims.length;
       for (const r of results) {
         if (r.verdict === 'verified') totalVerified++;
@@ -331,7 +282,7 @@ export class LocalPipeline implements CliPipeline {
         else totalUncertain++;
       }
 
-      files.push({ file: docFile, claims, results, fixes });
+      files.push({ file: docFile, claims, results });
     }
 
     // Cross-document consistency: flag when the same config key, dependency,
@@ -351,18 +302,7 @@ export class LocalPipeline implements CliPipeline {
     return { files, totalClaims, totalVerified, totalDrifted, totalUncertain, durationMs };
   }
 
-  async getStoredFixes(targetFile?: string): Promise<DocFix[]> {
-    if (targetFile) {
-      return this.fixCache.filter((f) => f.file === targetFile);
-    }
-    return this.fixCache;
-  }
-
-  async markFixesApplied(_fixIds: string[]): Promise<void> {
-    // No-op for local CLI
-  }
-
-  /**
+    /**
    * Build (or rebuild) the documentation mind map (Step 0).
    *
    * Sends all doc file snippets (path + frontmatter + headings) to Claude
@@ -1118,40 +1058,4 @@ If an assertion is correct and the code genuinely doesn't match (real drift), re
     };
   }
 
-  /**
-   * Generate a fix for a drifted claim using LLM.
-   */
-  private async generateFix(claim: Claim, result: VerificationResult): Promise<DocFix | null> {
-    if (!this.llmClient || result.verdict !== 'drifted') return null;
-
-    const { system, user } = buildFixPrompt({
-      claimText: claim.claim_text,
-      sourceFile: claim.source_file,
-      sourceLine: claim.line_number,
-      mismatchDescription: result.specific_mismatch ?? result.reasoning ?? 'Documentation does not match code',
-      evidenceFiles: result.evidence_files ?? [],
-    });
-
-    const llmResult = await llmCallWithRetry(
-      this.llmClient,
-      system,
-      user,
-      { model: DEFAULT_FIX_MODEL, temperature: 0.3, maxTokens: 500 },
-      PFixOutputSchema,
-    );
-
-    if (!llmResult) return null;
-
-    const fix = llmResult.result.suggested_fix;
-    return {
-      file: fix.file_path,
-      line_start: fix.line_start,
-      line_end: fix.line_end,
-      old_text: claim.claim_text,
-      new_text: fix.new_text,
-      reason: fix.explanation,
-      claim_id: claim.id,
-      confidence: result.confidence,
-    };
-  }
 }

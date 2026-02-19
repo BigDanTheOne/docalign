@@ -5,21 +5,9 @@
 
 import type { Claim, VerificationResult } from '../shared/types';
 
-export interface DocFix {
-  file: string;
-  line_start: number;
-  line_end: number;
-  old_text: string;
-  new_text: string;
-  reason: string;
-  claim_id: string;
-  confidence: number;
-}
-
 export interface CheckResult {
   claims: Claim[];
   results: VerificationResult[];
-  fixes: DocFix[];
   durationMs: number;
 }
 
@@ -27,7 +15,6 @@ export interface ScanFileResult {
   file: string;
   claims: Claim[];
   results: VerificationResult[];
-  fixes: DocFix[];
 }
 
 export interface ScanResult {
@@ -75,16 +62,6 @@ export interface CliPipeline {
    */
   scanRepo(onProgress?: (current: number, total: number) => void, exclude?: string[]): Promise<ScanResult>;
 
-  /**
-   * Get stored fixes from a previous check/scan.
-   * @param targetFile - optional, filter to a single file
-   */
-  getStoredFixes(targetFile?: string): Promise<DocFix[]>;
-
-  /**
-   * Mark fixes as applied in storage.
-   */
-  markFixesApplied(fixIds: string[]): Promise<void>;
 }
 
 /**

@@ -11,7 +11,6 @@
 
 import { runCheck } from './commands/check';
 import { runScan } from './commands/scan';
-import { runFix } from './commands/fix';
 import { runInit } from './commands/init';
 import { runStatus } from './commands/status';
 import { runConfigure } from './commands/configure';
@@ -44,7 +43,7 @@ export function parseArgs(argv: string[]): CliArgs {
         // --key value (peek ahead — if next arg isn't a flag, treat as value)
         const key = arg.slice(2);
         // Known boolean flags don't consume the next arg
-        if (['verbose', 'help', 'json', 'dry-run', 'force', 'no-open'].includes(key)) {
+        if (['help', 'json', 'dry-run', 'force', 'no-open', 'deep', 'verified-only'].includes(key)) {
           flags[key] = true;
         } else {
           options[key] = args[++i];
@@ -80,13 +79,14 @@ export async function run(
       return runInit(write);
 
     case 'check':
-      return runCheck(pipeline, args[0], { verbose: !!flags.verbose }, write);
+      return runCheck(pipeline, args[0], {
+        section: options.section,
+        deep: !!flags.deep,
+        json: !!flags.json,
+      }, write);
 
     case 'scan':
       return runScan(pipeline, write, undefined, exclude, !!flags.json);
-
-    case 'fix':
-      return runFix(pipeline, args[0], process.cwd(), write);
 
     case 'status':
       return runStatus(write);
@@ -117,17 +117,19 @@ export async function run(
       write('  init            Set up DocAlign for Claude Code (MCP + skill)');
       write('  check <file>    Check a single documentation file');
       write('  scan            Scan entire repository');
+      write('  search <query>  Search documentation by topic');
       write('  extract [file]  Extract semantic claims using Claude CLI');
-      write('  fix [file]      Apply fixes from prior scan');
       write('  status          Show configuration and integration status');
       write('  configure       Create or update .docalign.yml');
       write('  viz             Generate interactive knowledge graph');
       write('  mcp             Start MCP server (used by Claude Code)');
       write('');
       write('Options:');
-      write('  --verbose               Show additional detail (check command)');
-      write('  --exclude=FILE[,FILE]   Exclude files from scan (comma-separated)');
-      write('  --json                  Output scan results as JSON');
+      write('  --section=HEADING       Check a specific section (check command)');
+      write('  --deep                  Include unchecked sections in output (check command)');
+      write('  --json                  Output results as JSON');
+      write('  --code-file=PATH        Reverse lookup: find docs referencing a code file (search command)');
+      write('  --verified-only         Only return verified sections (search command)');
       write('  --dry-run               Show what would be extracted (extract command)');
       write('  --force                 Re-extract all sections (extract command)');
       write('  --min-severity=LEVEL    Set minimum severity (configure command)');
@@ -137,7 +139,7 @@ export async function run(
       write('  --help                  Show this help message');
       write('');
       write('Environment:');
-      write('  ANTHROPIC_API_KEY       Enable LLM verification (Tier 3) and fix generation');
+      write('  ANTHROPIC_API_KEY       Enable LLM verification (Tier 3)');
       return 0;
 
     default:

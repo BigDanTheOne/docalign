@@ -7,9 +7,15 @@ function makePipeline(): CliPipeline {
     checkFile: vi.fn().mockResolvedValue({
       claims: [],
       results: [],
-      fixes: [],
       durationMs: 0,
     }),
+    checkSection: vi.fn().mockResolvedValue({
+      claims: [],
+      results: [],
+      durationMs: 0,
+      section: { heading: 'Test', level: 1, startLine: 1, endLine: 10 },
+    }),
+    listSections: vi.fn().mockReturnValue([]),
     scanRepo: vi.fn().mockResolvedValue({
       files: [],
       totalClaims: 0,
@@ -18,8 +24,6 @@ function makePipeline(): CliPipeline {
       totalUncertain: 0,
       durationMs: 0,
     }),
-    getStoredFixes: vi.fn().mockResolvedValue([]),
-    markFixesApplied: vi.fn(),
   };
 }
 
@@ -73,9 +77,9 @@ describe('parseArgs', () => {
     expect(result.options.exclude).toBe('FOO.md');
   });
 
-  it('treats --verbose as boolean flag even with next arg', () => {
-    const result = parseArgs(['node', 'docalign', 'check', '--verbose', 'README.md']);
-    expect(result.flags.verbose).toBe(true);
+  it('treats --deep as boolean flag even with next arg', () => {
+    const result = parseArgs(['node', 'docalign', 'check', '--deep', 'README.md']);
+    expect(result.flags.deep).toBe(true);
     expect(result.args).toEqual(['README.md']);
   });
 });
@@ -85,7 +89,7 @@ describe('run', () => {
     const pipeline = makePipeline();
     await run(pipeline, ['node', 'docalign', 'check', 'README.md'], () => {});
 
-    expect(pipeline.checkFile).toHaveBeenCalledWith('README.md', false);
+    expect(pipeline.checkFile).toHaveBeenCalledWith('README.md');
   });
 
   it('routes to scan command', async () => {
@@ -95,12 +99,6 @@ describe('run', () => {
     expect(pipeline.scanRepo).toHaveBeenCalled();
   });
 
-  it('routes to fix command', async () => {
-    const pipeline = makePipeline();
-    await run(pipeline, ['node', 'docalign', 'fix', 'README.md'], () => {});
-
-    expect(pipeline.getStoredFixes).toHaveBeenCalledWith('README.md');
-  });
 
   it('shows help for empty command', async () => {
     const pipeline = makePipeline();
@@ -112,7 +110,7 @@ describe('run', () => {
     expect(output.join('\n')).toContain('Usage:');
     expect(output.join('\n')).toContain('check');
     expect(output.join('\n')).toContain('scan');
-    expect(output.join('\n')).toContain('fix');
+    expect(output.join('\n')).toContain('search');
   });
 
   it('returns 2 for unknown command', async () => {
@@ -125,10 +123,10 @@ describe('run', () => {
     expect(output.join('\n')).toContain('Unknown command: bogus');
   });
 
-  it('passes verbose flag to check', async () => {
+  it('passes --section flag to checkSection', async () => {
     const pipeline = makePipeline();
-    await run(pipeline, ['node', 'docalign', 'check', 'README.md', '--verbose'], () => {});
+    await run(pipeline, ['node', 'docalign', 'check', 'README.md', '--section', 'Setup'], () => {});
 
-    expect(pipeline.checkFile).toHaveBeenCalledWith('README.md', true);
+    expect(pipeline.checkSection).toHaveBeenCalledWith('README.md', 'Setup');
   });
 });
