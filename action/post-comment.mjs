@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Post DocAlign scan results as a PR comment.
- * Reads /tmp/docalign-output.json (produced by `docalign scan --json`).
+ * Reads /tmp/docalign-pr-comment.md (produced by `docalign scan --format github-pr`).
  * Uses GITHUB_TOKEN, GITHUB_REPOSITORY, GITHUB_REF, GITHUB_EVENT_PATH.
  */
 
@@ -9,26 +9,18 @@ import { readFileSync } from 'node:fs';
 
 const COMMENT_MARKER = '<!-- docalign-report -->';
 
-// --- Parse scan results ---
+// --- Read pre-formatted PR comment ---
 
-let scanData;
+let commentBody;
 try {
-  const raw = readFileSync('/tmp/docalign-output.json', 'utf-8');
-  // The file may contain stderr lines before the JSON — find the JSON object
-  const jsonStart = raw.indexOf('{');
-  if (jsonStart === -1) {
-    console.error('DocAlign: No JSON found in scan output');
+  commentBody = readFileSync('/tmp/docalign-pr-comment.md', 'utf-8').trim();
+  if (!commentBody) {
+    console.error('DocAlign: PR comment file is empty');
     process.exit(0);
   }
-  scanData = JSON.parse(raw.slice(jsonStart));
 } catch (err) {
-  console.error(`DocAlign: Failed to read scan results: ${err.message}`);
+  console.error(`DocAlign: Failed to read PR comment: ${err.message}`);
   process.exit(0); // Don't fail the action if comment posting fails
-}
-
-if (scanData.error) {
-  console.error(`DocAlign: Scan error: ${scanData.error}`);
-  process.exit(0);
 }
 
 // --- Determine PR number ---
@@ -65,88 +57,11 @@ if (!token) {
   process.exit(0);
 }
 
-// --- Format comment body ---
+// --- Verify comment has marker ---
 
-function healthEmoji(percent) {
-  if (percent >= 90) return ':white_check_mark:';
-  if (percent >= 75) return ':large_blue_circle:';
-  if (percent >= 50) return ':warning:';
-  return ':x:';
-}
-
-function truncate(text, maxLen) {
-  if (text.length <= maxLen) return text;
-  return text.slice(0, maxLen - 3) + '...';
-}
-
-function formatBody(data) {
-  const lines = [];
-  const emoji = healthEmoji(data.healthPercent);
-  lines.push(`## ${emoji} DocAlign: ${data.healthPercent}% Documentation Health`);
-  lines.push('');
-  lines.push('| Metric | Count |');
-  lines.push('|--------|-------|');
-  lines.push(`| Claims checked | ${data.verified + data.drifted} |`);
-  lines.push(`| Verified | ${data.verified} |`);
-  lines.push(`| Drifted | ${data.drifted} |`);
-  lines.push('');
-
-  const findings = data.findings ?? [];
-  if (findings.length === 0) {
-    lines.push('All documentation claims match the codebase. :tada:');
-    lines.push('');
-    lines.push('<sub>Powered by [DocAlign](https://github.com/BigDanTheOne/docalign)</sub>');
-    return lines.join('\n');
-  }
-
-  lines.push(`### Findings (${findings.length})`);
-  lines.push('');
-
-  // Group by file
-  const byFile = new Map();
-  for (const f of findings) {
-    const existing = byFile.get(f.file) ?? [];
-    existing.push(f);
-    byFile.set(f.file, existing);
-  }
-
-  for (const [file, fileFindings] of byFile) {
-    lines.push('<details>');
-    lines.push(`<summary><strong>${file}</strong> (${fileFindings.length} issue${fileFindings.length > 1 ? 's' : ''})</summary>`);
-    lines.push('');
-
-    for (const f of fileFindings) {
-      const badge = f.severity === 'high' ? '`HIGH`' : f.severity === 'medium' ? '`MEDIUM`' : '`LOW`';
-      lines.push(`${badge} **Line ${f.line}**`);
-      lines.push(`> ${truncate(f.claimText, 150)}`);
-      lines.push('');
-      lines.push(f.actual);
-      if (f.evidence) {
-        lines.push(`Evidence: \`${f.evidence}\``);
-      }
-      lines.push('');
-    }
-
-    lines.push('</details>');
-    lines.push('');
-  }
-
-  // Hotspots
-  const hotspots = data.hotspots ?? [];
-  if (hotspots.length > 3) {
-    lines.push('### Hotspots');
-    lines.push('');
-    for (const h of hotspots.slice(0, 5)) {
-      lines.push(`- **${h.file}** — ${h.drifted} drifted`);
-    }
-    if (hotspots.length > 5) {
-      lines.push(`- ...and ${hotspots.length - 5} more files`);
-    }
-    lines.push('');
-  }
-
-  lines.push('<sub>Powered by [DocAlign](https://github.com/BigDanTheOne/docalign)</sub>');
-  return lines.join('\n');
+if (!commentBody.includes(COMMENT_MARKER)) {
+  console.error('DocAlign: PR comment is missing the docalign-report marker');
+  process.exit(0);
 }
 
 // --- GitHub API helpers ---
@@ -188,15 +103,13 @@ async function findExistingComment() {
 
 // --- Main ---
 
-const body = `${COMMENT_MARKER}\n${formatBody(scanData)}`;
-
 try {
   const existingId = await findExistingComment();
   if (existingId) {
-    await githubApi('PATCH', `/repos/${owner}/${repo}/issues/comments/${existingId}`, { body });
+    await githubApi('PATCH', `/repos/${owner}/${repo}/issues/comments/${existingId}`, { body: commentBody });
     console.log(`DocAlign: Updated existing PR comment (id: ${existingId})`);
   } else {
-    await githubApi('POST', `/repos/${owner}/${repo}/issues/${prNumber}/comments`, { body });
+    await githubApi('POST', `/repos/${owner}/${repo}/issues/${prNumber}/comments`, { body: commentBody });
     console.log('DocAlign: Posted PR comment');
   }
 } catch (err) {

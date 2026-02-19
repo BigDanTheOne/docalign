@@ -88,7 +88,7 @@ export async function run(
 
     case 'scan':
       return runScan(pipeline, write, undefined, exclude, !!flags.json,
-        options.max ? parseInt(options.max, 10) : undefined);
+        options.max ? parseInt(options.max, 10) : undefined, options.format);
 
     case 'search':
       return runSearch(pipeline, args[0], {
@@ -140,6 +140,8 @@ export async function run(
       write('  --json                  Output results as JSON');
       write('  --code-file=PATH        Reverse lookup: find docs referencing a code file (search command)');
       write('  --verified-only         Only return verified sections (search command)');
+      write('  --exclude=FILE[,FILE]   Exclude files from scan (comma-separated)');
+      write('  --format=github-pr      Output scan results as GitHub PR comment markdown');
       write('  --dry-run               Show what would be extracted (extract command)');
       write('  --force                 Re-extract all sections (extract command)');
       write('  --min-severity=LEVEL    Set minimum severity (configure command)');
