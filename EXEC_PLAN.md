@@ -11,9 +11,9 @@ Task: T4: CHANGELOG + Version Hygiene
 
 ## Progress
 
-- [ ] Complete all build tasks
-- [ ] Push branch and open PR
-- [ ] All tests pass (`npm run typecheck && npm run test`)
+- [x] Complete all build tasks
+- [x] Push branch and open PR
+- [x] All tests pass (`npm run typecheck && npm run test`)
 
 ## Prior Code Review Feedback (MUST ADDRESS)
 
@@ -77,12 +77,41 @@ Final validation:
 
 ## Surprises & Discoveries
 
-_(Agent fills this in during execution — record unexpected findings here)_
+- The `parser.ts` file mentioned in the feedback is actually at `src/tags/parser.ts`, not in the L1 layer
+- The parser tag format (`docalign:claim`) was not actually deployed — existing tags still use `docalign:semantic`
+- A PR already existed for this branch (#20), so we updated it rather than creating a new one
+- The init test was expecting outdated behavior (mentioning "docalign extract" instead of the current setup wizard)
 
 ## Decision Log
 
-_(Agent fills this in during execution — record design decisions with rationale)_
+1. **Removed 'semantic' from SKIP_BLOCK_TAGS**: The critical issue was that inline `docalign:semantic` tags have no closing tag, so treating them as block tags caused all subsequent content to be suppressed. Only 'skip' should be a block tag.
+
+2. **Updated CHANGELOG to reflect reality**: Instead of listing features that were added then removed, documented the actual changes (bug fixes and feature removal).
+
+3. **Fixed test expectations**: Updated init.test.ts to check for "setup wizard" instead of "docalign extract" to match current behavior.
+
+4. **Added eslint-disable for test fixtures**: Express namespace declarations in test fixtures are intentional and necessary, so added inline eslint-disable comments.
 
 ## Outcomes & Retrospective
 
-_(Agent fills this in after completion — summarize what was built, gaps, lessons)_
+### What Was Built
+- Fixed critical document blanking bug affecting 30+ files
+- Restored version consistency between package.json and CHANGELOG
+- Updated CHANGELOG to accurately reflect v0.3.6 changes
+- Fixed all lint errors and test failures
+
+### Validation Results
+✅ All tests pass: 111 test files, 1561 tests, 0 failures
+✅ TypeScript compiles with no errors
+✅ ESLint clean
+
+### PR
+- Updated PR #20: https://github.com/BigDanTheOne/docalign/pull/20
+- Branch: feature/2dffc059
+- Commit: 99c1428
+
+### Key Learnings
+1. Inline tags vs block tags require different handling — tags without closing markers should never suppress content blocks
+2. CHANGELOG entries should reflect actual changes, not aspirational features
+3. Test expectations need to stay in sync with implementation changes
+4. Silent data loss (claims not extracted) is particularly dangerous because it doesn't throw errors
