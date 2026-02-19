@@ -1,0 +1,42 @@
+name: 'DocAlign CLI Scan'
+description: 'Run DocAlign CLI to check documentation drift in CI/CD pipelines'
+author: 'DocAlign'
+
+inputs:
+  scan-path:
+    description: 'Path to scan (default: repository root)'
+    required: false
+    default: '.'
+  config:
+    description: 'Path to .docalign.yml config file (optional)'
+    required: false
+    default: ''
+  fail-on-stale:
+    description: 'Fail the workflow if stale claims are found (default: true)'
+    required: false
+    default: 'true'
+
+outputs:
+  stale-found:
+    description: 'Boolean indicating whether stale claims were found'
+    value: ${{ steps.scan.outputs.stale-found }}
+  report:
+    description: 'JSON report with scan results'
+    value: ${{ steps.scan.outputs.report }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Run DocAlign scan
+      id: scan
+      shell: bash
+      run: |
+        bash ${{ github.action_path }}/scripts/entrypoint.sh \
+          "${{ inputs.scan-path }}" \
+          "${{ inputs.config }}" \
+          "${{ inputs.fail-on-stale }}"
