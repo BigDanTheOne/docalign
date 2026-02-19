@@ -6,19 +6,9 @@
 
 Detects when your documentation drifts from code reality — and tells your AI coding agent about it.
 
+## Overview
+
 DocAlign extracts verifiable claims from your docs — file paths, dependency versions, CLI commands, API routes, code examples, config values — and checks each one against the actual codebase. Works as an **MCP server** for Claude Code (primary) or as a standalone **CLI**.
-
-## Setup
-
-Run this from the root of your project:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/BigDanTheOne/docalign/main/scripts/install.sh | bash
-```
-
-The script checks prerequisites (Node 18+, git), installs DocAlign globally, runs `docalign init` to configure the MCP server and skills, then launches Claude Code. Claude walks you through selecting which docs to monitor and runs the initial extraction — one sub-agent per document, in parallel.
-
-After setup, Claude automatically checks documentation after code changes and answers "are my docs accurate?" directly. No further configuration required.
 
 ## How It Works
 
@@ -43,11 +33,24 @@ After setup, Claude automatically checks documentation after code changes and an
 | Code examples | Import from `./utils/helpers` but symbol not exported |
 | Env variables | `DATABASE_URL` documented but missing from `.env.example` |
 | Config values | "Defaults to port 3000" but code uses 8080 |
+
 **Semantic checks** (LLM-powered, via Claude):
 
 Behavior claims, architecture decisions, and config assumptions — verified against actual code. Extracted once per document, cached, re-verified on each scan.
 
 See [Checks Reference](docs/reference/checks.md) for all claim types.
+
+## Setup
+
+Run this from the root of your project:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/BigDanTheOne/docalign/main/scripts/install.sh | bash
+```
+
+The script checks prerequisites (Node 18+, git), installs DocAlign globally, runs `docalign init` to configure the MCP server and skills, then launches Claude Code. Claude walks you through selecting which docs to monitor and runs the initial extraction — one sub-agent per document, in parallel.
+
+After setup, Claude automatically checks documentation after code changes and answers "are my docs accurate?" directly. No further configuration required.
 
 ## Claude Code Skill
 
@@ -65,8 +68,6 @@ You can also invoke it on demand:
 
 - `/docalign` — check docs affected by recent changes
 - `/docalign-setup` — first-time interactive setup wizard
-
-To install the skill in your project, run the one-liner in [Setup](#setup) above.
 
 ## MCP Tools
 
@@ -108,6 +109,7 @@ claim_types:
 verification:
   min_severity: medium   # Only report medium+ issues
 ```
+
 See [Configuration Reference](docs/reference/configuration.md) for all options.
 
 ## Documentation
