@@ -22,13 +22,15 @@ The result is a living map of what your docs claim vs. what your code does, kept
 
 These are the claims that really go stale — and that no regex can catch.
 
-**On every subsequent code change**, the DocAlign skill:
+**On every commit**, the DocAlign skill narrows the scope before checking anything:
 
-1. Finds docs that reference the changed files (`get_docs` with `code_file` param)
-2. Re-verifies those docs' claims against the updated code (`check_doc`)
-3. Reports specific mismatches — claim text, location, and what the code actually does now
+1. **Identifies what changed** — reads the list of source files modified in the commit (ignoring docs, config, and lockfiles)
+2. **Reverse-looks up affected docs** — finds only the documents whose extracted claims reference those specific files
+3. **Re-verifies targeted claims** — checks those docs against the updated code and reports any mismatches: claim text, location, and what the code actually does now
 
-Extraction runs once per document. Verification runs on every change. Both are fast.
+Nothing outside that scope is touched. If you change `src/auth.ts`, only docs that were found to describe authentication behaviour are checked — not your entire doc tree. This keeps verification fast and signal-to-noise high regardless of repo size.
+
+Extraction runs once per document. Verification runs on every commit, scoped to what actually changed.
 
 ## What It Finds
 
