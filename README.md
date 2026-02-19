@@ -27,23 +27,25 @@ These are the claims that go stale — and that no regex can catch.
 Change `src/auth.ts` and only auth-related docs are re-checked — not your entire doc tree. Extraction runs once; verification runs on every commit, scoped to what changed.
 
 ```mermaid
-flowchart TD
-    subgraph Setup["⚙️ First setup — once per doc"]
-        A[Select docs to monitor] --> B["Sub-agents read\neach doc in parallel"]
-        B --> C["Extract claims\nbehavior · architecture · config"]
-        C --> D[("Claim store\nstable IDs")]
+flowchart LR
+    subgraph setup ["First setup — once per doc"]
+        direction TB
+        A[Select docs to monitor] --> B[Sub-agents read in parallel]
+        B --> C["Extract claims (behavior, architecture, config)"]
+        C --> D[("Claim store")]
     end
 
-    subgraph OnCommit["🔁 Every git commit"]
-        E["git commit\nvia Claude Bash tool"] --> F["PostToolUse hook\nfires automatically"]
-        F --> G["Read changed\nsource files"]
-        G --> H["/docalign skill"]
-        H --> I["Reverse-lookup:\nwhich claims reference\nchanged files?"]
-        I --> J["Re-verify only\nthose claims"]
-        J --> K["⚠️ Drift report"]
+    subgraph run ["Every git commit"]
+        direction TB
+        E[git commit] --> F[PostToolUse hook fires]
+        F --> G[Read changed source files]
+        G --> H[/docalign skill]
+        H --> I[Reverse-lookup affected docs]
+        I --> J[Re-verify claims]
+        J --> K[⚠️ Drift report]
     end
 
-    D -. "scoped lookup" .-> H
+    D -- scoped lookup --> H
 ```
 
 ## What It Finds
