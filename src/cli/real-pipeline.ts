@@ -67,7 +67,8 @@ import {
   buildDocSections,
   extractSemanticClaims,
 } from '../layers/L1-claim-extractor/semantic-extractor';
-import { writeSkipTagsToFile, blankSkipRegionContent, blankSemanticClaimLines } from '../tags/writer';
+import { writeSkipTagsToFile, blankSkipRegionContent, blankSemanticClaimLines, writeTagsToFile } from '../tags/writer';
+import type { TaggableClaim } from '../tags/writer';
 import { parseTags } from '../tags/parser';
 import type { DocAlignConfig } from '../shared/types';
 import {
@@ -179,6 +180,10 @@ export class LocalPipeline implements CliPipeline {
       if (result) results.push(result);
     }
 
+    // Write verification status back to inline docalign:semantic tags in-place.
+    // Uses the current tag positions from parseTags() so line numbers are always fresh.
+    await this.writeTagStatusBack(absPath, content, results);
+
     // Generate fixes for drifted claims (LLM)
     const fixes: DocFix[] = [];
     if (this.llmClient) {
@@ -227,6 +232,9 @@ export class LocalPipeline implements CliPipeline {
       const result = await this.verifyClaim(claim);
       if (result) results.push(result);
     }
+
+    // Write verification status back to inline docalign:semantic tags in-place.
+    await this.writeTagStatusBack(absPath, content, results);
 
     // Generate fixes for drifted claims (LLM)
     const fixes: DocFix[] = [];
@@ -941,6 +949,41 @@ If an assertion is correct and the code genuinely doesn't match (real drift), re
     const data = loadClaimsForFile(this.repoRoot, docFile);
     this.semanticStoreCache.set(docFile, data);
     return data;
+  }
+
+  /**
+   * Write verification status back to inline docalign:semantic tags in-place.
+   *
+   * Parses the current inline tags from content, matches each tag to a verification
+   * result by claim ID, and writes the updated status attribute back to the file.
+   * Tags with no result (e.g. syntactic claims, unverified tags) are unchanged.
+   *
+   * @param absPath  Absolute path to the doc file.
+   * @param content  Current file content (used to locate tag line numbers).
+   * @param results  Verification results from the check run.
+   */
+  private async writeTagStatusBack(
+    absPath: string,
+    content: string,
+    results: VerificationResult[],
+  ): Promise<void> {
+    if (results.length === 0) return;
+
+    const inlineTags = parseTags(content);
+    if (inlineTags.length === 0) return;
+
+    const resultByClaimId = new Map(results.map((r) => [r.claim_id, r]));
+
+    const tagUpdates: TaggableClaim[] = [];
+    for (const tag of inlineTags) {
+      const result = resultByClaimId.get(tag.id);
+      if (!result) continue;
+      tagUpdates.push({ id: tag.id, status: result.verdict, source_line: tag.line });
+    }
+
+    if (tagUpdates.length > 0) {
+      await writeTagsToFile(absPath, tagUpdates);
+    }
   }
 
   /**
