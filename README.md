@@ -14,27 +14,17 @@ The result is a living map of what your docs claim vs. what your code does, kept
 
 ## How It Works
 
-**On first setup**, DocAlign runs a one-time extraction pass across your selected docs. A sub-agent reads each document in parallel, identifies every verifiable claim, and stores them with stable IDs:
+**On first setup**, a sub-agent reads each selected doc in parallel, extracts every verifiable behavioral claim, and stores it with a stable ID:
 
 - *"Requests are authenticated using JWT tokens validated in `middleware/auth.ts`"*
 - *"The worker retries failed jobs up to 3 times with exponential backoff"*
 - *"All errors are forwarded to Sentry before responding to the client"*
 
-These are the claims that really go stale — and that no regex can catch.
+These are the claims that go stale — and that no regex can catch.
 
-**On every commit**, a Claude Code **PostToolUse hook** fires automatically when Claude runs `git commit` via the Bash tool. The hook:
+**On every commit**, a Claude Code **PostToolUse hook** fires when Claude runs `git commit`. It reads which source files changed and tells Claude to invoke the `/docalign` skill. The skill then reverse-looks up which stored claims reference those files, re-verifies only those claims against the updated code, and reports any mismatches.
 
-1. **Reads what changed** — pulls the source files modified in the commit (ignoring `.md`, `.docalign/`, and lockfiles)
-2. **Emits an instruction** — tells Claude to invoke the `/docalign` skill with the list of changed files
-
-The skill then takes over:
-
-3. **Reverse-looks up affected docs** — queries the claim index for documents whose stored claims reference those specific files
-4. **Re-verifies targeted claims** — checks only those docs against the updated code and reports mismatches: claim text, line, and what the code actually does now
-
-Nothing outside that scope is touched. Change `src/auth.ts` and only docs describing authentication behaviour are re-checked — not your entire doc tree. Signal-to-noise stays high regardless of repo size.
-
-Extraction runs once per document. Verification runs on every commit, scoped automatically to what changed.
+Change `src/auth.ts` and only auth-related docs are re-checked — not your entire doc tree. Extraction runs once; verification runs on every commit, scoped to what changed.
 
 ## What It Finds
 
