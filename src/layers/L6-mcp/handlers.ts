@@ -135,6 +135,11 @@ export async function handleGetDocsForFile(
   config: HandlerConfig,
   cache: SimpleCache,
 ): Promise<GetDocsForFileResponse> {
+  // Sanitize path traversal
+  if (params.file_path.includes('..')) {
+    throw new Error('Path must not contain ".."');
+  }
+
   const cacheKey = `get_docs_for_file:${crypto.createHash('sha256').update(params.file_path).digest('hex')}`;
   const cached = cache.get<GetDocsForFileResponse>(cacheKey);
   if (cached) return cached;
@@ -183,12 +188,47 @@ export interface GetDocHealthResponse {
  * Handle get_doc_health: aggregate claim verification statuses.
  * TDD-6 Section 4.2.
  */
+// Overload: no params (for testing/simple usage) - must be first for TypeScript to match correctly
+export async function handleGetDocHealth(
+  pool: Pool,
+  config: HandlerConfig,
+  cache: SimpleCache,
+): Promise<GetDocHealthResponse>;
+// Overload: params provided
 export async function handleGetDocHealth(
   params: GetDocHealthParams,
   pool: Pool,
   config: HandlerConfig,
   cache: SimpleCache,
+): Promise<GetDocHealthResponse>;
+// Implementation
+export async function handleGetDocHealth(
+  paramsOrPool: GetDocHealthParams | Pool,
+  poolOrConfig: Pool | HandlerConfig,
+  configOrCache: HandlerConfig | SimpleCache,
+  cache?: SimpleCache,
 ): Promise<GetDocHealthResponse> {
+  // Determine which overload was called by checking if first arg is a Pool
+  // Pool has a 'query' method that's a function
+  let params: GetDocHealthParams;
+  let pool: Pool;
+  let config: HandlerConfig;
+  let cacheObj: SimpleCache;
+
+  if (typeof (paramsOrPool as Pool).query === 'function') {
+    // First overload: (pool, config, cache)
+    params = {};
+    pool = paramsOrPool as Pool;
+    config = poolOrConfig as HandlerConfig;
+    cacheObj = configOrCache as SimpleCache;
+  } else {
+    // Second overload: (params, pool, config, cache)
+    params = paramsOrPool as GetDocHealthParams;
+    pool = poolOrConfig as Pool;
+    config = configOrCache as HandlerConfig;
+    cacheObj = cache!;
+  }
+
   const pathFilter = params.path ?? null;
 
   // Sanitize path traversal
@@ -197,7 +237,7 @@ export async function handleGetDocHealth(
   }
 
   const cacheKey = `health:${pathFilter ?? 'repo'}`;
-  const cached = cache.get<GetDocHealthResponse>(cacheKey);
+  const cached = cacheObj.get<GetDocHealthResponse>(cacheKey);
   if (cached) return cached;
 
   const rows = await queryHealthAgg(pool, config.repoId, pathFilter);
@@ -265,7 +305,7 @@ export async function handleGetDocHealth(
     },
   };
 
-  cache.set(cacheKey, response, config.cacheTtlSeconds);
+  cacheObj.set(cacheKey, response, config.cacheTtlSeconds);
   return response;
 }
 
@@ -288,16 +328,51 @@ export interface ListStaleDocsResponse {
  * Handle list_stale_docs: find files with stale or drifted claims.
  * TDD-6 Section 4.4.
  */
+// Overload: no params (for testing/simple usage) - must be first for TypeScript to match correctly
+export async function handleListStaleDocs(
+  pool: Pool,
+  config: HandlerConfig,
+  cache: SimpleCache,
+): Promise<ListStaleDocsResponse>;
+// Overload: params provided
 export async function handleListStaleDocs(
   params: ListStaleDocsParams,
   pool: Pool,
   config: HandlerConfig,
   cache: SimpleCache,
+): Promise<ListStaleDocsResponse>;
+// Implementation
+export async function handleListStaleDocs(
+  paramsOrPool: ListStaleDocsParams | Pool,
+  poolOrConfig: Pool | HandlerConfig,
+  configOrCache: HandlerConfig | SimpleCache,
+  cache?: SimpleCache,
 ): Promise<ListStaleDocsResponse> {
+  // Determine which overload was called by checking if first arg is a Pool
+  // Pool has a 'query' method that's a function
+  let params: ListStaleDocsParams;
+  let pool: Pool;
+  let config: HandlerConfig;
+  let cacheObj: SimpleCache;
+
+  if (typeof (paramsOrPool as Pool).query === 'function') {
+    // Second overload: (pool, config, cache)
+    params = {};
+    pool = paramsOrPool as Pool;
+    config = poolOrConfig as HandlerConfig;
+    cacheObj = configOrCache as SimpleCache;
+  } else {
+    // First overload: (params, pool, config, cache)
+    params = paramsOrPool as ListStaleDocsParams;
+    pool = poolOrConfig as Pool;
+    config = configOrCache as HandlerConfig;
+    cacheObj = cache!;
+  }
+
   const maxResults = Math.min(Math.max(params.max_results ?? 10, 1), 100);
 
   const cacheKey = `stale_docs:${maxResults}`;
-  const cached = cache.get<ListStaleDocsResponse>(cacheKey);
+  const cached = cacheObj.get<ListStaleDocsResponse>(cacheKey);
   if (cached) return cached;
 
   const rows = await queryStaleFiles(
@@ -313,7 +388,7 @@ export async function handleListStaleDocs(
     })),
   };
 
-  cache.set(cacheKey, response, config.cacheTtlSeconds);
+  cacheObj.set(cacheKey, response, config.cacheTtlSeconds);
   return response;
 }
 

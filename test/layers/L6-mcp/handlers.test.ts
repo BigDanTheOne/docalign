@@ -582,3 +582,4 @@ describe('handleListStaleDocs', () => {
     expect(result.stale_docs[0].uncertain_claims).toBe(7);
   });
 });
+
