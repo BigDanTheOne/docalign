@@ -39,7 +39,7 @@ flowchart LR
         direction TB
         E[git commit] --> F[PostToolUse hook fires]
         F --> G[Read changed source files]
-        G --> H[/docalign skill]
+        G --> H["/docalign skill"]
         H --> I[Reverse-lookup affected docs]
         I --> J[Re-verify claims]
         J --> K[⚠️ Drift report]
