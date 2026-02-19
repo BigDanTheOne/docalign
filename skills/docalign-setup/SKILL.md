@@ -121,8 +121,10 @@ Say:
 • Monitoring: 8 docs (~5,000 tokens)
 • Skipping: 4 docs (changelog, internal)
 
-Ready to proceed to configuration?
+Writing your DocAlign config now...
 ```
+
+Proceed immediately — no user input needed here.
 
 ---
 
@@ -182,11 +184,42 @@ llm:
 
 2. Write config file using Write tool
 
-**Step 2.2: Write Document Headers**
+**Step 2.2: Ask to Write Document Headers**
 
-For EACH selected document, write YAML frontmatter header:
+Before writing any headers, ask:
 
-Read the document first to understand its content, then write:
+```
+📎 Optional: YAML frontmatter headers
+
+I can add a small metadata block to the top of each monitored document:
+
+  ---
+  title: "Getting Started"
+  summary: "Walks new users through installation and first run."
+  category: guide
+  read_when:
+    - Setting up the project for the first time
+    - Troubleshooting installation issues
+  related:
+    - docs/reference/cli.md
+  docalign:
+    monitored: true
+  ---
+
+This is entirely optional. It helps AI agents (and humans) quickly
+understand what each doc is for and when to read it — without opening
+the file. It does not affect how drift detection works.
+
+Add YAML headers to your docs? [yes / no]
+```
+
+**IF user says yes:** write headers to all selected documents using the process below.
+
+**IF user says no:** skip this step entirely and proceed to Step 2.3.
+
+**Header writing process (when approved):**
+
+For EACH selected document, read the document first to understand its content, then write:
 
 ```markdown
 ---
@@ -218,11 +251,11 @@ docalign:
 
 **Step 2.3: Report Progress**
 
-Say:
+Say (adapt based on whether headers were written):
 
 ```
 ✅ Configuration saved to .docalign/config.yml
-✅ Headers written to 8 documents
+✅ Headers written to 8 documents   ← omit this line if user declined headers
 
 Next: Processing documents to extract claims and add annotations...
 ```
