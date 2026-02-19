@@ -68,6 +68,7 @@ import {
   extractSemanticClaims,
 } from '../layers/L1-claim-extractor/semantic-extractor';
 import { writeSkipTagsToFile, blankSkipRegionContent } from '../tags/writer';
+import { parseTags } from '../tags/parser';
 import type { DocAlignConfig } from '../shared/types';
 import {
   loadDocMap,
@@ -166,8 +167,8 @@ export class LocalPipeline implements CliPipeline {
     const content = fs.readFileSync(absPath, 'utf-8');
     const syntacticClaims = this.extractClaimsInMemory(filePath, content);
 
-    // Load stored semantic claims
-    const semanticClaims = this.loadSemanticClaimsAsClaims(filePath);
+    // Load semantic claims via tag-first discovery
+    const semanticClaims = this.loadSemanticClaimsTagFirst(filePath, content);
     const claims = [...syntacticClaims, ...semanticClaims];
 
     const results: VerificationResult[] = [];
@@ -289,7 +290,7 @@ export class LocalPipeline implements CliPipeline {
       }
 
       const syntacticClaims = this.extractClaimsInMemory(docFile, content);
-      const semanticClaims = this.loadSemanticClaimsAsClaims(docFile);
+      const semanticClaims = this.loadSemanticClaimsTagFirst(docFile, content);
       const claims = [...syntacticClaims, ...semanticClaims];
 
       const results: VerificationResult[] = [];
@@ -941,23 +942,50 @@ If an assertion is correct and the code genuinely doesn't match (real drift), re
   }
 
   /**
-   * Load stored semantic claims for a doc file and convert to Claim objects.
+   * Load semantic claims for a doc file using tag-first discovery.
+   *
+   * Parses inline docalign:semantic tags from the doc content, looks up each
+   * claim by ID in the JSON store, and converts to Claim objects. Claims that
+   * have a tag but no JSON store entry are silently skipped (likely deleted from store).
+   *
+   * @param docFile  Doc file path relative to repo root.
+   * @param content  The raw file content (already read by the caller).
    */
-  private loadSemanticClaimsAsClaims(docFile: string): Claim[] {
+  private loadSemanticClaimsTagFirst(docFile: string, content: string): Claim[] {
+    const inlineTags = parseTags(content);
+    if (inlineTags.length === 0) return [];
+
     const data = this.getCachedSemanticStore(docFile);
     if (!data) return [];
-    return data.claims.map((sc) => this.semanticClaimToRegularClaim(sc));
+
+    const claimById = new Map<string, SemanticClaimRecord>(
+      data.claims.map((c) => [c.id, c]),
+    );
+
+    const result: Claim[] = [];
+    for (const tag of inlineTags) {
+      const stored = claimById.get(tag.id);
+      if (!stored) continue; // tag present, no JSON entry — silently skip
+      result.push(this.semanticClaimToRegularClaim(stored, tag.line));
+    }
+    return result;
   }
 
   /**
    * Convert a SemanticClaimRecord to the standard Claim type.
+   *
+   * @param sc       The stored semantic claim record.
+   * @param tagLine  1-based line number of the inline tag itself. The claim text
+   *                 line is tagLine + 1. When provided, overrides sc.line_number
+   *                 so that line numbers reflect the current document state.
    */
-  private semanticClaimToRegularClaim(sc: SemanticClaimRecord): Claim {
+  private semanticClaimToRegularClaim(sc: SemanticClaimRecord, tagLine?: number): Claim {
+    const lineNumber = tagLine !== undefined ? tagLine + 1 : sc.line_number;
     return {
       id: sc.id,
       repo_id: 'local',
       source_file: sc.source_file,
-      line_number: sc.line_number,
+      line_number: lineNumber,
       claim_text: sc.claim_text,
       claim_type: sc.claim_type,
       testability: 'semantic',
