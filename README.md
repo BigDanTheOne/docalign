@@ -63,6 +63,7 @@ See [Checks Reference](docs/reference/checks.md) for all claim types.
 Run this from the root of your project:
 
 ```bash
+cd your_project_root
 curl -fsSL https://raw.githubusercontent.com/BigDanTheOne/docalign/main/scripts/install.sh | bash
 ```
 
