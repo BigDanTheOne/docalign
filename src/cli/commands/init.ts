@@ -98,7 +98,7 @@ export async function runInit(
   // which is the reliable way to make MCP tools available in a session.
   const mcpResult = spawnSync(
     "claude",
-    ["mcp", "add", "--scope", "project", "docalign", "npx", "docalign", "mcp", "--repo", "."],
+    ["mcp", "add", "--scope", "project", "docalign", "--", "npx", "docalign", "mcp", "--repo", "."],
     { cwd, stdio: "pipe" },
   );
   if (mcpResult.status === 0) {
