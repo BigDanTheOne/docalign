@@ -83,7 +83,7 @@ export async function run(
       return runCheck(pipeline, args[0], { verbose: !!flags.verbose }, write);
 
     case 'scan':
-      return runScan(pipeline, write, undefined, exclude, !!flags.json);
+      return runScan(pipeline, write, undefined, exclude, !!flags.json, options.format);
 
     case 'fix':
       return runFix(pipeline, args[0], process.cwd(), write);
@@ -128,6 +128,7 @@ export async function run(
       write('  --verbose               Show additional detail (check command)');
       write('  --exclude=FILE[,FILE]   Exclude files from scan (comma-separated)');
       write('  --json                  Output scan results as JSON');
+      write('  --format=github-pr      Output scan results as GitHub PR comment markdown');
       write('  --dry-run               Show what would be extracted (extract command)');
       write('  --force                 Re-extract all sections (extract command)');
       write('  --min-severity=LEVEL    Set minimum severity (configure command)');
