@@ -53,11 +53,7 @@ docalign check README.md
 docalign check README.md --verbose
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--verbose` | Show all claims, not just drifted ones |
-
-**Output:** Each claim found in the file with its verification result. Verbose mode includes verified claims.
+**Output:** Each claim found in the file with its verification result (drifted claims only).
 
 ### docalign extract [file]
 
@@ -100,8 +96,8 @@ Show current configuration, MCP integration status, and environment info.
 docalign status
 ```
 
-<!-- docalign:semantic id="sem-81de6b5b50c968d5" claim="docalign status outputs active config file path, enabled claim types, MCP server status, ANTHROPIC_API_KEY presence, and any config warnings" -->
-**Output:** Active config file path, enabled claim types, MCP server status, `ANTHROPIC_API_KEY` presence, and any config warnings.
+<!-- docalign:semantic id="sem-81de6b5b50c968d5" claim="docalign status outputs active config file path, MCP server status, ANTHROPIC_API_KEY presence, and any config warnings" -->
+**Output:** Active config file path, MCP server status, `ANTHROPIC_API_KEY` presence, and any config warnings.
 
 ### docalign configure
 
@@ -129,10 +125,11 @@ docalign init
 ```
 
 **What it does:**
-<!-- docalign:semantic id="sem-e04ddc09ca6c89f1" claim="docalign init adds DocAlign MCP server to .claude/mcp.json" -->
-1. Adds DocAlign MCP server to `.claude/mcp.json`
-<!-- docalign:semantic id="sem-ab882ee276c75146" claim="docalign init installs the docalign skill for Claude Code" -->
-2. Installs the `docalign` skill for Claude Code
+<!-- docalign:semantic id="sem-e04ddc09ca6c89f1" claim="docalign init writes MCP server config and post-commit hooks to .claude/settings.local.json" -->
+1. Writes MCP server config and post-commit hooks to `.claude/settings.local.json`
+<!-- docalign:semantic id="sem-ab882ee276c75146" claim="docalign init installs docalign and docalign-setup skills to .claude/skills/ and ~/.claude/skills/" -->
+2. Installs `docalign` and `docalign-setup` skills to `.claude/skills/` and `~/.claude/skills/`
+3. Adds a setup trigger to `CLAUDE.md` — the interactive setup wizard runs automatically on the next Claude Code launch
 
 ### docalign viz
 

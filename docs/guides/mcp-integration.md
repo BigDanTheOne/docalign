@@ -26,9 +26,10 @@ docalign init
 ```
 
 This automatically:
-<!-- docalign:semantic id="sem-af8351d975968695" claim="docalign init adds the docalign MCP server to .claude/mcp.json and installs the docalign skill" -->
-1. Adds the DocAlign MCP server to `.claude/mcp.json`
-2. Installs the `docalign` skill
+<!-- docalign:semantic id="sem-af8351d975968695" claim="docalign init writes MCP server config to .claude/settings.local.json and installs the docalign skill" -->
+1. Writes the DocAlign MCP server config to `.claude/settings.local.json`
+2. Installs the `docalign` and `docalign-setup` skills
+3. Triggers the interactive setup wizard on next Claude Code launch
 
 <!-- docalign:semantic id="sem-9db76114419e7312" claim="After setup, your AI agent has 10 documentation tools available" -->
 After setup, your AI agent has 10 documentation tools available.

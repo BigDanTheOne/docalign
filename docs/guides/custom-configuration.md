@@ -119,8 +119,7 @@ check:
   min_severity_to_block: medium
 ```
 <!-- /docalign:skip -->
-<!-- docalign:semantic id="sem-9f4a1f63384cd4d0" claim="docalign check exits 0 for low-severity drift and exits 1 only for medium or high" -->
-When set, `docalign check` exits 0 for low-severity drift and exits 1 only for medium or high.
+> **Note:** `min_severity_to_block` does not currently affect the `docalign check` CLI exit code — the CLI always exits 1 for any drift. It controls which severity level the GitHub App reports in PR comments.
 
 ## View current config
 
@@ -128,8 +127,8 @@ When set, `docalign check` exits 0 for low-severity drift and exits 1 only for m
 docalign status
 ```
 
-<!-- docalign:semantic id="sem-0767b3c003c6613d" claim="docalign status shows the active config file path, enabled claim types, and any warnings" -->
-Shows the active config file path, enabled claim types, and any warnings.
+<!-- docalign:semantic id="sem-0767b3c003c6613d" claim="docalign status shows the active config file path and any warnings" -->
+Shows the active config file path, MCP server status, and any warnings.
 
 ## Full reference
 

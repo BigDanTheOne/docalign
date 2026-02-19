@@ -53,8 +53,7 @@ By default, shows only drifted claims. To see everything:
 docalign check README.md --verbose
 ```
 
-<!-- docalign:semantic id="sem-97bbed93d0e4d372" claim="the --verbose flag includes verified claims in the output" -->
-The `--verbose` flag includes verified claims in the output, useful for understanding what DocAlign checked.
+The `--verbose` flag is accepted but not yet implemented — output always shows drifted claims only.
 
 ## Check a section via MCP
 
@@ -104,8 +103,7 @@ check:
 ```
 <!-- /docalign:skip -->
 
-<!-- docalign:semantic id="sem-9fb30046e03a2830" claim="with min_severity_to_block: medium, exits 0 for low-severity drift and exits 1 only for medium or high" -->
-This exits 0 for low-severity drift and exits 1 only for medium or high.
+> **Note:** `min_severity_to_block` does not currently affect the `docalign check` CLI exit code — the CLI always exits 1 for any drift regardless of severity. This setting controls which findings the GitHub App surfaces in PR comments.
 
 ## Get a health overview
 

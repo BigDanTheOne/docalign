@@ -109,8 +109,7 @@ Two MCP tools work with semantic claims:
 ## Requirements
 
 - `claude` CLI installed and authenticated (part of Claude Code)
-<!-- docalign:semantic id="sem-ca97058d624ec9b8" claim="Uses the model configured in llm.extraction_model (default: claude-sonnet-4-20250514)" -->
-- Uses the model configured in `llm.extraction_model` (default: `claude-sonnet-4-20250514`)
+- Uses the `claude` CLI's built-in model directly (the `llm.extraction_model` config is not read by the CLI extraction path — it applies to the GitHub App server path only)
 <!-- docalign:semantic id="sem-175db9b33078f1ba" claim="No ANTHROPIC_API_KEY needed -- uses Claude Code's built-in authentication" -->
 - No `ANTHROPIC_API_KEY` needed -- uses Claude Code's built-in authentication
 

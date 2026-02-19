@@ -266,8 +266,7 @@ Controls check command behavior.
 |-------|------|---------|-------------|
 | `min_severity_to_block` | `'low' \| 'medium' \| 'high'` | (none) | Minimum severity for non-zero exit code |
 
-<!-- docalign:semantic id="sem-e7f9f510c97e2c35" claim="docalign check exits with code 1 if findings meet min_severity_to_block threshold" -->
-When set, `docalign check` exits with code 1 only if findings meet this severity threshold. Without it, any drifted claim causes exit code 1.
+> **Note:** This setting does not currently affect the `docalign check` CLI exit code — the CLI always exits 1 for any drift. It controls which severity level the GitHub App reports in PR comments.
 
 ### mapping
 
