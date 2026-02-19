@@ -154,6 +154,6 @@ describe('runInit', () => {
     await runInit((msg) => output.push(msg));
 
     const joined = output.join('\n');
-    expect(joined).toContain('docalign extract');
+    expect(joined).toContain('Restart Claude Code');
   });
 });
