@@ -49,6 +49,25 @@ Behavior claims, architecture decisions, and config assumptions — verified aga
 
 See [Checks Reference](docs/reference/checks.md) for all claim types.
 
+## Claude Code Skill
+
+DocAlign ships as a native **Claude Code skill** — an agent workflow that Claude runs automatically, not a tool you have to remember to call.
+
+Once installed, Claude watches every `git commit`. When source files change, the skill:
+
+1. Looks up which docs reference those files
+2. Re-verifies each affected doc's claims against the updated code
+3. Surfaces any mismatches inline, with the exact line and a suggested fix
+
+The result: **stale documentation gets caught at commit time**, before it reaches reviewers or other developers. No CI step required, no separate lint job — it runs inside the same Claude Code session where you're already working.
+
+You can also invoke it on demand:
+
+- `/docalign` — check docs affected by recent changes
+- `/docalign-setup` — first-time interactive setup wizard
+
+To install the skill in your project, run the one-liner in [Setup](#setup) above.
+
 ## MCP Tools
 
 Claude Code gets 4 documentation tools:
