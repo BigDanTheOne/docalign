@@ -121,10 +121,10 @@ Say:
 • Monitoring: 8 docs (~5,000 tokens)
 • Skipping: 4 docs (changelog, internal)
 
-Writing your DocAlign config now...
+Ready to proceed to configuration?
 ```
 
-Proceed immediately — no user input needed here.
+Wait for user confirmation, then proceed immediately.
 
 ---
 
