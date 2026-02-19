@@ -31,8 +31,8 @@ describe('runInit', () => {
     expect(fs.existsSync(settingsPath)).toBe(true);
 
     const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-    expect(settings.mcpServers?.docalign).toBeDefined();
-    expect(settings.mcpServers.docalign.command).toBe('npx');
+    // MCP server is now registered via `claude mcp add`, not settings.local.json
+    // settings.local.json still gets permissions
     expect(settings.permissions.allow).toContain('mcp__docalign__*');
   });
 
@@ -154,6 +154,6 @@ describe('runInit', () => {
     await runInit((msg) => output.push(msg));
 
     const joined = output.join('\n');
-    expect(joined).toContain('docalign extract');
+    expect(joined).toContain('DocAlign');
   });
 });
