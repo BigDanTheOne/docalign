@@ -12,24 +12,40 @@ import fs from 'fs';
  */
 
 // Mock dependencies
-vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
-  McpServer: vi.fn().mockImplementation(() => ({
-    connect: vi.fn(),
-  })),
+const mockConnect = vi.fn().mockResolvedValue(undefined);
+const MockMcpServer = vi.fn().mockImplementation(() => ({
+  connect: mockConnect,
 }));
 
+vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
+  McpServer: MockMcpServer,
+}));
+
+const MockStdioServerTransport = vi.fn().mockImplementation(() => ({}));
+
 vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
-  StdioServerTransport: vi.fn().mockImplementation(() => ({})),
+  StdioServerTransport: MockStdioServerTransport,
+}));
+
+const mockScanRepo = vi.fn().mockResolvedValue(undefined);
+const MockLocalPipeline = vi.fn().mockImplementation(() => ({
+  scanRepo: mockScanRepo,
 }));
 
 vi.mock('../../../src/cli/real-pipeline', () => ({
-  LocalPipeline: vi.fn().mockImplementation(() => ({
-    scanRepo: vi.fn().mockResolvedValue(undefined),
-  })),
+  LocalPipeline: MockLocalPipeline,
 }));
 
+const mockRegisterLocalTools = vi.fn();
+
 vi.mock('../../../src/layers/L6-mcp/tool-handlers', () => ({
-  registerLocalTools: vi.fn(),
+  registerLocalTools: mockRegisterLocalTools,
+}));
+
+vi.mock('../../../src/lib/repo-root-resolver', () => ({
+  resolveRepoRoot: vi.fn(({ cwd }: { cwd: string }) => ({
+    root: cwd,
+  })),
 }));
 
 describe('local-server', () => {
@@ -59,40 +75,91 @@ describe('local-server', () => {
   });
 
   describe('parseArgs', () => {
-    it('parses --repo argument', () => {
-      // Import the parseArgs function from local-server
-      // This test verifies CLI argument parsing works correctly
-      const args = { repoPath: '/test/repo', verbose: false };
+    it('parses --repo argument', async () => {
+      const { parseArgs } = await import('../../../src/layers/L6-mcp/local-server');
+      const args = parseArgs(['--repo', '/test/repo']);
       expect(args.repoPath).toBe('/test/repo');
+      expect(args.verbose).toBe(false);
     });
 
-    it('parses --verbose flag', () => {
-      const args = { repoPath: '', verbose: true };
+    it('parses --verbose flag', async () => {
+      const { parseArgs } = await import('../../../src/layers/L6-mcp/local-server');
+      const args = parseArgs(['--verbose']);
       expect(args.verbose).toBe(true);
     });
 
-    it('defaults to empty repo path when no args provided', () => {
-      const args = { repoPath: '', verbose: false };
+    it('defaults to empty repo path when no args provided', async () => {
+      const { parseArgs } = await import('../../../src/layers/L6-mcp/local-server');
+      const args = parseArgs([]);
       expect(args.repoPath).toBe('');
+      expect(args.verbose).toBe(false);
     });
   });
 
   describe('main initialization', () => {
-    it('initializes local server with valid repo path', () => {
-      // Test that main() function can initialize the local MCP server
-      // with a valid repository path
-      expect(true).toBe(true); // Placeholder for main server initialization test
+    it('initializes local server with valid repo path', async () => {
+      // Mock fs.existsSync to simulate .git directory exists
+      const existsSyncSpy = vi.spyOn(fs, 'existsSync');
+      existsSyncSpy.mockReturnValue(true);
+
+      // Mock process.argv to simulate --repo argument
+      const originalArgv = process.argv;
+      process.argv = ['node', 'local-server.js', '--repo', '/test/repo'];
+
+      try {
+        const { main } = await import('../../../src/layers/L6-mcp/local-server');
+
+        // Test that main() function can initialize the local MCP server
+        // with a valid repository path
+        await main();
+
+        // Verify McpServer was created
+        expect(MockMcpServer).toHaveBeenCalledWith({
+          name: 'docalign',
+          version: '0.1.0',
+        });
+
+        // Verify LocalPipeline was created with the repo path
+        expect(MockLocalPipeline).toHaveBeenCalledWith('/test/repo');
+      } finally {
+        process.argv = originalArgv;
+        existsSyncSpy.mockRestore();
+      }
     });
 
-    it('starts MCP server and connects stdio transport', () => {
-      // Verify that the local server creates an McpServer instance
-      // and connects it to the stdio transport for MCP communication
-      expect(true).toBe(true); // Placeholder for server connection test
+    it('starts MCP server and connects stdio transport', async () => {
+      // Mock fs.existsSync to simulate .git directory exists
+      const existsSyncSpy = vi.spyOn(fs, 'existsSync');
+      existsSyncSpy.mockReturnValue(true);
+
+      // Mock process.argv
+      const originalArgv = process.argv;
+      process.argv = ['node', 'local-server.js', '--repo', '/test/repo'];
+
+      try {
+        const { main } = await import('../../../src/layers/L6-mcp/local-server');
+
+        // Verify that the local server creates an McpServer instance
+        // and connects it to the stdio transport for MCP communication
+        await main();
+
+        // Verify connect was called on the server
+        expect(mockConnect).toHaveBeenCalled();
+
+        // Verify StdioServerTransport was created
+        expect(MockStdioServerTransport).toHaveBeenCalled();
+
+        // Verify registerLocalTools was called
+        expect(mockRegisterLocalTools).toHaveBeenCalled();
+      } finally {
+        process.argv = originalArgv;
+        existsSyncSpy.mockRestore();
+      }
     });
   });
 
   describe('error handling', () => {
-    it('exits with error when repo root is not a git repository (no .git directory)', () => {
+    it('exits with error when repo root is not a git repository (no .git directory)', async () => {
       // Mock fs.existsSync to return false for .git directory
       const existsSyncSpy = vi.spyOn(fs, 'existsSync');
       existsSyncSpy.mockImplementation((p) => {
@@ -102,30 +169,106 @@ describe('local-server', () => {
         return true;
       });
 
-      // The local server should detect missing .git and exit with error
-      // Expected error message should mention: .git, not a git, repo root, or error
-      expect(true).toBe(true); // Placeholder for .git error test
+      // Mock process.argv
+      const originalArgv = process.argv;
+      process.argv = ['node', 'local-server.js', '--repo', '/invalid/path'];
 
-      existsSyncSpy.mockRestore();
+      try {
+        const { main } = await import('../../../src/layers/L6-mcp/local-server');
+
+        // The local server should detect missing .git and exit with error
+        await main();
+
+        // Verify process.exit was called with error code
+        expect(process.exit).toHaveBeenCalledWith(1);
+
+        // Verify error message was logged
+        const errorOutput = stderrOutput.join('');
+        expect(errorOutput).toMatch(/\.git|not a git|repo.*root|error/i);
+      } finally {
+        process.argv = originalArgv;
+        existsSyncSpy.mockRestore();
+      }
     });
 
-    it('logs error message when .git directory is missing', () => {
-      // Verify that appropriate error messages are logged to stderr
-      // when the repository root check fails
-      const errorMessage = 'Error: /some/path is not a git repository (no .git directory)';
-      expect(errorMessage).toMatch(/\.git|not a git|repo.*root|error/i);
+    it('logs error message when .git directory is missing', async () => {
+      // Mock fs.existsSync to return false for .git directory
+      const existsSyncSpy = vi.spyOn(fs, 'existsSync');
+      existsSyncSpy.mockImplementation((p) => {
+        if (String(p).endsWith('.git')) {
+          return false;
+        }
+        return true;
+      });
+
+      // Mock process.argv
+      const originalArgv = process.argv;
+      process.argv = ['node', 'local-server.js', '--repo', '/some/path'];
+
+      try {
+        const { main } = await import('../../../src/layers/L6-mcp/local-server');
+
+        // Verify that appropriate error messages are logged to stderr
+        // when the repository root check fails
+        await main();
+
+        // Check the captured stderr output
+        const errorOutput = stderrOutput.join('');
+        expect(errorOutput).toMatch(/\.git|not a git|repo.*root|error/i);
+      } finally {
+        process.argv = originalArgv;
+        existsSyncSpy.mockRestore();
+      }
     });
   });
 
   describe('repo root resolution', () => {
-    it('resolves repo root from --repo argument', () => {
-      // Test that repo root is correctly resolved when --repo is provided
-      expect(true).toBe(true);
+    it('resolves repo root from --repo argument', async () => {
+      // Mock fs.existsSync to simulate .git directory exists
+      const existsSyncSpy = vi.spyOn(fs, 'existsSync');
+      existsSyncSpy.mockReturnValue(true);
+
+      // Mock process.argv with --repo flag
+      const originalArgv = process.argv;
+      process.argv = ['node', 'local-server.js', '--repo', '/custom/repo'];
+
+      try {
+        const { main } = await import('../../../src/layers/L6-mcp/local-server');
+
+        // Test that repo root is correctly resolved when --repo is provided
+        await main();
+
+        // Verify LocalPipeline was created with the custom repo path
+        expect(MockLocalPipeline).toHaveBeenCalledWith('/custom/repo');
+      } finally {
+        process.argv = originalArgv;
+        existsSyncSpy.mockRestore();
+      }
     });
 
-    it('defaults to current working directory when no --repo specified', () => {
-      // Test that cwd is used as fallback when --repo is not provided
-      expect(true).toBe(true);
+    it('defaults to current working directory when no --repo specified', async () => {
+      // Mock fs.existsSync to simulate .git directory exists
+      const existsSyncSpy = vi.spyOn(fs, 'existsSync');
+      existsSyncSpy.mockReturnValue(true);
+
+      // Mock process.argv without --repo flag
+      const originalArgv = process.argv;
+      const originalCwd = process.cwd();
+      process.argv = ['node', 'local-server.js'];
+
+      try {
+        const { main } = await import('../../../src/layers/L6-mcp/local-server');
+
+        // Test that cwd is used as fallback when --repo is not provided
+        await main();
+
+        // Verify LocalPipeline was created with current working directory
+        // (resolveRepoRoot mock returns the cwd passed to it)
+        expect(MockLocalPipeline).toHaveBeenCalledWith(originalCwd);
+      } finally {
+        process.argv = originalArgv;
+        existsSyncSpy.mockRestore();
+      }
     });
   });
 });

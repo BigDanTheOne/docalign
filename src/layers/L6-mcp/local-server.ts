@@ -22,7 +22,7 @@ function log(msg: string): void {
   process.stderr.write(`[docalign-mcp] ${msg}\n`);
 }
 
-function parseArgs(argv: string[]): { repoPath: string; verbose: boolean } {
+export function parseArgs(argv: string[]): { repoPath: string; verbose: boolean } {
   let repoPath = '';
   let verbose = false;
 
@@ -52,7 +52,7 @@ function parseArgs(argv: string[]): { repoPath: string; verbose: boolean } {
   return { repoPath, verbose };
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
 
   // Default to cwd if no --repo specified
