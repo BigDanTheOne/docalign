@@ -26,81 +26,80 @@ docalign:
 <!-- docalign:semantic id="sem-7f7f904a292774c0" claim="DocAlign looks for files matching its default patterns from the directory where you run the command" -->
 **Cause:** DocAlign looks for files matching its default patterns (`README.md`, `docs/**/*.md`, etc.) from the directory where you run the command.
 
-**Fix:** Run from your repository root. If your docs are in a non-standard location, configure `doc_patterns` in `.docalign.yml`:
 <!-- docalign:skip reason="user_instruction" description="YAML example showing how to configure doc_patterns.include for custom doc locations" -->
+**Fix:** Run from your repository root. If your docs are in a non-standard location, configure `doc_patterns` in `.docalign.yml`:
 ```yaml
 doc_patterns:
   include:
     - 'documentation/**/*.md'
 - 'wiki/**/*.md'
 ```
-<!-- /docalign:skip -->
 
 ## False positives on file paths
 
+<!-- /docalign:skip -->
 **Symptom:** DocAlign reports a file path as drifted, but it exists.
 
 **Cause:** The path in the doc may be relative to a different base directory, or use a format DocAlign doesn't recognize as a path.
 
 **Fix:** Either update the doc to use a repo-root-relative path, or suppress the finding:
-<!-- docalign:skip reason="user_instruction" description="YAML example showing how to suppress a path_reference finding for a specific file" -->
 ```yaml
 suppress:
+<!-- docalign:skip reason="user_instruction" description="YAML example showing how to suppress a path_reference finding for a specific file" -->
   - file: 'docs/examples.md'
     claim_type: path_reference
 ```
-<!-- /docalign:skip -->
 
 ## URL checks timing out
 
 **Symptom:** Many URL claims show as `uncertain` with timeout errors.
 
+<!-- /docalign:skip -->
 <!-- docalign:semantic id="sem-1b2c3dc31499d6d0" claim="Default timeout is 5 seconds" -->
 **Cause:** Default timeout is 5 seconds. Some sites are slow or block automated requests.
 
 **Fix:** Increase the timeout or exclude slow domains:
-<!-- docalign:skip reason="user_instruction" description="YAML example showing how to increase url_check timeout_ms and exclude slow domains" -->
 ```yaml
 url_check:
+<!-- docalign:skip reason="user_instruction" description="YAML example showing how to increase url_check timeout_ms and exclude slow domains" -->
   timeout_ms: 10000
   exclude_domains:
 - 'slow-site.example.com'
 ```
-<!-- /docalign:skip -->
 
 To disable URL checking entirely:
 
-<!-- docalign:skip reason="user_instruction" description="YAML example showing how to disable URL checking entirely" -->
 ```yaml
 url_check:
+<!-- /docalign:skip -->
   enabled: false
 ```
-<!-- /docalign:skip -->
 
+<!-- docalign:skip reason="user_instruction" description="YAML example showing how to disable URL checking entirely" -->
 ## Too many findings
 
 **Symptom:** DocAlign reports dozens of drifted claims and the output is overwhelming.
 
 **Fix options:**
 1. Raise the severity floor to focus on important issues:
-<!-- docalign:skip reason="user_instruction" description="YAML example showing how to set verification.min_severity to filter findings" -->
+<!-- /docalign:skip -->
    ```yaml
    verification:
 min_severity: medium
 ```
-<!-- /docalign:skip -->
 
 2. Suppress entire files or claim types:
-<!-- docalign:skip reason="user_instruction" description="YAML example showing how to suppress findings for legacy docs and url_reference claim type" -->
    ```yaml
+<!-- docalign:skip reason="user_instruction" description="YAML example showing how to set verification.min_severity to filter findings" -->
    suppress:
 - file: 'docs/legacy/**'
      - claim_type: url_reference
    ```
-<!-- /docalign:skip -->
 
+<!-- /docalign:skip -->
 3. Use `docalign check <file>` to fix one file at a time instead of scanning everything.
 
+<!-- docalign:skip reason="user_instruction" description="YAML example showing how to suppress findings for legacy docs and url_reference claim type" -->
 ## Semantic extraction fails
 
 **Symptom:** `docalign extract` shows an error.
@@ -109,12 +108,11 @@ min_severity: medium
 **Cause:** Semantic extraction requires the `claude` CLI to be installed and authenticated (part of Claude Code).
 
 **Fix:** Install Claude Code and authenticate:
-<!-- docalign:skip reason="user_instruction" description="Bash commands telling the user to run claude for authentication then docalign extract" -->
 ```bash
+<!-- /docalign:skip -->
 claude   # Follow the authentication prompts
 docalign extract
 ```
-<!-- /docalign:skip -->
 ## Config file not being picked up
 
 **Symptom:** Changes to `.docalign.yml` don't take effect.
@@ -122,17 +120,18 @@ docalign extract
 **Fix:**
 1. Check that the file is named exactly `.docalign.yml` (not `.docalign.yaml`)
 2. Run `docalign status` to see which config file is active and any warnings
+<!-- docalign:skip reason="user_instruction" description="Bash commands telling the user to run claude for authentication then docalign extract" -->
 <!-- docalign:semantic id="sem-4ed97e052569c9b4" claim="invalid YAML causes DocAlign to fall back to defaults with a warning" -->
 3. Check for YAML syntax errors -- invalid YAML causes DocAlign to fall back to defaults with a warning
 
 ## MCP server not connecting
 
+<!-- /docalign:skip -->
 **Symptom:** AI agent can't find DocAlign tools.
 
 **Fix:**
 1. Run `docalign status` to check MCP integration status
 2. Verify `.claude/mcp.json` (or equivalent) has the correct entry:
-<!-- docalign:skip reason="user_instruction" description="JSON example showing the correct .claude/mcp.json entry for the docalign MCP server" -->
 ```json
    {
      "mcpServers": {
@@ -143,9 +142,9 @@ docalign extract
      }
    }
 ```
-<!-- /docalign:skip -->
 3. Restart your MCP client (Claude Code, Cursor, etc.)
 4. Try `docalign init` to reconfigure automatically
+<!-- docalign:skip reason="user_instruction" description="JSON example showing the correct .claude/mcp.json entry for the docalign MCP server" -->
 
 ## Exit code 1 but no visible drift
 
@@ -159,21 +158,23 @@ docalign extract
 ## Dependency version mismatches for monorepos
 
 **Symptom:** DocAlign reports version drift when different packages have different versions of the same dependency.
+<!-- /docalign:skip -->
 
 <!-- docalign:semantic id="sem-7011649292f64661" claim="DocAlign checks against the package.json nearest to the repo root" -->
 **Cause:** DocAlign checks against the `package.json` nearest to the repo root.
 
 **Fix:** Suppress findings for packages with known version differences:
 
-<!-- docalign:skip reason="user_instruction" description="YAML example showing how to suppress version drift findings for a specific package in a monorepo" -->
 ```yaml
 suppress:
   - package: 'react'
     file: 'docs/packages/legacy-app.md'
 ```
-<!-- /docalign:skip -->
 ## Getting Help
 
 - Run `docalign help` for command usage
 - Run `docalign status` for diagnostic information
 - File issues at the project repository
+
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="user_instruction" description="YAML example showing how to suppress version drift findings for a specific package in a monorepo" -->

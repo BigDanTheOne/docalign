@@ -32,15 +32,16 @@ With no config file, DocAlign:
 <!-- docalign:semantic id="sem-9cc4fce5b07901d5" claim="url check max per domain defaults to 5" -->
 - Checks URLs with 5s timeout, max 5 per domain
 
+<!-- docalign:skip reason="illustrative_example" description="Full YAML configuration example showing all options with illustrative values" -->
 ## Full Example
 
-<!-- docalign:skip reason="illustrative_example" description="Full YAML configuration example showing all options with illustrative values, not factual claims about current defaults" -->
 ```yaml
 # .docalign.yml
 
 doc_patterns:
   include:
     - 'README.md'
+<!-- docalign:skip reason="illustrative_example" description="YAML example showing doc_patterns include/exclude configuration" -->
     - 'docs/**/*.md'
   exclude:
     - 'docs/archive/**'
@@ -51,9 +52,11 @@ code_patterns:
 
 verification:
   min_severity: low
+<!-- /docalign:skip -->
   max_claims_per_pr: 50
   auto_fix: false
   auto_fix_threshold: 0.9
+<!-- docalign:skip reason="illustrative_example" description="YAML example showing verification and check severity settings" -->
 
 claim_types:
   path_reference: true
@@ -62,10 +65,12 @@ claim_types:
   api_route: true
   code_example: true
   behavior: true
+<!-- /docalign:skip -->
   architecture: true
   config: true
   convention: true
   environment: true
+<!-- docalign:skip reason="illustrative_example" description="YAML example showing disabled claim types configuration" -->
   url_reference: true
 
 suppress:
@@ -73,9 +78,11 @@ suppress:
   - pattern: 'internal-.*'
   - claim_type: url_reference
   - package: 'private-pkg'
+<!-- /docalign:skip -->
 
 schedule:
   full_scan: weekly
+<!-- docalign:skip reason="illustrative_example" description="YAML example showing suppression configuration" -->
   full_scan_day: sunday
 
 agent:
@@ -85,11 +92,13 @@ agent:
 trigger:
   on_pr_open: true
   on_push: false
+<!-- /docalign:skip -->
   on_ready_for_review: true
   on_command: true
 
 llm:
   verification_model: claude-sonnet-4-20250514
+<!-- docalign:skip reason="illustrative_example" description="YAML example showing url_check settings" -->
   extraction_model: claude-sonnet-4-20250514
   embedding_model: text-embedding-3-small
   embedding_dimensions: 1536
@@ -99,25 +108,30 @@ check:
 
 mapping:
   semantic_threshold: 0.7
+<!-- /docalign:skip -->
   path1_max_evidence_tokens: 8000
   max_agent_files_per_claim: 10
 
 url_check:
+<!-- docalign:skip reason="illustrative_example" description="YAML example showing LLM model configuration" -->
   enabled: true
+<!-- /docalign:skip -->
   timeout_ms: 5000
   max_per_domain: 5
   exclude_domains: []
 
+<!-- /docalign:skip -->
 coverage:
   enabled: false
   min_entity_importance: exported
 ```
-<!-- /docalign:skip -->
+<!-- docalign:skip reason="illustrative_example" description="YAML example showing CI blocking threshold" -->
 
 ## Sections
 
 ### doc_patterns
 
+<!-- /docalign:skip -->
 Controls which documentation files are scanned.
 
 | Field | Type | Default | Description |

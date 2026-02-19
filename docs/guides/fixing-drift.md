@@ -32,6 +32,7 @@ No separate `docalign fix` command is needed — Claude Code handles the edit di
 
 ## Finding what needs fixing
 
+<!-- docalign:skip reason="sample_output" description="CLI command examples showing hypothetical usage patterns" -->
 ### Via CLI
 
 ```bash
@@ -40,6 +41,8 @@ docalign check README.md         # Specific file details
 docalign check README.md --deep  # Full audit including unchecked sections
 ```
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="sample_output" description="MCP tool usage examples showing hypothetical invocations" -->
 ### Via MCP
 
 ```
@@ -48,6 +51,8 @@ Use check_doc with file="README.md" for specific findings
 Use check_doc with file="README.md", deep=true for a full audit
 ```
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="capability_description" description="Description of drift output format using illustrative field examples" -->
 ## What drift looks like
 
 Each drifted finding includes:
@@ -58,6 +63,7 @@ Each drifted finding includes:
 
 Claude Code uses this information to make the right edit without guessing.
 
+<!-- /docalign:skip -->
 ## Auto-fix (experimental)
 
 For high-confidence deterministic fixes (version numbers, file paths, script names), you can enable auto-fix:
@@ -74,12 +80,13 @@ Only deterministic fixes (version numbers, paths) with confidence above the thre
 
 ## Suppressing intentional drift
 
+<!-- docalign:skip reason="illustrative_example" description="Example markdown skip directive showing the pattern to follow" -->
 If a doc section is intentionally out of sync with the code (examples, tutorials, aspirational descriptions), suppress it:
 
 ```markdown
-<!-- docalign:skip reason="illustrative_example" description="Shows hypothetical API usage, not actual code" -->
 ...example content...
-<!-- /docalign:skip -->
 ```
 
 See [Suppressing Findings](suppressing-findings.md) for all reason codes.
+
+<!-- /docalign:skip -->

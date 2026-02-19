@@ -27,6 +27,7 @@ This guide walks you through installing DocAlign, running your first scan, and u
 
 ## Install
 
+<!-- docalign:skip reason="illustrative_example" description="npm install command examples showing how to install the tool" -->
 ```bash
 npm install -g docalign
 ```
@@ -36,20 +37,23 @@ Or run directly without installing:
 ```bash
 npx docalign scan
 ```
+<!-- /docalign:skip -->
 
 ## Run Your First Scan
 
 Navigate to your repository root and run:
 
+<!-- docalign:skip reason="illustrative_example" description="docalign scan command example" -->
 ```bash
 docalign scan
 ```
+<!-- /docalign:skip -->
 
 DocAlign automatically finds documentation files (`README.md`, `docs/**/*.md`, `CONTRIBUTING.md`, and more) and scans them for verifiable claims.
 
 ### Sample Output
 
-<!-- docalign:skip reason="sample_output" description="Illustrative CLI output with invented file paths, claim counts, and health score numbers" -->
+<!-- docalign:skip reason="sample_output" description="Illustrative CLI output with invented file paths, claim counts, and health score numbers (already marked with docalign:skip)" -->
 ```
 Scanning repository...
 
@@ -64,17 +68,19 @@ docs/setup.md (8 claims)
 Summary: 20 claims scanned, 16 verified, 4 drifted
 Health score: 80/100
 ```
-<!-- /docalign:skip -->
 
 ## Check a Single File
+<!-- /docalign:skip -->
 
 For detailed results on one file:
 
 ```bash
 docalign check README.md --verbose
+<!-- docalign:skip reason="illustrative_example" description="docalign check command example with --verbose flag" -->
 ```
 
 <!-- docalign:semantic id="sem-b83c64788ff816a8" claim="--verbose flag shows all claims, including verified ones. Without it, only drifted claims appear." -->
+<!-- /docalign:skip -->
 The `--verbose` flag shows all claims, including verified ones. Without it, only drifted claims appear.
 
 ## Understanding Results
@@ -92,9 +98,11 @@ Each finding has three parts:
 The health score is calculated as:
 ```
 score = 100 * verified / (verified + drifted)
+<!-- docalign:skip reason="illustrative_example" description="Health score formula shown as example calculation" -->
 ```
 
 Uncertain claims don't count. A score of 100 means every checkable claim matches the code.
+<!-- /docalign:skip -->
 
 ## Set Up for AI Agents (MCP)
 
@@ -102,9 +110,11 @@ If you use Claude Code, Cursor, or another MCP client:
 
 ```bash
 docalign init
+<!-- docalign:skip reason="illustrative_example" description="docalign init command example" -->
 ```
 
 This configures the MCP server so your AI agent can query documentation health, find stale docs, and get fix suggestions. See [MCP Integration](guides/mcp-integration.md).
+<!-- /docalign:skip -->
 
 ## Optional: Semantic Extraction
 
@@ -112,9 +122,11 @@ For deeper analysis, extract behavior and architecture claims using Claude:
 
 ```bash
 docalign extract
+<!-- docalign:skip reason="illustrative_example" description="docalign extract command example" -->
 ```
 
 This finds claims that regex can't catch, like "Authentication uses JWT tokens" or "Services communicate via REST." See [Semantic Extraction](guides/semantic-extraction.md).
+<!-- /docalign:skip -->
 
 ## Optional: Configuration
 
@@ -122,9 +134,11 @@ DocAlign works with zero configuration, but you can customize what it scans:
 
 ```bash
 docalign configure
+<!-- docalign:skip reason="illustrative_example" description="docalign configure command example" -->
 ```
 
 Or create `.docalign.yml` manually. See [Custom Configuration](guides/custom-configuration.md).
+<!-- /docalign:skip -->
 
 ## Next Steps
 

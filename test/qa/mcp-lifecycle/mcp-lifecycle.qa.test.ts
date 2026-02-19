@@ -9,8 +9,8 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
-const TEST_DIR = path.resolve(__dirname, '../../../layers/L6-mcp');
-const SRC_DIR = path.resolve(__dirname, '../../../../src/layers/L6-mcp');
+const TEST_DIR = path.resolve(__dirname, '../../layers/L6-mcp');
+const SRC_DIR = path.resolve(__dirname, '../../../src/layers/L6-mcp');
 
 describe('QA: MCP server lifecycle test coverage', () => {
   // AC1: parseCliArgs tests exist

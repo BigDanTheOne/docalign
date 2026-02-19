@@ -21,6 +21,7 @@ DocAlign verifies claims through a four-tier system, from fast deterministic che
 
 ## Tier 1: Deterministic Checks
 
+<!-- docalign:skip reason="example_table" description="Tier 1 capability table showing what claim types can be checked - illustrative examples of tool capabilities, not specific implementation claims" -->
 Direct evidence-based verification with high confidence. These are fast, reliable, and require no configuration.
 
 | Claim Type | Check |
@@ -29,6 +30,7 @@ Direct evidence-based verification with high confidence. These are fast, reliabl
 | File paths | Does the file exist in the repo? Fuzzy match for close alternatives. |
 | Dependencies | Is the package in `package.json`? Does the version match (semver-aware)? |
 | Commands | Is the npm script defined in `package.json` scripts? |
+<!-- /docalign:skip -->
 <!-- docalign:semantic id="sem-a915d5ee43040caf" claim="API route verification checks whether the route exists in Express/Flask/FastAPI handlers using AST-based detection" -->
 | API routes | Does the route exist in Express/Flask/FastAPI handlers (AST-based)? |
 | Code examples | Do imports resolve? Do referenced symbols exist in exports? |
@@ -42,6 +44,7 @@ Direct evidence-based verification with high confidence. These are fast, reliabl
 
 ## Tier 2: Pattern-Based Checks
 
+<!-- docalign:skip reason="example_table" description="Tier 2 capability table showing pattern-based checks - illustrative examples of tool capabilities, not specific implementation claims" -->
 Heuristic verification using well-known file patterns. Slightly lower confidence because patterns may have false positives.
 
 | Claim Type | Check |
@@ -52,6 +55,7 @@ Heuristic verification using well-known file patterns. Slightly lower confidence
 | Navigation configs | All paths in `mkdocs.yml`, `_sidebar.md`, `mint.json` resolve? |
 | Deprecation | Is the referenced code entity marked `@deprecated`? |
 | License | Does `package.json` license match documentation? |
+<!-- /docalign:skip -->
 | Changelog | Does latest CHANGELOG version match `package.json` version? |
 | Frontmatter | Does YAML `title:` match the first `# Heading`? |
 | Cross-doc consistency | Does the same entity have the same value across all docs? |

@@ -25,16 +25,16 @@ DocAlign extracts 11 types of claims from documentation and runs 8 cross-cutting
 ### path_reference
 
 File paths, image references, and asset links mentioned in documentation.
-
 <!-- docalign:skip reason="capability_description" description="path_reference Extracts bullet list with illustrative example paths and anchor links" -->
+
 **Extracts:**
 - Inline paths: `src/auth.ts`, `config/database.yml`
 - Image references: `![logo](assets/logo.png)`
 - Markdown links to local files: `[Setup Guide](docs/setup.md)`
 - Anchor links: `[Installation](#installation)`
-<!-- /docalign:skip -->
 
 **Verifies:**
+<!-- /docalign:skip -->
 - File exists in the repository
 - For anchor links: heading with matching slug exists in the target file
 - Fuzzy match suggestions when file not found ("Did you mean `src/auth/index.ts`?")
@@ -43,62 +43,61 @@ File paths, image references, and asset links mentioned in documentation.
 
 Package names and versions mentioned in prose, code blocks, and tables.
 
-<!-- docalign:skip reason="capability_description" description="dependency_version Extracts bullet list with illustrative package names and install commands" -->
 **Extracts:**
+<!-- docalign:skip reason="capability_description" description="dependency_version Extracts bullet list with illustrative package names and install commands" -->
 - Prose mentions: "requires express 4.18"
 - Install commands: `npm install react@18.2.0`
 - Code blocks: `"express": "^4.18.0"` in JSON snippets
 - Table rows with package/version columns
-<!-- /docalign:skip -->
 
 **Verifies:**
 - Package exists in `package.json` (or `pyproject.toml`, `go.mod`)
 - Version matches (supports semver range comparison)
+<!-- /docalign:skip -->
 - Fuzzy match suggestions for misspelled package names
 
 ### command
 
 CLI commands, npm scripts, and shell invocations.
 
-<!-- docalign:skip reason="capability_description" description="command Extracts bullet list with illustrative npm/npx/shell commands" -->
 **Extracts:**
 - npm/yarn/pnpm scripts: `npm run build`, `yarn test`
 - npx invocations: `npx docalign scan`
+<!-- docalign:skip reason="capability_description" description="command Extracts bullet list with illustrative npm/npx/shell commands" -->
 - Shell commands in code blocks: `docker compose up`
-<!-- /docalign:skip -->
 
 **Verifies:**
 - npm scripts: checks `scripts` in `package.json`
 - Close match suggestions for misspelled script names
 
+<!-- /docalign:skip -->
 ### api_route
 
 HTTP endpoints mentioned in documentation.
 
-<!-- docalign:skip reason="capability_description" description="api_route Extracts bullet list with illustrative route definitions" -->
 **Extracts:**
 - Route definitions: `GET /api/users`, `POST /auth/login`
 - URL patterns with HTTP methods
-<!-- /docalign:skip -->
 
 **Verifies:**
+<!-- docalign:skip reason="capability_description" description="api_route Extracts bullet list with illustrative route definitions" -->
 <!-- docalign:semantic id="sem-de225892faf2ed47" claim="Route exists in Express, Flask, or FastAPI handlers (AST-based detection)" -->
 - Route exists in Express, Flask, or FastAPI handlers (AST-based detection)
 - Method matches (GET vs POST)
 
 ### code_example
+<!-- /docalign:skip -->
 
 Import statements, symbol references, and code snippets.
 
-<!-- docalign:skip reason="capability_description" description="code_example Extracts bullet list with illustrative import and require examples" -->
 **Extracts:**
 - Import statements: `import { foo } from './bar'`
 - Require calls: `const db = require('./database')`
 - Symbol references in code blocks
 - Language tags on fenced code blocks
-<!-- /docalign:skip -->
 
 **Verifies:**
+<!-- docalign:skip reason="capability_description" description="code_example Extracts bullet list with illustrative import and require examples" -->
 - Import paths resolve to existing files
 <!-- docalign:semantic id="sem-045e4cebe0259868" claim="Referenced symbols are exported from the target module" -->
 - Referenced symbols are exported from the target module
@@ -108,27 +107,26 @@ Import statements, symbol references, and code snippets.
 
 Environment variables referenced in documentation.
 
-<!-- docalign:skip reason="capability_description" description="environment Extracts bullet list with illustrative env var references" -->
+<!-- /docalign:skip -->
 **Extracts:**
 - Inline references: `DATABASE_URL`, `API_KEY`
 - Process.env access: `process.env.NODE_ENV`
 - env var syntax in code blocks
-<!-- /docalign:skip -->
 
 **Verifies:**
 - Present in `.env`, `.env.example`, `docker-compose.yml`, or similar
 - Referenced in code via `process.env.*`
 
+<!-- docalign:skip reason="capability_description" description="environment Extracts bullet list with illustrative env var references" -->
 ### convention
 
 Claims about project conventions, standards, or practices.
 
-<!-- docalign:skip reason="capability_description" description="convention Extracts bullet list with illustrative framework and standard claims" -->
 **Extracts:**
 - Framework claims: "Uses TypeScript strict mode", "Built with React"
+<!-- /docalign:skip -->
 - Standard claims: "Follows REST conventions"
 - Tool claims: "Linted with ESLint"
-<!-- /docalign:skip -->
 
 **Verifies:**
 <!-- docalign:semantic id="sem-b8d13bd7737f2ae9" claim="TypeScript strict: checks tsconfig.json for strict: true" -->
@@ -136,11 +134,11 @@ Claims about project conventions, standards, or practices.
 - Framework presence: checks `package.json` dependencies
 - Engine versions: checks `engines.node` field against documented Node.js version
 
+<!-- docalign:skip reason="capability_description" description="convention Extracts bullet list with illustrative framework and standard claims" -->
 ### config
 
 Claims about configuration defaults, limits, and thresholds.
 
-<!-- docalign:skip reason="capability_description" description="config Extracts bullet list with illustrative default values, limits, and thresholds" -->
 **Extracts:**
 - Default values: "Defaults to port 3000"
 - Limits: "Maximum of 100 connections"
@@ -153,44 +151,44 @@ Claims about configuration defaults, limits, and thresholds.
 
 Behavioral descriptions that require LLM extraction.
 
-<!-- docalign:skip reason="capability_description" description="behavior Extracts bullet list with illustrative behavioral description examples" -->
 **Extracts via `docalign extract`:**
 - "Authentication uses JWT tokens stored in HTTP-only cookies"
+<!-- docalign:skip reason="capability_description" description="config Extracts bullet list with illustrative default values, limits, and thresholds" -->
 - "All API endpoints return JSON with an `error` field on failure"
 - "Database migrations are run automatically on startup"
-<!-- /docalign:skip -->
 
 **Verifies:** Grep-verifiable assertions generated by Claude, checked against actual code.
+<!-- /docalign:skip -->
 
 ### architecture (semantic only)
 
 Architecture decisions that require LLM extraction.
 
-<!-- docalign:skip reason="capability_description" description="architecture Extracts bullet list with illustrative architecture decision examples" -->
 **Extracts via `docalign extract`:**
 - "Services communicate via REST APIs, not message queues"
 - "Data flows from API gateway to service layer to repository"
 - "Frontend uses server-side rendering for initial page load"
-<!-- /docalign:skip -->
+<!-- docalign:skip reason="capability_description" description="behavior Extracts bullet list with illustrative behavioral description examples" -->
 
 **Verifies:** Grep-verifiable assertions checked against code structure and imports.
 
 ### url_reference
+<!-- /docalign:skip -->
 
 URLs and links to external resources.
 
-<!-- docalign:skip reason="capability_description" description="url_reference Extracts bullet list with illustrative URL and link examples" -->
 **Extracts:**
 - HTTP/HTTPS URLs in prose and code blocks
 - Markdown links to external sites
-<!-- /docalign:skip -->
 
 **Verifies:**
 <!-- docalign:semantic id="sem-e3d8d0be4b305428" claim="HTTP HEAD request (falls back to GET)" -->
+<!-- docalign:skip reason="capability_description" description="architecture Extracts bullet list with illustrative architecture decision examples" -->
 - HTTP HEAD request (falls back to GET)
 <!-- docalign:semantic id="sem-d88e64087079c198" claim="Status code 200-399 = verified, 4xx/5xx = drifted, Timeout or network error = uncertain" -->
 - Status code 200-399 = verified
 - 4xx/5xx = drifted
+<!-- /docalign:skip -->
 - Timeout or network error = uncertain
 
 Configurable via `url_check` settings (timeout, max per domain, excluded domains).
@@ -200,10 +198,12 @@ Configurable via `url_check` settings (timeout, max per domain, excluded domains
 These run after individual claim verification and analyze patterns across the entire scan.
 
 ### Anchor validation
+<!-- docalign:skip reason="capability_description" description="url_reference Extracts bullet list with illustrative URL and link examples" -->
 
 Checks that `[text](#anchor)` links point to headings that exist in the target file. Generates correct slugs from heading text.
 
 ### Cross-document consistency
+<!-- /docalign:skip -->
 
 <!-- docalign:semantic id="sem-986ff2a3e1f88350" claim="Groups claims by entity (same package, config key, or env var). If different documentation files state different values for the same entity, flags the inconsistency." -->
 Groups claims by entity (same package, config key, or env var). If different documentation files state different values for the same entity, flags the inconsistency.

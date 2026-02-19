@@ -52,6 +52,7 @@ Add to your MCP config (`.claude/mcp.json` for Claude Code, or equivalent for ot
 
 With MCP integration, your AI agent can:
 
+<!-- docalign:skip reason="sample_output" description="Example CLI interaction showing hypothetical code file path and tool usage" -->
 ### Find docs affected by code changes
 
 After changing `src/auth/middleware.ts`:
@@ -62,6 +63,8 @@ Use get_docs with code_file="src/auth/middleware.ts"
 
 Returns all doc claims that reference that file, showing which docs might need updating.
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="sample_output" description="Example check_doc command invocations demonstrating tool usage" -->
 ### Check if documentation is accurate
 
 ```
@@ -71,6 +74,8 @@ Use check_doc with file="README.md", deep=true for a thorough audit
 
 `check_doc` runs syntactic checks. With `deep=true` it also adds semantic claims and shows unchecked sections.
 
+<!-- /docalign:skip -->
+<!-- docalign:skip reason="sample_output" description="Example get_docs query demonstrating tool usage" -->
 ### Search documentation by topic
 
 ```
@@ -80,10 +85,12 @@ Use get_docs with query="authentication"
 <!-- docalign:semantic id="sem-2d5a71308583e52c" -->
 Returns doc sections about authentication ranked by relevance, with verification status.
 
+<!-- /docalign:skip -->
 ### Fix stale documentation
 
 When `check_doc` or `scan_docs` reports drift, Claude Code can fix the documentation directly: it reads the drift report, checks the referenced code files, and edits the documentation to match reality. No separate fix command needed.
 
+<!-- docalign:skip reason="sample_output" description="Example scan_docs command demonstrating tool usage" -->
 ### Get a quality overview
 
 ```
@@ -93,6 +100,7 @@ Use scan_docs
 <!-- docalign:semantic id="sem-63f2b4167bcf748c" -->
 Returns a 0-100 health score, verified vs drifted counts, and the worst files.
 
+<!-- /docalign:skip -->
 ## Verify it's working
 
 Run `docalign status` to check MCP integration status. Or ask your AI agent to run `scan_docs` — if it returns a health score, the integration is working.

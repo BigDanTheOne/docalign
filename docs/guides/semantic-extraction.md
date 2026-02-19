@@ -20,9 +20,9 @@ docalign:
 
 DocAlign's regex extraction catches structural claims (file paths, versions, commands), but documentation often contains natural language claims that regex can't extract. Semantic extraction uses Claude to find these.
 
+<!-- docalign:skip reason="capability_description" description="What it catches examples listing illustrative claim types with hypothetical example claims" -->
 ## What it catches
 
-<!-- docalign:skip reason="capability_description" description="What it catches examples listing illustrative claim types with hypothetical example claims" -->
 Claims that regex misses:
 
 - **Behavior**: "Authentication uses JWT tokens stored in HTTP-only cookies"
@@ -30,10 +30,10 @@ Claims that regex misses:
 - **Config assumptions**: "Rate limited to 100 requests per minute per API key"
 - **Implicit contracts**: "All API endpoints return JSON with an `error` field on failure"
 - **Design decisions**: "Database migrations are run automatically on startup"
-<!-- /docalign:skip -->
 
 ## Extract all doc files
 
+<!-- /docalign:skip -->
 ```bash
 docalign extract
 ```
@@ -77,9 +77,9 @@ Shows what would be extracted without writing to `.docalign/semantic/`.
 
 ## Storage
 
+<!-- docalign:skip reason="illustrative_example" description="File listing showing hypothetical .docalign/semantic/ contents with invented filenames" -->
 Extracted claims are saved to `.docalign/semantic/`:
 
-<!-- docalign:skip reason="illustrative_example" description="File listing showing hypothetical .docalign/semantic/ contents with invented filenames" -->
 ```
 .docalign/
   semantic/
@@ -87,13 +87,13 @@ Extracted claims are saved to `.docalign/semantic/`:
     docs--setup.md.json
     docs--api-reference.md.json
 ```
-<!-- /docalign:skip -->
 Each file contains the source file, extraction timestamp, and an array of claims with their assertion patterns and verification results.
 
 ## Verification
 
 Semantic claims are verified automatically on every check and scan:
 
+<!-- /docalign:skip -->
 ```bash
 docalign check README.md    # Includes semantic claims
 docalign scan               # Includes semantic claims for all files

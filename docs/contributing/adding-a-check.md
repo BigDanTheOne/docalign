@@ -32,9 +32,9 @@ Adding a check involves three files:
 
 If this is a new claim type (not a new check for an existing type), add it to the type system.
 
+<!-- docalign:skip reason="tutorial_example" description="ClaimType union extension example using your_new_type placeholder" -->
 In `src/shared/types.ts`, add the new type to the `ClaimType` union:
 
-<!-- docalign:skip reason="tutorial_example" description="ClaimType union extension example using your_new_type placeholder" -->
 ```typescript
 export type ClaimType =
   | 'path_reference'
@@ -50,9 +50,9 @@ In `src/config/schema.ts`, add it to the `claimTypeEnum` and `claim_types` confi
 
 Add a function in `src/layers/L1-claim-extractor/extractors.ts`:
 
-<!-- docalign:skip reason="tutorial_example" description="Extractor function template using extractYourNewType placeholder" -->
 ```typescript
 export function extractYourNewType(
+<!-- docalign:skip reason="tutorial_example" description="Extractor function template using extractYourNewType placeholder" -->
   line: string,
   lineNumber: number,
   context: ExtractionContext,
@@ -74,19 +74,19 @@ export function extractYourNewType(
   return results;
 }
 ```
-<!-- /docalign:skip -->
 
+<!-- /docalign:skip -->
 Register it in the extraction pipeline in `src/layers/L1-claim-extractor/syntactic.ts`.
 
 ## Step 3: Write the Verifier
 
 Add a verification function. Follow the verifier pattern:
 
-<!-- docalign:skip reason="tutorial_example" description="Verifier function template using verifyYourNewType placeholder" -->
 ```typescript
 export function verifyYourNewType(
   claim: Claim,
   index: CodebaseIndex,
+<!-- docalign:skip reason="tutorial_example" description="Verifier function template using verifyYourNewType placeholder" -->
 ): VerificationResult | null {
   // Check against the codebase index
   const found = index.someCheck(claim.value);
@@ -114,24 +114,23 @@ export function verifyYourNewType(
   });
 }
 ```
-<!-- /docalign:skip -->
 
 Register it in the verifier router in `src/layers/L3-verifier/index.ts`:
 
-<!-- docalign:skip reason="tutorial_example" description="Verifier router registration snippet using your_new_type placeholder" -->
 ```typescript
+<!-- /docalign:skip -->
 case 'your_new_type':
   return verifyYourNewType(claim, index);
 ```
-<!-- /docalign:skip -->
+<!-- docalign:skip reason="tutorial_example" description="Verifier router registration snippet using your_new_type placeholder" -->
 
 ## Step 4: Write Tests
 
 ### Extraction tests
+<!-- /docalign:skip -->
 
 In `test/layers/L1-claim-extractor/`:
 
-<!-- docalign:skip reason="tutorial_example" description="Extraction test template using extractYourNewType placeholder" -->
 ```typescript
 describe('extractYourNewType', () => {
   it('extracts from standard format', () => {
@@ -140,6 +139,7 @@ describe('extractYourNewType', () => {
     expect(results[0].value).toBe('expected-value');
     expect(results[0].claim_type).toBe('your_new_type');
   });
+<!-- docalign:skip reason="tutorial_example" description="Extraction test template using extractYourNewType placeholder" -->
 
   it('returns empty for non-matching lines', () => {
     const results = extractYourNewType('no match here', 1, context);
@@ -147,16 +147,15 @@ describe('extractYourNewType', () => {
   });
 });
 ```
-<!-- /docalign:skip -->
 
 ### Verification tests
 
 In `test/layers/L3-verifier/`:
 
-<!-- docalign:skip reason="tutorial_example" description="Verification test template using verifyYourNewType placeholder" -->
 ```typescript
 describe('verifyYourNewType', () => {
   it('verifies when found in codebase', () => {
+<!-- /docalign:skip -->
     const claim = makeClaim({ claim_type: 'your_new_type', value: 'test-value' });
     const index = makeMockIndex({ /* relevant index data */ });
 
@@ -164,6 +163,7 @@ describe('verifyYourNewType', () => {
     expect(result?.verdict).toBe('verified');
   });
 
+<!-- docalign:skip reason="tutorial_example" description="Verification test template using verifyYourNewType placeholder" -->
   it('drifts when not found', () => {
     const claim = makeClaim({ claim_type: 'your_new_type', value: 'missing' });
     const index = makeMockIndex({});
@@ -181,7 +181,6 @@ describe('verifyYourNewType', () => {
   });
 });
 ```
-<!-- /docalign:skip -->
 
 ## Step 5: Verify
 
@@ -192,6 +191,7 @@ npm run typecheck && npm run test
 Both must pass before the change is complete.
 
 ## Checklist
+<!-- /docalign:skip -->
 
 - [ ] Claim type added to `ClaimType` union (if new type)
 - [ ] Claim type added to config schema (if new type)

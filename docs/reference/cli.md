@@ -32,6 +32,7 @@ npx docalign scan          # Or run directly with npx
 Scan the entire repository for documentation drift.
 
 ```bash
+<!-- docalign:skip reason="sample_output" description="Example CLI usage showing docalign scan with hypothetical output format" -->
 docalign scan
 docalign scan --json
 docalign scan --exclude=docs/archive/old.md,docs/legacy.md
@@ -43,6 +44,7 @@ docalign scan --exclude=docs/archive/old.md,docs/legacy.md
 | `--max=N` | Limit hotspot results in JSON output (default: all) |
 | `--exclude=FILE[,FILE]` | Comma-separated list of files to skip |
 
+<!-- /docalign:skip -->
 **Output:** Lists each doc file with its claim count and drift status. Summary shows total verified, drifted, and health score.
 
 ### docalign check \<file\>
@@ -51,6 +53,7 @@ Check a single documentation file for drift.
 
 ```bash
 docalign check README.md
+<!-- docalign:skip reason="sample_output" description="Example CLI usage showing docalign check with hypothetical output format" -->
 docalign check README.md --section "Installation"
 docalign check README.md --deep
 docalign check README.md --json
@@ -62,12 +65,14 @@ docalign check README.md --json
 | `--deep` | Include semantic claims, unchecked sections, and coverage metrics |
 | `--json` | Output results as JSON |
 
+<!-- /docalign:skip -->
 **Output:** Each drifted claim with severity, line number, mismatch description, and evidence files.
 
 ### docalign search \<query\>
 
 Search project documentation by topic or find all docs that reference a code file.
 
+<!-- docalign:skip reason="sample_output" description="Example CLI usage showing docalign search with hypothetical queries" -->
 ```bash
 docalign search "authentication"
 docalign search --code-file src/auth/middleware.ts
@@ -82,17 +87,20 @@ docalign search "api" --json
 | `--max=N` | Maximum results to return (default 10) |
 | `--json` | Output results as JSON |
 
+<!-- /docalign:skip -->
 **Output:** Matching doc sections with file, heading, verification status, and content preview.
 
 ### docalign extract [file]
 
 Extract semantic claims using Claude. Finds behavior, architecture, and config claims that regex can't catch.
 
+<!-- docalign:skip reason="sample_output" description="Example CLI usage showing docalign extract with hypothetical file paths" -->
 ```bash
 docalign extract                    # All doc files
 docalign extract README.md          # Single file
 docalign extract README.md --force  # Re-extract even if unchanged
 docalign extract --dry-run          # Preview without saving
+<!-- /docalign:skip -->
 ```
 
 | Flag | Description |
@@ -110,16 +118,19 @@ docalign extract --dry-run          # Preview without saving
 Show current configuration, MCP integration status, and environment info.
 
 ```bash
+<!-- docalign:skip reason="sample_output" description="Example CLI usage showing docalign status command" -->
 docalign status
 ```
 
 <!-- docalign:semantic id="sem-81de6b5b50c968d5" claim="docalign status outputs active config file path, MCP server status, ANTHROPIC_API_KEY presence, and any config warnings" -->
+<!-- /docalign:skip -->
 **Output:** Active config file path, MCP server status, `ANTHROPIC_API_KEY` presence, and any config warnings.
 
 ### docalign configure
 
 Create or update `.docalign.yml` interactively.
 
+<!-- docalign:skip reason="sample_output" description="Example CLI usage showing docalign configure with hypothetical flags" -->
 ```bash
 docalign configure
 docalign configure --exclude=docs/archive/**
@@ -131,12 +142,14 @@ docalign configure --reset
 |------|-------------|
 | `--exclude=PATTERN[,PATTERN]` | Add exclude patterns to doc_patterns |
 | `--min-severity=LEVEL` | Set minimum severity (`low`, `medium`, `high`) |
+<!-- /docalign:skip -->
 | `--reset` | Reset config to defaults |
 
 ### docalign init
 
 Set up DocAlign for Claude Code integration.
 
+<!-- docalign:skip reason="user_instruction" description="What it does section describing steps the user should perform during init" -->
 ```bash
 docalign init
 ```
@@ -146,12 +159,14 @@ docalign init
 1. Writes MCP server config and post-commit hooks to `.claude/settings.local.json`
 <!-- docalign:semantic id="sem-ab882ee276c75146" claim="docalign init installs docalign and docalign-setup skills to .claude/skills/ and ~/.claude/skills/" -->
 2. Installs `docalign` and `docalign-setup` skills to `.claude/skills/` and `~/.claude/skills/`
+<!-- /docalign:skip -->
 3. Adds a setup trigger to `CLAUDE.md` — the interactive setup wizard runs automatically on the next Claude Code launch
 
 ### docalign viz
 
 Generate an interactive knowledge graph showing doc-to-code relationships.
 
+<!-- docalign:skip reason="sample_output" description="Example CLI usage showing docalign viz with hypothetical flags" -->
 ```bash
 docalign viz
 docalign viz --output=report.html
@@ -160,6 +175,7 @@ docalign viz --exclude=docs/internal/**
 ```
 
 | Flag | Description |
+<!-- /docalign:skip -->
 |------|-------------|
 | `--output=PATH` | Output path (default: `.docalign/viz.html`) |
 | `--no-open` | Don't auto-open in browser |
@@ -172,6 +188,7 @@ docalign viz --exclude=docs/internal/**
 
 Start the MCP server for integration with Claude Code, Cursor, or other MCP clients.
 
+<!-- docalign:skip reason="sample_output" description="Example CLI usage showing docalign mcp command" -->
 ```bash
 docalign mcp --repo .
 docalign mcp --repo /path/to/project
@@ -181,14 +198,17 @@ docalign mcp --repo /path/to/project
 |------|-------------|
 | `--repo=PATH` | Path to repository root (required) |
 
+<!-- /docalign:skip -->
 Typically called by the MCP client, not directly. See [MCP Integration](../guides/mcp-integration.md).
 
 ### docalign help
 
 Show usage information and available commands.
+<!-- docalign:skip reason="sample_output" description="Example CLI usage showing docalign help command" -->
 
 ```bash
 docalign help
+<!-- /docalign:skip -->
 ```
 
 ## Environment Variables

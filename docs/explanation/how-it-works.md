@@ -21,7 +21,7 @@ docalign:
 DocAlign follows a three-stage pipeline: **extract** claims from documentation, **verify** each claim against the codebase, and **report** the results.
 
 ## Pipeline Overview
-<!-- docalign:skip reason="illustrative_example" description="ASCII art pipeline diagram illustrating data flow between layers; not a factual claim about specific code" -->
+<!-- docalign:skip reason="illustrative_example" description="ASCII art pipeline diagram showing data flow between layers (pre-annotated)" -->
 ```
                     +-----------------------+
                     |   Documentation       |
@@ -49,9 +49,9 @@ DocAlign follows a three-stage pipeline: **extract** claims from documentation, 
                     |   (CLI, MCP, PR)      |
                     +-----------------------+
 ```
-<!-- /docalign:skip -->
 
 ## Stage 1: Extract
+<!-- /docalign:skip -->
 DocAlign scans each documentation file and extracts **claims** -- verifiable statements about the codebase.
 **Syntactic extraction** uses regex patterns to find:
 - File paths: `src/auth.ts`, `![logo](assets/logo.png)`

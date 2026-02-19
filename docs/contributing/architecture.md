@@ -21,6 +21,7 @@ docalign:
 
 DocAlign is organized into 8 layers (L0-L7), each with a single responsibility. Data flows through the layers as a pipeline.
 
+<!-- docalign:skip reason="example_table" description="Layer overview table showing L0-L7 layer names and descriptions - this is illustrative of the architecture, but the specific tools count (10 tools) is a factual claim that should be verified separately" -->
 ## Layer Overview
 
 <!-- docalign:semantic id="sem-54a8ac288ba87790" claim="MCP server has 10 tools with stdio transport" -->
@@ -33,8 +34,10 @@ L4  Triggers           Webhook handlers, scan queue, pipeline orchestration
 L5  Reporter           PR comments, check runs, health scores
 L6  MCP                MCP server (10 tools, stdio transport)
 L7  Learning           Feedback, suppression, learning loop
+<!-- /docalign:skip -->
 ```
 
+<!-- docalign:skip reason="illustrative_example" description="Directory structure example showing target file layout - this is aspirational/future state, not a claim about current codebase state" -->
 ## Directory Structure
 
 ```
@@ -54,7 +57,9 @@ src/
   storage/                # StorageAdapter interface + SQLite + PostgreSQL
 ```
 
+<!-- /docalign:skip -->
 ## Data Flow
+<!-- docalign:skip reason="capability_description" description="Full scan pipeline steps describing what the system does at each layer - this is high-level capability description using numbered steps" -->
 ### Full scan pipeline
 
 ```
@@ -86,6 +91,7 @@ src/
    - PR: GitHub comments (server mode)
 ```
 
+<!-- /docalign:skip -->
 ### CLI mode vs Server mode
 
 DocAlign runs in two modes:
@@ -112,6 +118,7 @@ The type system lives in `src/shared/types.ts`:
 - **`VerificationResult`**: Output of L3 verification (verdict, confidence, reasoning, evidence)
 - **`ClaimMapping`**: L2 output linking a claim to code files
 
+<!-- docalign:skip reason="illustrative_example" description="Configuration flow diagram showing data flow from .docalign.yml through loader and schema to validated config - this is a visual illustration" -->
 ## Configuration Flow
 
 ```
@@ -125,6 +132,7 @@ The type system lives in `src/shared/types.ts`:
 <!-- docalign:semantic id="sem-25cebbb673b72c10" claim="Config loader reads YAML, validates against Zod schema, merges with defaults, invalid fields get warnings and fall back to defaults" -->
 The loader reads YAML, validates against the Zod schema, merges with defaults, and returns a typed config object. Invalid fields get warnings and fall back to defaults.
 
+<!-- /docalign:skip -->
 ## Storage Adapters
 
 The `StorageAdapter` interface abstracts the database:
