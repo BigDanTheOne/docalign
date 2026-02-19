@@ -9,6 +9,7 @@ coverage/
 *.tgz
 debug-*.mjs
 worktree/
+layers
 
 # Runtime / local state
 .entire/
