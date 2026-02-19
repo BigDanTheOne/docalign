@@ -69,11 +69,15 @@ async function main(): Promise<void> {
 
   const pipeline = new LocalPipeline(repoPath);
 
-  // Pre-warm the index
+  // Pre-warm the index (non-fatal — server still starts if this fails)
   log('Building codebase index...');
   const warmupStart = Date.now();
-  await pipeline.scanRepo();
-  log(`Index built in ${((Date.now() - warmupStart) / 1000).toFixed(1)}s`);
+  try {
+    await pipeline.scanRepo();
+    log(`Index built in ${((Date.now() - warmupStart) / 1000).toFixed(1)}s`);
+  } catch (err) {
+    log(`Warmup scan skipped (${err instanceof Error ? err.message : String(err)}); index will build on first request.`);
+  }
 
   const server = new McpServer({
     name: 'docalign',
