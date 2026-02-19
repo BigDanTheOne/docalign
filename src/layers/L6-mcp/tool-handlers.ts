@@ -32,16 +32,26 @@ export function registerLocalTools(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const s = server as any;
 
-  // Tool 1: check_doc — Check a specific doc file for drift
+  // Tool 1: check_doc — Check a doc file (with optional section scoping and deep audit)
   s.tool(
     'check_doc',
-    'Check a documentation file for drift against the codebase. Returns verification results for each claim found.',
+    'Check a documentation file for drift against the codebase. Optionally scope to a specific section (section param) or run a deep audit including semantic claims and unchecked sections (deep param).',
     {
       file: z.string().min(1).describe('Path to the documentation file (relative to repo root)'),
+      section: z.string().optional().describe('Section heading to scope check to (e.g., "Installation", "API Reference"). If omitted, checks the whole file.'),
+      deep: z.boolean().optional().describe('If true, includes semantic claims, unchecked sections, and coverage metrics in addition to syntactic claims.'),
     },
-    async ({ file }: { file: string }) => {
+    async ({ file, section, deep }: { file: string; section?: string; deep?: boolean }) => {
       try {
-        const result = await pipeline.checkFile(file, true);
+        let result: Awaited<ReturnType<CliPipeline['checkFile']>> & { section?: { heading: string; startLine: number; endLine: number } };
+
+        if (section) {
+          const sectionResult = await pipeline.checkSection(file, section);
+          result = sectionResult;
+        } else {
+          result = await pipeline.checkFile(file, true);
+        }
+
         const visible = filterUncertain(result.results);
         const counts = countVerdicts(visible);
 
@@ -57,70 +67,102 @@ export function registerLocalTools(
             evidence: r.evidence_files,
           }));
 
-        return {
-          content: [{
-            type: 'text' as const,
-            text: JSON.stringify({
-              file,
-              total_claims: result.claims.length,
-              verified: counts.verified,
-              drifted: counts.drifted,
-              duration_ms: result.durationMs,
-              findings,
-            }, null, 2),
-          }],
+        const base: Record<string, unknown> = {
+          file,
+          total_claims: result.claims.length,
+          verified: counts.verified,
+          drifted: counts.drifted,
+          duration_ms: result.durationMs,
+          findings,
         };
-      } catch (err) {
-        return {
-          content: [{
-            type: 'text' as const,
-            text: JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
-          }],
-          isError: true,
-        };
-      }
-    },
-  );
 
-  // Tool 2: check_section — Check a specific section of a doc file
-  s.tool(
-    'check_section',
-    'Check a specific section of a documentation file by heading. Returns verification results for claims within that section only.',
-    {
-      file: z.string().min(1).describe('Path to the documentation file (relative to repo root)'),
-      heading: z.string().min(1).describe('Section heading text (e.g., "Installation", "API Reference")'),
-    },
-    async ({ file, heading }: { file: string; heading: string }) => {
-      try {
-        const result = await pipeline.checkSection(file, heading);
-        const visible = filterUncertain(result.results);
-        const counts = countVerdicts(visible);
+        if (section && 'section' in result && result.section) {
+          base.section = result.section.heading;
+          base.section_lines = `${result.section.startLine}-${result.section.endLine}`;
+        }
 
-        const findings = visible
-          .filter((r) => r.verdict === 'drifted')
-          .map((r) => ({
-            claim_text: result.claims.find((c) => c.id === r.claim_id)?.claim_text ?? '',
-            claim_type: result.claims.find((c) => c.id === r.claim_id)?.claim_type ?? '',
-            line: result.claims.find((c) => c.id === r.claim_id)?.line_number,
-            severity: r.severity,
-            reasoning: r.reasoning,
-            suggested_fix: r.suggested_fix,
-            evidence: r.evidence_files,
+        if (deep) {
+          // Semantic claims from store
+          const semanticData = loadClaimsForFile(repoRoot, file);
+          const semanticClaims = semanticData?.claims ?? [];
+          const semanticFindings = semanticClaims.map((sc) => ({
+            id: sc.id,
+            claim_text: sc.claim_text,
+            claim_type: sc.claim_type,
+            line: sc.line_number,
+            section: sc.section_heading,
+            keywords: sc.keywords,
+            verification: sc.last_verification ? {
+              verdict: sc.last_verification.verdict,
+              confidence: sc.last_verification.confidence,
+              reasoning: sc.last_verification.reasoning,
+              verified_at: sc.last_verification.verified_at,
+            } : null,
           }));
 
+          // Unchecked sections
+          const absPath = path.join(repoRoot, file);
+          let uncheckedSections: Array<{ heading: string; line_range: string; content_preview: string }> = [];
+
+          if (fs.existsSync(absPath)) {
+            const content = fs.readFileSync(absPath, 'utf-8');
+            const headings = listHeadings(content);
+            const lines = content.split('\n');
+
+            const checkedSections = new Set<string>();
+            for (const claim of result.claims) {
+              for (const h of headings) {
+                const sec = findSection(content, h.text);
+                if (sec && claim.line_number >= sec.startLine && claim.line_number <= sec.endLine) {
+                  checkedSections.add(h.text.toLowerCase());
+                }
+              }
+            }
+            for (const sc of semanticClaims) {
+              checkedSections.add(sc.section_heading.toLowerCase());
+            }
+
+            uncheckedSections = headings
+              .filter((h) => !checkedSections.has(h.text.toLowerCase()))
+              .map((h) => {
+                const sec = findSection(content, h.text);
+                const startLine = sec?.startLine ?? h.line;
+                const endLine = sec?.endLine ?? h.line;
+                return {
+                  heading: h.text,
+                  line_range: `${startLine}-${endLine}`,
+                  content_preview: lines.slice(startLine - 1, endLine).join('\n').slice(0, 300),
+                };
+              });
+          }
+
+          const allHeadingCount = fs.existsSync(absPath)
+            ? listHeadings(fs.readFileSync(absPath, 'utf-8')).length || 1
+            : 1;
+          const checkedCount = allHeadingCount - uncheckedSections.length;
+
+          const warnings: string[] = [];
+          if (semanticClaims.length === 0) {
+            warnings.push('No semantic claims stored. Run `docalign extract` first.');
+          }
+
+          base.semantic = {
+            total_claims: semanticClaims.length,
+            findings: semanticFindings,
+          };
+          base.unchecked_sections = uncheckedSections;
+          base.coverage = {
+            total_sections: allHeadingCount,
+            checked_sections: checkedCount,
+            coverage_pct: Math.round((checkedCount / allHeadingCount) * 100),
+          };
+          base.warnings = warnings;
+        }
+
         return {
           content: [{
             type: 'text' as const,
-            text: JSON.stringify({
-              file,
-              section: result.section.heading,
-              section_lines: `${result.section.startLine}-${result.section.endLine}`,
-              total_claims: result.claims.length,
-              verified: counts.verified,
-              drifted: counts.drifted,
-              duration_ms: result.durationMs,
-              findings,
-            }, null, 2),
+            text: JSON.stringify(base, null, 2),
           }],
         };
       } catch (err) {
@@ -135,113 +177,47 @@ export function registerLocalTools(
     },
   );
 
-  // Tool 3: get_doc_health — Repository health overview
+  // Tool 2: scan_docs — Repository health + drift hotspots (replaces get_doc_health + list_drift)
   s.tool(
-    'get_doc_health',
-    'Get documentation health score for the repository. Shows overall verification coverage and top drift hotspots.',
-    {},
-    async () => {
-      try {
-        const result = await pipeline.scanRepo();
-        return formatHealthResponse(result);
-      } catch (err) {
-        return {
-          content: [{
-            type: 'text' as const,
-            text: JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
-          }],
-          isError: true,
-        };
-      }
-    },
-  );
-
-  // Tool 4: list_drift — List all drifted documentation claims
-  s.tool(
-    'list_drift',
-    'List all documentation files with drift, ordered by severity. Shows which docs need updating.',
+    'scan_docs',
+    'Scan repository documentation for drift. Returns health score, verification coverage, and ordered list of files with most drift. Use this to get a quick overview of documentation quality.',
     {
-      max_results: z.number().int().min(1).max(50).optional().describe('Maximum files to return (default 20)'),
+      max_results: z.number().int().min(1).max(50).optional().describe('Maximum hotspot files to return (default 20)'),
     },
     async ({ max_results }: { max_results?: number }) => {
       try {
         const limit = max_results ?? 20;
         const result = await pipeline.scanRepo();
-        const hotspots = buildHotspots(
-          result.files.map((f) => ({
-            ...f,
-            results: filterUncertain(f.results),
-          })),
-        );
+        const filteredFiles = result.files.map((f) => {
+          const visible = filterUncertain(f.results);
+          const counts = countVerdicts(visible);
+          return { ...f, results: visible, counts };
+        });
 
-        return {
-          content: [{
-            type: 'text' as const,
-            text: JSON.stringify({
-              stale_docs: hotspots.slice(0, limit).map((h) => ({
-                file: h.file,
-                drifted_claims: h.driftedCount,
-              })),
-              total_files_with_drift: hotspots.length,
-            }, null, 2),
-          }],
-        };
-      } catch (err) {
-        return {
-          content: [{
-            type: 'text' as const,
-            text: JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
-          }],
-          isError: true,
-        };
-      }
-    },
-  );
-
-  // Tool 5: get_docs_for_file — Reverse lookup: which docs reference a code file
-  s.tool(
-    'get_docs_for_file',
-    'Find all documentation claims that reference a specific code file. Useful when modifying code to find docs that may need updating.',
-    {
-      file_path: z.string().min(1).describe('Path to the code file (relative to repo root)'),
-    },
-    async ({ file_path }: { file_path: string }) => {
-      try {
-        const result = await pipeline.scanRepo();
-        const matching: Array<{
-          doc_file: string;
-          line: number;
-          claim_text: string;
-          claim_type: string;
-          verdict: string;
-          severity: string | null;
-        }> = [];
-
-        for (const f of result.files) {
-          for (const r of f.results) {
-            if (r.evidence_files.some((e) => e === file_path || e.endsWith('/' + file_path))) {
-              const claim = f.claims.find((c) => c.id === r.claim_id);
-              if (claim) {
-                matching.push({
-                  doc_file: claim.source_file,
-                  line: claim.line_number,
-                  claim_text: claim.claim_text.slice(0, 200),
-                  claim_type: claim.claim_type,
-                  verdict: r.verdict,
-                  severity: r.severity,
-                });
-              }
-            }
-          }
+        let totalVerified = 0;
+        let totalDrifted = 0;
+        for (const f of filteredFiles) {
+          totalVerified += f.counts.verified;
+          totalDrifted += f.counts.drifted;
         }
+        const totalScored = totalVerified + totalDrifted;
+        const score = totalScored > 0 ? Math.round((totalVerified / totalScored) * 100) : 100;
+        const hotspots = buildHotspots(filteredFiles);
 
         return {
           content: [{
             type: 'text' as const,
             text: JSON.stringify({
-              code_file: file_path,
-              referencing_docs: matching,
-              total: matching.length,
+              health_score: score,
+              total_scored: totalScored,
+              verified: totalVerified,
+              drifted: totalDrifted,
+              doc_files_scanned: result.files.length,
+              duration_ms: result.durationMs,
+              hotspots: hotspots.slice(0, limit).map((h) => ({
+                file: h.file,
+                drifted: h.driftedCount,
+              })),
             }, null, 2),
           }],
         };
@@ -257,170 +233,92 @@ export function registerLocalTools(
     },
   );
 
-  // Tool 6: get_docs — Multi-signal search over documentation sections
+  // Tool 3: get_docs — Search documentation or reverse-lookup by code file
   const searchIndex = new DocSearchIndex();
   let searchIndexBuilt = false;
 
   s.tool(
     'get_docs',
-    'Search project documentation by topic. Returns relevant doc sections ranked by relevance, with verification status showing whether the content matches the actual code.',
+    'Search project documentation by topic or find docs that reference a specific code file. Provide query for topic search, code_file for reverse lookup (which docs reference that file), or both to combine results.',
     {
-      query: z.string().min(1).describe('Topic to search for (e.g., "authentication", "API endpoints", "deployment")'),
+      query: z.string().optional().describe('Topic to search for (e.g., "authentication", "API endpoints", "deployment")'),
+      code_file: z.string().optional().describe('Code file path (relative to repo root) to find docs that reference it. Useful when modifying code to find docs that may need updating.'),
       verified_only: z.boolean().optional().describe('Only return sections where all claims are verified'),
-      max_results: z.number().int().min(1).max(50).optional().describe('Max sections to return (default 10)'),
+      max_results: z.number().int().min(1).max(50).optional().describe('Max results to return (default 10)'),
     },
-    async ({ query, verified_only, max_results }: { query: string; verified_only?: boolean; max_results?: number }) => {
+    async ({ query, code_file, verified_only, max_results }: {
+      query?: string;
+      code_file?: string;
+      verified_only?: boolean;
+      max_results?: number;
+    }) => {
       try {
-        if (!searchIndexBuilt) {
-          await searchIndex.build(pipeline, repoRoot);
-          searchIndexBuilt = true;
+        if (!query && !code_file) {
+          return {
+            content: [{
+              type: 'text' as const,
+              text: JSON.stringify({ error: 'Provide at least one of: query, code_file' }),
+            }],
+            isError: true,
+          };
         }
 
-        const response = searchIndex.search(query, {
-          verified_only: verified_only ?? false,
-          max_results: max_results ?? 10,
-        });
+        const limit = max_results ?? 10;
+        const combined: Record<string, unknown> = {};
 
-        return {
-          content: [{
-            type: 'text' as const,
-            text: JSON.stringify(response, null, 2),
-          }],
-        };
-      } catch (err) {
-        return {
-          content: [{
-            type: 'text' as const,
-            text: JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
-          }],
-          isError: true,
-        };
-      }
-    },
-  );
+        if (code_file) {
+          const result = await pipeline.scanRepo();
+          const matching: Array<{
+            doc_file: string;
+            line: number;
+            claim_text: string;
+            claim_type: string;
+            verdict: string;
+            severity: string | null;
+          }> = [];
 
-  // Tool 9: deep_check — Deep documentation audit with semantic claims
-  s.tool(
-    'deep_check',
-    'Deep documentation audit. Returns syntactic claims + semantic claims + unchecked sections + coverage metrics. Use for thorough doc verification.',
-    {
-      file: z.string().min(1).describe('Path to the documentation file (relative to repo root)'),
-    },
-    async ({ file }: { file: string }) => {
-      try {
-        // Syntactic check
-        const result = await pipeline.checkFile(file, true);
-        const visible = filterUncertain(result.results);
-        const counts = countVerdicts(visible);
-
-        const syntacticFindings = visible.map((r) => {
-          const claim = result.claims.find((c) => c.id === r.claim_id);
-          return {
-            claim_text: claim?.claim_text ?? '',
-            claim_type: claim?.claim_type ?? '',
-            line: claim?.line_number,
-            verdict: r.verdict,
-            severity: r.severity,
-            reasoning: r.reasoning,
-          };
-        });
-
-        // Semantic claims from store
-        const semanticData = loadClaimsForFile(repoRoot, file);
-        const semanticClaims = semanticData?.claims ?? [];
-        const semanticFindings = semanticClaims.map((sc) => ({
-          id: sc.id,
-          claim_text: sc.claim_text,
-          claim_type: sc.claim_type,
-          line: sc.line_number,
-          section: sc.section_heading,
-          keywords: sc.keywords,
-          verification: sc.last_verification ? {
-            verdict: sc.last_verification.verdict,
-            confidence: sc.last_verification.confidence,
-            reasoning: sc.last_verification.reasoning,
-            verified_at: sc.last_verification.verified_at,
-          } : null,
-        }));
-
-        // Unchecked sections
-        const absPath = path.join(repoRoot, file);
-        let uncheckedSections: Array<{
-          heading: string;
-          line_range: string;
-          content_preview: string;
-        }> = [];
-
-        if (fs.existsSync(absPath)) {
-          const content = fs.readFileSync(absPath, 'utf-8');
-          const headings = listHeadings(content);
-          const lines = content.split('\n');
-
-          // Build set of checked sections (have at least one claim)
-          const checkedSections = new Set<string>();
-          for (const claim of result.claims) {
-            for (const h of headings) {
-              const section = findSection(content, h.text);
-              if (section && claim.line_number >= section.startLine && claim.line_number <= section.endLine) {
-                checkedSections.add(h.text.toLowerCase());
+          for (const f of result.files) {
+            for (const r of f.results) {
+              if (r.evidence_files.some((e) => e === code_file || e.endsWith('/' + code_file))) {
+                const claim = f.claims.find((c) => c.id === r.claim_id);
+                if (claim) {
+                  matching.push({
+                    doc_file: claim.source_file,
+                    line: claim.line_number,
+                    claim_text: claim.claim_text.slice(0, 200),
+                    claim_type: claim.claim_type,
+                    verdict: r.verdict,
+                    severity: r.severity,
+                  });
+                }
               }
             }
           }
-          for (const sc of semanticClaims) {
-            checkedSections.add(sc.section_heading.toLowerCase());
-          }
 
-          uncheckedSections = headings
-            .filter((h) => !checkedSections.has(h.text.toLowerCase()))
-            .map((h) => {
-              const section = findSection(content, h.text);
-              const startLine = section?.startLine ?? h.line;
-              const endLine = section?.endLine ?? h.line;
-              const sectionContent = lines.slice(startLine - 1, endLine).join('\n');
-              return {
-                heading: h.text,
-                line_range: `${startLine}-${endLine}`,
-                content_preview: sectionContent.slice(0, 300),
-              };
-            });
+          combined.code_file = code_file;
+          combined.referencing_docs = matching.slice(0, limit);
+          combined.total_referencing = matching.length;
         }
 
-        // Coverage
-        const allHeadingCount = fs.existsSync(absPath)
-          ? listHeadings(fs.readFileSync(absPath, 'utf-8')).length || 1
-          : 1;
-        const checkedCount = allHeadingCount - uncheckedSections.length;
-        const coveragePct = Math.round((checkedCount / allHeadingCount) * 100);
+        if (query) {
+          if (!searchIndexBuilt) {
+            await searchIndex.build(pipeline, repoRoot);
+            searchIndexBuilt = true;
+          }
 
-        // Warnings
-        const warnings: string[] = [];
-        if (semanticClaims.length === 0) {
-          warnings.push('No semantic claims stored. Run `docalign extract` first.');
+          const response = searchIndex.search(query, {
+            verified_only: verified_only ?? false,
+            max_results: limit,
+          });
+
+          combined.query = query;
+          combined.search_results = response;
         }
 
         return {
           content: [{
             type: 'text' as const,
-            text: JSON.stringify({
-              file,
-              syntactic: {
-                total_claims: result.claims.filter((c) => c.extraction_method !== 'llm').length,
-                verified: counts.verified,
-                drifted: counts.drifted,
-                findings: syntacticFindings.filter((f) => f.verdict === 'drifted'),
-              },
-              semantic: {
-                total_claims: semanticClaims.length,
-                findings: semanticFindings,
-              },
-              unchecked_sections: uncheckedSections,
-              coverage: {
-                total_sections: allHeadingCount,
-                checked_sections: checkedCount,
-                coverage_pct: coveragePct,
-              },
-              warnings,
-            }, null, 2),
+            text: JSON.stringify(combined, null, 2),
           }],
         };
       } catch (err) {
@@ -435,7 +333,7 @@ export function registerLocalTools(
     },
   );
 
-  // Tool 10: register_claims — Persist semantic claims from agent analysis
+  // Tool 4: register_claims — Persist semantic claims from agent analysis
   s.tool(
     'register_claims',
     'Register semantic claims discovered during analysis. Persists them to .docalign/semantic/ for future verification.',
@@ -493,18 +391,16 @@ export function registerLocalTools(
             const headingsList = listHeadings(content);
             const lines = content.split('\n');
 
-            // For each claim, find its section
             const newRecords: SemanticClaimRecord[] = fileClaims.map((c) => {
-              // Find section for this line
               let foundHeading = '(document)';
               let foundHash = hashContent(content);
 
               for (let i = headingsList.length - 1; i >= 0; i--) {
                 if (headingsList[i].line <= c.line_number) {
                   foundHeading = headingsList[i].text;
-                  const section = findSection(content, headingsList[i].text);
-                  if (section) {
-                    const sectionContent = lines.slice(section.startLine - 1, section.endLine).join('\n');
+                  const sec = findSection(content, headingsList[i].text);
+                  if (sec) {
+                    const sectionContent = lines.slice(sec.startLine - 1, sec.endLine).join('\n');
                     foundHash = hashContent(sectionContent);
                   }
                   break;
@@ -538,7 +434,6 @@ export function registerLocalTools(
               };
             });
 
-            // Load or create file data
             const existing = loadClaimsForFile(repoRoot, sourceFile) ?? {
               version: 1 as const,
               source_file: sourceFile,
@@ -546,7 +441,6 @@ export function registerLocalTools(
               claims: [],
             };
 
-            // Merge — don't remove claims from non-mentioned sections
             const claimMap = new Map<string, SemanticClaimRecord>();
             for (const c of existing.claims) {
               claimMap.set(c.id, c);
@@ -587,7 +481,7 @@ export function registerLocalTools(
   );
 }
 
-/** Format a scan result as a health response (shared between get_doc_health and internal use). */
+/** Format a scan result as a health response (shared between scan_docs and internal use). */
 export function formatHealthResponse(result: ScanResult) {
   const filteredFiles = result.files.map((f) => {
     const visible = filterUncertain(f.results);

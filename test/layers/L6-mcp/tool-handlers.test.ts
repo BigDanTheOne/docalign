@@ -39,17 +39,13 @@ describe('registerLocalTools', () => {
     } as unknown as McpServer;
   });
 
-  it('registers all 8 tools', () => {
+  it('registers all 4 tools', () => {
     registerLocalTools(server, mockPipeline, '/tmp/test-repo');
 
-    expect(server.tool).toHaveBeenCalledTimes(8);
+    expect(server.tool).toHaveBeenCalledTimes(4);
     expect(registeredTools).toContain('check_doc');
-    expect(registeredTools).toContain('check_section');
-    expect(registeredTools).toContain('get_doc_health');
-    expect(registeredTools).toContain('list_drift');
-    expect(registeredTools).toContain('get_docs_for_file');
+    expect(registeredTools).toContain('scan_docs');
     expect(registeredTools).toContain('get_docs');
-    expect(registeredTools).toContain('deep_check');
     expect(registeredTools).toContain('register_claims');
   });
 
@@ -63,5 +59,22 @@ describe('registerLocalTools', () => {
     expect(call![1]).toContain('Search project documentation');
   });
 
-});
+  it('check_doc is the only check tool (no check_section or deep_check)', () => {
+    registerLocalTools(server, mockPipeline, '/tmp/test-repo');
 
+    expect(registeredTools).not.toContain('check_section');
+    expect(registeredTools).not.toContain('deep_check');
+    expect(registeredTools).not.toContain('get_doc_health');
+    expect(registeredTools).not.toContain('list_drift');
+    expect(registeredTools).not.toContain('get_docs_for_file');
+  });
+
+  it('scan_docs replaces get_doc_health and list_drift', () => {
+    registerLocalTools(server, mockPipeline, '/tmp/test-repo');
+
+    expect(registeredTools).toContain('scan_docs');
+    expect(registeredTools).not.toContain('get_doc_health');
+    expect(registeredTools).not.toContain('list_drift');
+  });
+
+});
