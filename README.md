@@ -8,17 +8,27 @@ Detects when your documentation drifts from code reality — and tells your AI c
 
 ## Overview
 
-DocAlign extracts verifiable claims from your docs — file paths, dependency versions, CLI commands, API routes, code examples, config values — and checks each one against the actual codebase. Works as an **MCP server** for Claude Code (primary) or as a standalone **CLI**.
+Most documentation checkers verify syntax: does this file exist, is this version correct? DocAlign goes further. It reads your docs the way a developer would, extracts every factual claim — both mechanical facts *and* behavioral assertions — and verifies each one against the actual codebase.
+
+The result is a living map of what your docs claim vs. what your code does, kept current on every commit. Works as an **MCP server** for Claude Code (primary) or as a standalone **CLI**.
 
 ## How It Works
 
-**On every code change**, Claude's DocAlign skill:
+**On first setup**, DocAlign runs a one-time extraction pass across your selected docs. A sub-agent reads each document in parallel, identifies every verifiable claim, and stores them with stable IDs:
+
+- *"Requests are authenticated using JWT tokens validated in `middleware/auth.ts`"*
+- *"The worker retries failed jobs up to 3 times with exponential backoff"*
+- *"All errors are forwarded to Sentry before responding to the client"*
+
+These are the claims that really go stale — and that no regex can catch.
+
+**On every subsequent code change**, the DocAlign skill:
 
 1. Finds docs that reference the changed files (`get_docs` with `code_file` param)
-2. Checks those docs for drift (`check_doc`)
-3. Reports specific mismatches with suggested fixes
+2. Re-verifies those docs' claims against the updated code (`check_doc`)
+3. Reports specific mismatches — claim text, location, and what the code actually does now
 
-**On first setup**, Claude walks through your doc files, selects which ones to monitor, and extracts semantic claims in parallel — one sub-agent per document. Subsequent checks use cached claims and are fast.
+Extraction runs once per document. Verification runs on every change. Both are fast.
 
 ## What It Finds
 
@@ -36,7 +46,17 @@ DocAlign extracts verifiable claims from your docs — file paths, dependency ve
 
 **Semantic checks** (LLM-powered, via Claude):
 
-Behavior claims, architecture decisions, and config assumptions — verified against actual code. Extracted once per document, cached, re-verified on each scan.
+Behavioral claims that regex can't verify — extracted from prose, stored as structured claims, re-checked against source on every scan:
+
+| Claim type | Example |
+|------------|---------|
+| Auth behavior | *"JWT is validated on every request"* — but middleware was removed |
+| Retry logic | *"Failed jobs retry 3 times"* — but retry count is now 5 |
+| Error handling | *"Errors are sent to Sentry"* — but Sentry SDK was uninstalled |
+| Data flow | *"Results are cached in Redis"* — but Redis call was replaced with a DB query |
+| Default values | *"Timeout defaults to 30 s"* — but the constant was changed to 10 |
+
+Semantic claims are extracted once per document, assigned stable IDs, cached alongside the doc, and re-verified automatically whenever related code changes.
 
 See [Checks Reference](docs/reference/checks.md) for all claim types.
 
