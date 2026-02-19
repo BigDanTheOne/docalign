@@ -129,16 +129,15 @@ export async function runInit(
     .filter((h): h is HookEntry => h !== null);
 
   const hookCommand =
-    'bash -c \'INPUT=$(cat); if echo "$INPUT" | grep -q "git commit"; then echo "[DocAlign] Code committed. Consider running get_doc_health or check_doc to verify documentation is still accurate."; fi\'';
-  const existingHook = settings.hooks.PostToolUse.find((h) =>
-    h.hooks?.some((hk) => hk.command.includes("DocAlign")),
+    "bash -c 'test -f .docalign/config.yml || exit 0; INPUT=$(cat); echo \"$INPUT\" | grep -q \"git commit\" || exit 0; CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -v \"\\.md$\" | grep -v \"^\\.docalign/\"); [ -z \"$CHANGED\" ] && exit 0; echo \"[DocAlign] Source files changed in commit:\"; echo \"$CHANGED\" | while IFS= read -r f; do echo \"  $f\"; done; echo \"Invoke /docalign: for each file above, call get_docs(code_file=<file>) to find affected docs, then check_doc on each affected doc.\"'";
+  // Force-replace any existing DocAlign hook so re-running `docalign init` picks up the latest command
+  settings.hooks.PostToolUse = settings.hooks.PostToolUse.filter(
+    (h) => !h.hooks?.some((hk) => hk.command.includes("DocAlign")),
   );
-  if (!existingHook) {
-    settings.hooks.PostToolUse.push({
-      matcher: "Bash",
-      hooks: [{ type: "command", command: hookCommand }],
-    });
-  }
+  settings.hooks.PostToolUse.push({
+    matcher: "Bash",
+    hooks: [{ type: "command", command: hookCommand }],
+  });
 
   // Add SessionStart hook: on every new session, if config is missing, inject setup context
   if (!settings.hooks.SessionStart) settings.hooks.SessionStart = [];

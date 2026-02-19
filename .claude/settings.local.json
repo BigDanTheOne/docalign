@@ -22,7 +22,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'INPUT=$(cat); if echo \"$INPUT\" | grep -q \"git commit\"; then echo \"[DocAlign] Code committed. Consider running get_doc_health or check_doc to verify documentation is still accurate.\"; fi'"
+            "command": "bash -c 'test -f .docalign/config.yml || exit 0; INPUT=$(cat); echo \"$INPUT\" | grep -q \"git commit\" || exit 0; CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -v \"\\.md$\" | grep -v \"^\\.docalign/\"); [ -z \"$CHANGED\" ] && exit 0; echo \"[DocAlign] Source files changed in commit:\"; echo \"$CHANGED\" | while IFS= read -r f; do echo \"  $f\"; done; echo \"Invoke /docalign: for each file above, call get_docs(code_file=<file>) to find affected docs, then check_doc on each affected doc.\"'"
           }
         ]
       }
