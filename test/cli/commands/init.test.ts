@@ -147,13 +147,13 @@ describe('runInit', () => {
     expect(content).toContain('Workflow 9: Deep Documentation Audit');
   });
 
-  it('init output mentions docalign extract', async () => {
+  it('init output mentions setup wizard', async () => {
     const { runInit } = await import('../../../src/cli/commands/init');
 
     const output: string[] = [];
     await runInit((msg) => output.push(msg));
 
     const joined = output.join('\n');
-    expect(joined).toContain('docalign extract');
+    expect(joined).toContain('setup wizard');
   });
 });

@@ -138,7 +138,7 @@ export function preProcess(content: string, format: DocFormat): PreProcessedDoc 
   }
 
   // Step 8: Detect docalign tag/block lines (metadata, not content for extraction).
-  // Opening and closing tag lines are always marked. For skip/semantic block tags,
+  // Opening and closing tag lines are always marked. For skip block tags,
   // all lines inside the block are also marked so extractors skip them.
   const tagLines = new Set<number>();
   const OPEN_TAG_PATTERN = /^\s*<!--\s*docalign:(\w+)(?:\s[^>]*)?\s*-->\s*$/;
@@ -146,8 +146,6 @@ export function preProcess(content: string, format: DocFormat): PreProcessedDoc 
   // These block types suppress claim extraction for their content.
   // 'semantic' is intentionally excluded: docalign:semantic is an inline tag
   // (placed before a single claim line), not a block tag with open/close pairs.
-  // Claim-line suppression for semantic tags is handled by blankSemanticClaimLines()
-  // in src/tags/writer.ts, which is called before L1 extraction runs.
   const SKIP_BLOCK_TAGS = new Set(['skip']);
   let activeBlockTag: string | null = null;
   for (let i = 0; i < lines.length; i++) {
