@@ -19,7 +19,7 @@ describe('runInit', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('creates settings.local.json with MCP config', async () => {
+  it('creates settings.local.json with permissions', async () => {
     const { runInit } = await import('../../../src/cli/commands/init');
 
     const output: string[] = [];
@@ -31,8 +31,7 @@ describe('runInit', () => {
     expect(fs.existsSync(settingsPath)).toBe(true);
 
     const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-    expect(settings.mcpServers?.docalign).toBeDefined();
-    expect(settings.mcpServers.docalign.command).toBe('npx');
+    // MCP is now registered via `claude mcp add --scope user`, not in settings.local.json
     expect(settings.permissions.allow).toContain('mcp__docalign__*');
   });
 
@@ -147,13 +146,13 @@ describe('runInit', () => {
     expect(content).toContain('Workflow 9: Deep Documentation Audit');
   });
 
-  it('init output mentions docalign extract', async () => {
+  it('init output mentions installation complete', async () => {
     const { runInit } = await import('../../../src/cli/commands/init');
 
     const output: string[] = [];
     await runInit((msg) => output.push(msg));
 
     const joined = output.join('\n');
-    expect(joined).toContain('docalign extract');
+    expect(joined).toContain('DocAlign installation complete');
   });
 });
