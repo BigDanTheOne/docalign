@@ -149,3 +149,41 @@ describe('DocSearchIndex', () => {
     expect(result.signals_used).toEqual([]);
   });
 });
+
+describe('Error handling', () => {
+  describe('splitIntoSections', () => {
+    it('handles invalid markdown gracefully', () => {
+      const invalidContent = '\x00\x01\x02'; // Binary data
+      const sections = splitIntoSections('binary.md', invalidContent);
+      // Should return full document section instead of throwing
+      expect(sections).toHaveLength(1);
+      expect(sections[0].heading).toBe('Full Document');
+    });
+
+    it('handles empty content', () => {
+      const sections = splitIntoSections('empty.md', '');
+      expect(sections).toHaveLength(1);
+      expect(sections[0].heading).toBe('Full Document');
+      expect(sections[0].content).toBe('');
+    });
+
+    it('handles extremely long content without errors', () => {
+      const longContent = '# Title\n\n' + 'x'.repeat(100000);
+      expect(() => splitIntoSections('huge.md', longContent)).not.toThrow();
+    });
+  });
+
+  describe('reciprocalRankFusion', () => {
+    it('handles invalid rank values gracefully', () => {
+      const signal = [{ id: 'a', rank: -1 }]; // Negative rank
+      expect(() => reciprocalRankFusion([signal])).not.toThrow();
+    });
+
+    it('handles duplicate IDs across signals', () => {
+      const signal1 = [{ id: 'a', rank: 1 }];
+      const signal2 = [{ id: 'a', rank: 1 }];
+      const scores = reciprocalRankFusion([signal1, signal2]);
+      expect(scores.has('a')).toBe(true);
+    });
+  });
+});

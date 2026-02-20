@@ -77,4 +77,70 @@ describe('registerLocalTools', () => {
     expect(registeredTools).not.toContain('list_drift');
   });
 
+  describe('error handling', () => {
+    it('handles checkFile rejection gracefully', async () => {
+      const errorPipeline: CliPipeline = {
+        ...mockPipeline,
+        checkFile: vi.fn().mockRejectedValue(new Error('File not found')),
+      };
+
+      registerLocalTools(server, errorPipeline, '/tmp/test-repo');
+
+      // Get the check_doc handler (fourth argument is the handler function)
+      const toolCall = (server.tool as ReturnType<typeof vi.fn>).mock.calls.find(
+        (c: unknown[]) => c[0] === 'check_doc',
+      );
+      expect(toolCall).toBeDefined();
+
+      const handler = toolCall![3]; // Handler is fourth argument (name, description, schema, handler)
+
+      // Call the handler and expect it to return an error response
+      const result = await handler({ file: 'test.md' });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('File not found');
+    });
+
+    it('handles scanRepo rejection gracefully', async () => {
+      const errorPipeline: CliPipeline = {
+        ...mockPipeline,
+        scanRepo: vi.fn().mockRejectedValue(new Error('Repository scan failed')),
+      };
+
+      registerLocalTools(server, errorPipeline, '/tmp/test-repo');
+
+      // Get the scan_docs handler (fourth argument is the handler function)
+      const toolCall = (server.tool as ReturnType<typeof vi.fn>).mock.calls.find(
+        (c: unknown[]) => c[0] === 'scan_docs',
+      );
+      expect(toolCall).toBeDefined();
+
+      const handler = toolCall![3]; // Handler is fourth argument (name, description, schema, handler)
+
+      // Call the handler and expect it to return an error response
+      const result = await handler({});
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Repository scan failed');
+    });
+
+    it('handles get_docs error when no query or code_file provided', async () => {
+      registerLocalTools(server, mockPipeline, '/tmp/test-repo');
+
+      // Get the get_docs handler
+      const toolCall = (server.tool as ReturnType<typeof vi.fn>).mock.calls.find(
+        (c: unknown[]) => c[0] === 'get_docs',
+      );
+      expect(toolCall).toBeDefined();
+
+      const handler = toolCall![3];
+
+      // Call without query or code_file
+      const result = await handler({});
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Provide at least one of: query, code_file');
+    });
+  });
+
 });
