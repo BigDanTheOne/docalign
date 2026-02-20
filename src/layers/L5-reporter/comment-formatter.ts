@@ -84,11 +84,19 @@ export function formatFinding(finding: Finding): string {
 export function buildSummaryComment(
   payload: PRCommentPayload,
   scanRunId: string,
-  opts?: { forcePush?: boolean },
+  opts?: { forcePush?: boolean; minSeverity?: Severity },
 ): string {
+  const minSeverity = opts?.minSeverity;
+  const severityThreshold = minSeverity ? (SEVERITY_ORDER[minSeverity] ?? 2) : 2;
+
   const outcome = determineOutcome(payload);
   const unsuppressed = payload.findings.filter((f) => !f.suppressed);
-  const drifted = unsuppressed.filter((f) => f.result.verdict === 'drifted');
+  const drifted = unsuppressed
+    .filter((f) => f.result.verdict === 'drifted')
+    .filter((f) => {
+      const order = SEVERITY_ORDER[f.result.severity || 'medium'] ?? 1;
+      return order <= severityThreshold;
+    });
   const uncertain = unsuppressed.filter((f) => f.result.verdict === 'uncertain');
 
   const lines: string[] = [];

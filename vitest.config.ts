@@ -6,6 +6,9 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, './src'),
       '~test': resolve(__dirname, './test'),
+      // QA tests at test/qa/<suite>/ use ../../../../src which is off-by-one;
+      // alias to correct the resolution without modifying QA test files.
+      '../../../../src': resolve(__dirname, './src'),
     },
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
   },
