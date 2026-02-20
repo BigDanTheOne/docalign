@@ -7,12 +7,14 @@ export default defineConfig({
       '@': resolve(__dirname, './src'),
       '~test': resolve(__dirname, './test'),
     },
+    extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
   },
   test: {
     globals: true,
     environment: 'node',
     testTimeout: 30_000,
     fileParallelism: false,
+    clearMocks: true,
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
