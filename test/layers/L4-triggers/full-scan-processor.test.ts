@@ -65,4 +65,62 @@ describe('processFullScan', () => {
     expect(updated!.completed_at).toBeDefined();
     expect(updated!.total_duration_ms).toBeGreaterThan(0);
   });
+
+  describe('edge cases', () => {
+    it('handles missing scanRun gracefully', async () => {
+      const nonExistentScanId = randomUUID();
+      const job = makeFakeJob({
+        scanRunId: nonExistentScanId,
+        repoId,
+        installationId: 1,
+      });
+
+      await processFullScan(job, pool);
+
+      const result = await getScanRun(pool, nonExistentScanId);
+      expect(result).toBeNull();
+    });
+
+    it('handles manual trigger type', async () => {
+      const scanRun = await createScanRun(pool, {
+        repoId,
+        triggerType: 'manual',
+        triggerRef: null,
+        commitSha: 'HEAD',
+      });
+
+      const job = makeFakeJob({
+        scanRunId: scanRun.id,
+        repoId,
+        installationId: 1,
+      });
+
+      await processFullScan(job, pool);
+
+      const updated = await getScanRun(pool, scanRun.id);
+      expect(updated!.status).toBe('completed');
+      expect(updated!.trigger_type).toBe('manual');
+    });
+
+    it('handles scan with specific commit SHA', async () => {
+      const scanRun = await createScanRun(pool, {
+        repoId,
+        triggerType: 'scheduled',
+        triggerRef: null,
+        commitSha: 'abc123def456',
+      });
+
+      const job = makeFakeJob({
+        scanRunId: scanRun.id,
+        repoId,
+        installationId: 1,
+      });
+
+      await processFullScan(job, pool);
+
+      const updated = await getScanRun(pool, scanRun.id);
+      expect(updated!.status).toBe('completed');
+      expect(updated!.commit_sha).toBe('abc123def456');
+    });
+  });
 });

@@ -40,4 +40,28 @@ describe('cancellation', () => {
       await clearCancellationKey(redis, 'nonexistent-clear');
     });
   });
+
+  describe('edge cases', () => {
+    it('isCancelled handles empty job ID', async () => {
+      expect(await isCancelled(redis, '')).toBe(false);
+    });
+
+    it('isCancelled handles job ID with special characters', async () => {
+      const jobId = 'job-with-special:chars/test';
+      await redis.set(`cancel:${jobId}`, '1', 'EX', 60);
+      expect(await isCancelled(redis, jobId)).toBe(true);
+      await redis.del(`cancel:${jobId}`);
+    });
+
+    it('clearCancellationKey handles empty job ID', async () => {
+      await expect(clearCancellationKey(redis, '')).resolves.not.toThrow();
+    });
+
+    it('clearCancellationKey is idempotent', async () => {
+      await redis.set('cancel:test-idempotent', '1', 'EX', 60);
+      await clearCancellationKey(redis, 'test-idempotent');
+      await clearCancellationKey(redis, 'test-idempotent');
+      expect(await redis.exists('cancel:test-idempotent')).toBe(0);
+    });
+  });
 });
