@@ -19,7 +19,7 @@ describe('runInit', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('creates settings.local.json with MCP config', async () => {
+  it('creates settings.local.json with permissions and hooks', async () => {
     const { runInit } = await import('../../../src/cli/commands/init');
 
     const output: string[] = [];
@@ -31,9 +31,11 @@ describe('runInit', () => {
     expect(fs.existsSync(settingsPath)).toBe(true);
 
     const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-    expect(settings.mcpServers?.docalign).toBeDefined();
-    expect(settings.mcpServers.docalign.command).toBe('npx');
+    // MCP server is registered globally via `claude mcp add --scope user`, not in settings.local.json
+    // But permissions and hooks should still be present
     expect(settings.permissions.allow).toContain('mcp__docalign__*');
+    expect(settings.hooks).toBeDefined();
+    expect(settings.hooks.PostToolUse).toBeDefined();
   });
 
   it('creates SKILL.md with all 10 tools documented', async () => {
@@ -147,13 +149,16 @@ describe('runInit', () => {
     expect(content).toContain('Workflow 9: Deep Documentation Audit');
   });
 
-  it('init output mentions docalign extract', async () => {
+  it('init output mentions setup wizard and restart instruction', async () => {
     const { runInit } = await import('../../../src/cli/commands/init');
 
     const output: string[] = [];
     await runInit((msg) => output.push(msg));
 
     const joined = output.join('\n');
-    expect(joined).toContain('docalign extract');
+    // Verify the output mentions the setup wizard and restart instruction
+    expect(joined).toContain('Restart Claude Code');
+    expect(joined).toContain('setup wizard');
+    expect(joined).toContain('installation complete');
   });
 });
