@@ -106,6 +106,54 @@ Claude Code gets 4 documentation tools:
 
 See [MCP Tools Reference](docs/reference/mcp-tools.md) for parameters and return values.
 
+## GitHub Action
+
+Add DocAlign to your CI pipeline to catch documentation drift on every pull request.
+
+### Permissions
+
+The action needs write access to post PR comments:
+
+```yaml
+permissions:
+  contents: read
+  pull-requests: write
+```
+
+### Inputs
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `github-token` | No | `${{ github.token }}` | GitHub token for posting PR comments and annotations |
+| `anthropic-api-key` | No | — | Anthropic API key for LLM verification (enables Tier 3 semantic checks) |
+| `min-severity` | No | `medium` | Minimum severity to report (`high`, `medium`, `low`) |
+| `exclude` | No | — | Comma-separated file patterns to exclude |
+| `fail-on-drift` | No | `true` | Fail the check if any drift is found |
+
+### Workflow Example
+
+```yaml
+name: DocAlign
+on:
+  pull_request:
+    paths: ['**.md', 'src/**', 'docs/**']
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  docalign:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: BigDanTheOne/docalign@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          min-severity: medium
+```
+
 ## CLI
 
 For one-off checks, CI use, or manual setup:
@@ -115,6 +163,15 @@ npx docalign init              # Manual setup (alternative to install.sh)
 npx docalign scan              # Scan entire repository
 npx docalign check README.md   # Check a single file
 ```
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--min-severity <level>` | Only report issues at or above this severity (`high`, `medium`, `low`) |
+| `--format github-pr` | Output formatted for GitHub PR comments |
+| `--json` | Output raw JSON |
+| `--exclude <patterns>` | Comma-separated file patterns to exclude |
 
 See [CLI Reference](docs/reference/cli.md) for all commands and flags.
 
