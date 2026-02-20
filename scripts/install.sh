@@ -236,15 +236,16 @@ launch_banner() {
         echo "  Claude will automatically flag stale documentation"
         echo "  whenever you change code."
     else
-        echo "  OpenCode is starting. The DocAlign MCP server is active."
-        echo "  Ask OpenCode to help you set up DocAlign, for example:"
-        echo ""
-        echo "    \"Set up DocAlign for this project\""
+        echo "  OpenCode is starting with the DocAlign setup prompt."
+        echo "  It will guide you through discovering and annotating your docs."
     fi
     echo ""
     echo "═══════════════════════════════════════════════════════════════"
     echo ""
 }
+
+# Initial prompt sent to OpenCode on startup so it begins setup automatically.
+OPENCODE_PROMPT="DocAlign has just been installed and configured for this project. Please set it up now: use the docalign MCP tools to discover all documentation files, help me select which ones to monitor, add YAML tracking headers to each selected doc, extract claims, and run an initial drift scan to find any docs already out of sync with the code."
 
 # Try to launch in the same terminal window using 'script', which allocates a
 # fresh PTY for the child process — bypassing the broken-TTY problem that occurs
@@ -263,9 +264,9 @@ launch_same_window() {
         fi
     else
         if [[ "$OSTYPE" == "darwin"* ]]; then
-            script -q /dev/null opencode </dev/tty
+            script -q /dev/null opencode --prompt "$OPENCODE_PROMPT" </dev/tty
         else
-            script -q -c 'opencode' /dev/null </dev/tty
+            script -q -c "opencode --prompt '$OPENCODE_PROMPT'" /dev/null </dev/tty
         fi
     fi
 }
@@ -297,15 +298,15 @@ APPLESCRIPT
             osascript << APPLESCRIPT
 tell application "Terminal"
     activate
-    do script "cd '$PROJ_DIR' && opencode"
+    do script "cd '$PROJ_DIR' && opencode --prompt '$OPENCODE_PROMPT'"
 end tell
 APPLESCRIPT
             echo "  ➜  A new Terminal window is opening now."
         elif command -v gnome-terminal &>/dev/null; then
-            gnome-terminal -- bash -c "cd '$PROJ_DIR' && opencode; exec bash" &
+            gnome-terminal -- bash -c "cd '$PROJ_DIR' && opencode --prompt '$OPENCODE_PROMPT'; exec bash" &
             echo "  ➜  A new gnome-terminal window is opening now."
         elif command -v xterm &>/dev/null; then
-            xterm -e "bash -c \"cd '$PROJ_DIR' && opencode\"" &
+            xterm -e "bash -c \"cd '$PROJ_DIR' && opencode --prompt '$OPENCODE_PROMPT'\"" &
             echo "  ➜  A new xterm window is opening now."
         else
             echo "  ➜  Open a new terminal in this directory, then run:"
