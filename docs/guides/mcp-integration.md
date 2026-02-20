@@ -26,13 +26,14 @@ docalign init
 ```
 
 This automatically:
-<!-- docalign:semantic id="sem-af8351d975968695" claim="docalign init writes MCP server config to .claude/settings.local.json and installs the docalign skill" -->
-1. Writes the DocAlign MCP server config to `.claude/settings.local.json`
-2. Installs the `docalign` and `docalign-setup` skills
-3. Triggers the interactive setup wizard on next Claude Code launch
+<!-- docalign:semantic id="sem-af8351d975968695" -->
+1. Registers the DocAlign MCP server globally via `claude mcp add --scope user`
+2. Installs the `docalign` and `docalign-setup` skills to `.claude/skills/docalign/`
+3. Adds permissions and a PostToolUse hook to `.claude/settings.local.json`
+4. Triggers the interactive setup wizard on next Claude Code launch
 
 <!-- docalign:semantic id="sem-9db76114419e7312" -->
-After setup, your AI agent has 4 documentation tools available.
+After setup, your AI agent has 10 documentation tools available.
 
 ## Manual setup
 Add to your MCP config (`.claude/mcp.json` for Claude Code, or equivalent for other clients):
@@ -77,7 +78,7 @@ Use check_doc with file="README.md", deep=true for a thorough audit
 Use get_docs with query="authentication"
 ```
 
-<!-- docalign:semantic id="sem-2d5a71308583e52c" -->
+<!-- docalign:semantic id="sem-2d5a71308583e52c" status="drifted" -->
 Returns doc sections about authentication ranked by relevance, with verification status.
 
 ### Fix stale documentation
@@ -90,12 +91,12 @@ When `check_doc` or `scan_docs` reports drift, Claude Code can fix the documenta
 Use scan_docs
 ```
 
-<!-- docalign:semantic id="sem-63f2b4167bcf748c" -->
+<!-- docalign:semantic id="sem-63f2b4167bcf748c" status="verified" -->
 Returns a 0-100 health score, verified vs drifted counts, and the worst files.
 
 ## Verify it's working
 
 Run `docalign status` to check MCP integration status. Or ask your AI agent to run `scan_docs` — if it returns a health score, the integration is working.
-## All 4 tools
+## All 10 tools
 
 See [MCP Tools Reference](../reference/mcp-tools.md) for complete documentation of every tool with parameters and return values.
