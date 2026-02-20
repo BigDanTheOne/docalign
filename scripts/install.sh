@@ -170,7 +170,7 @@ fi
 # Fixes hooks.PostToolUse entries that use the old flat {matcher,command} format.
 SETTINGS_FILE=".claude/settings.local.json"
 if [ -f "$SETTINGS_FILE" ]; then
-    node - <<'EOF'
+    if node - <<'EOF'
 const fs = require('fs');
 const file = '.claude/settings.local.json';
 const settings = JSON.parse(fs.readFileSync(file, 'utf-8'));
@@ -206,13 +206,17 @@ if (!settings.permissions.allow.includes('mcp__docalign__*')) {
 
 fs.writeFileSync(file, JSON.stringify(settings, null, 2) + '\n');
 EOF
-    log_success "MCP server config and hooks verified"
+    then
+        log_success "MCP server config and hooks verified"
+    else
+        log_error "Failed to repair settings.local.json"
+        exit 1
+    fi
 fi
 
 # Step 4c: Create .mcp.json for project-level MCP configuration
 # Claude Code reads this file to configure the docalign MCP server with explicit repo context
-MCP_FILE=".mcp.json"
-node - <<'EOF'
+if node - <<'EOF'
 const fs = require('fs');
 const mcpConfig = {
   mcpServers: {
@@ -226,7 +230,12 @@ const mcpConfig = {
 };
 fs.writeFileSync('.mcp.json', JSON.stringify(mcpConfig, null, 2) + '\n');
 EOF
-log_success ".mcp.json (project-level MCP configuration)"
+then
+    log_success ".mcp.json (project-level MCP configuration)"
+else
+    log_error "Failed to create .mcp.json"
+    exit 1
+fi
 
 echo ""
 
