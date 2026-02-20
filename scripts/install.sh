@@ -129,7 +129,12 @@ if $HAS_CLAUDE && $HAS_OPENCODE; then
     echo "  1) Claude Code"
     echo "  2) OpenCode"
     echo ""
-    read -r -p "Enter 1 or 2: " tool_choice </dev/tty
+    if [ -t 0 ] || [ -e /dev/tty ]; then
+        read -r -p "Enter 1 or 2: " tool_choice </dev/tty 2>/dev/null || tool_choice="1"
+    else
+        log_info "Non-interactive mode: defaulting to Claude Code"
+        tool_choice="1"
+    fi
     case "$tool_choice" in
         2) CHOSEN_TOOL="opencode" ;;
         *) CHOSEN_TOOL="claude" ;;
