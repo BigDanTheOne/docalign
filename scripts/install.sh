@@ -245,7 +245,7 @@ launch_banner() {
 }
 
 # Initial prompt sent to OpenCode on startup so it begins setup automatically.
-OPENCODE_PROMPT="DocAlign has just been installed and configured for this project. Please set it up now: use the docalign MCP tools to discover all documentation files, help me select which ones to monitor, add YAML tracking headers to each selected doc, extract claims, and run an initial drift scan to find any docs already out of sync with the code."
+OPENCODE_PROMPT="Set up DocAlign for this project using the docalign_setup skill"
 
 # Try to launch in the same terminal window using 'script', which allocates a
 # fresh PTY for the child process — bypassing the broken-TTY problem that occurs
