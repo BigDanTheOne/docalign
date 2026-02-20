@@ -582,3 +582,53 @@ describe('handleListStaleDocs', () => {
     expect(result.stale_docs[0].uncertain_claims).toBe(7);
   });
 });
+
+// ─── Error handling ───
+
+describe('Error handling', () => {
+  let cache: SimpleCache;
+
+  beforeEach(() => {
+    cache = new SimpleCache();
+  });
+
+  it('handleGetDocs handles database query rejection', async () => {
+    const pool = {
+      query: vi.fn().mockRejectedValue(new Error('Database connection failed')),
+    } as unknown as Pool;
+
+    await expect(
+      handleGetDocs({ query: 'test' }, pool, defaultConfig, cache),
+    ).rejects.toThrow('Database connection failed');
+  });
+
+  it('handleGetDocsForFile handles database query rejection', async () => {
+    const pool = {
+      query: vi.fn().mockRejectedValue(new Error('Query timeout')),
+    } as unknown as Pool;
+
+    await expect(
+      handleGetDocsForFile({ file_path: 'src/test.ts' }, pool, defaultConfig, cache),
+    ).rejects.toThrow('Query timeout');
+  });
+
+  it('handleGetDocHealth handles database query rejection', async () => {
+    const pool = {
+      query: vi.fn().mockRejectedValue(new Error('Connection pool exhausted')),
+    } as unknown as Pool;
+
+    await expect(
+      handleGetDocHealth({}, pool, defaultConfig, cache),
+    ).rejects.toThrow('Connection pool exhausted');
+  });
+
+  it('handleListStaleDocs handles database query rejection', async () => {
+    const pool = {
+      query: vi.fn().mockRejectedValue(new Error('Database error')),
+    } as unknown as Pool;
+
+    await expect(
+      handleListStaleDocs({}, pool, defaultConfig, cache),
+    ).rejects.toThrow('Database error');
+  });
+});
