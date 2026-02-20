@@ -256,6 +256,9 @@ OPENCODE_PROMPT="Set up DocAlign for this project using the docalign_setup skill
 
 launch_same_window() {
     launch_banner
+    # Export DOCALIGN_REPO_ROOT so the MCP server resolves to this project
+    # even if Claude Code starts from a different directory
+    export DOCALIGN_REPO_ROOT="$PROJ_DIR"
     if [ "$CHOSEN_TOOL" = "claude" ]; then
         if [[ "$OSTYPE" == "darwin"* ]]; then
             script -q /dev/null claude "/docalign-setup" </dev/tty
@@ -281,40 +284,40 @@ launch_new_window() {
             osascript << APPLESCRIPT
 tell application "Terminal"
     activate
-    do script "cd '$PROJ_DIR' && claude '/docalign-setup'"
+    do script "cd '$PROJ_DIR' && DOCALIGN_REPO_ROOT='$PROJ_DIR' claude '/docalign-setup'"
 end tell
 APPLESCRIPT
             echo "  ➜  A new Terminal window is opening now."
         elif command -v gnome-terminal &>/dev/null; then
-            gnome-terminal -- bash -c "cd '$PROJ_DIR' && claude '/docalign-setup'; exec bash" &
+            gnome-terminal -- bash -c "cd '$PROJ_DIR' && DOCALIGN_REPO_ROOT='$PROJ_DIR' claude '/docalign-setup'; exec bash" &
             echo "  ➜  A new gnome-terminal window is opening now."
         elif command -v xterm &>/dev/null; then
-            xterm -e "bash -c \"cd '$PROJ_DIR' && claude '/docalign-setup'\"" &
+            xterm -e "bash -c \"cd '$PROJ_DIR' && DOCALIGN_REPO_ROOT='$PROJ_DIR' claude '/docalign-setup'\"" &
             echo "  ➜  A new xterm window is opening now."
         else
             echo "  ➜  Open a new terminal in this directory, then run:"
             echo ""
-            echo "         claude"
+            echo "         DOCALIGN_REPO_ROOT=\"$PROJ_DIR\" claude"
         fi
     else
         if [[ "$OSTYPE" == "darwin"* ]]; then
             osascript << APPLESCRIPT
 tell application "Terminal"
     activate
-    do script "cd '$PROJ_DIR' && opencode --prompt '$OPENCODE_PROMPT'"
+    do script "cd '$PROJ_DIR' && DOCALIGN_REPO_ROOT='$PROJ_DIR' opencode --prompt '$OPENCODE_PROMPT'"
 end tell
 APPLESCRIPT
             echo "  ➜  A new Terminal window is opening now."
         elif command -v gnome-terminal &>/dev/null; then
-            gnome-terminal -- bash -c "cd '$PROJ_DIR' && opencode --prompt '$OPENCODE_PROMPT'; exec bash" &
+            gnome-terminal -- bash -c "cd '$PROJ_DIR' && DOCALIGN_REPO_ROOT='$PROJ_DIR' opencode --prompt '$OPENCODE_PROMPT'; exec bash" &
             echo "  ➜  A new gnome-terminal window is opening now."
         elif command -v xterm &>/dev/null; then
-            xterm -e "bash -c \"cd '$PROJ_DIR' && opencode --prompt '$OPENCODE_PROMPT'\"" &
+            xterm -e "bash -c \"cd '$PROJ_DIR' && DOCALIGN_REPO_ROOT='$PROJ_DIR' opencode --prompt '$OPENCODE_PROMPT'\"" &
             echo "  ➜  A new xterm window is opening now."
         else
             echo "  ➜  Open a new terminal in this directory, then run:"
             echo ""
-            echo "         opencode"
+            echo "         DOCALIGN_REPO_ROOT=\"$PROJ_DIR\" opencode"
         fi
     fi
     echo ""
