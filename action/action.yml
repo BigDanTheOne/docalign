@@ -67,7 +67,7 @@ runs:
 
         # Run scan with JSON output, capture exit code
         set +e
-        OUTPUT=$(docalign scan $EXCLUDE_ARG $MIN_SEV_ARG --json 2>&1)
+        OUTPUT=$(docalign scan ${EXCLUDE_ARG:+"$EXCLUDE_ARG"} ${MIN_SEV_ARG:+"$MIN_SEV_ARG"} --json 2>&1)
         EXIT_CODE=$?
         set -e
 

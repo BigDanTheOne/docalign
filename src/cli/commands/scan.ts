@@ -5,9 +5,16 @@
  * Gates: GATE42-012, GATE42-014, GATE42-015, GATE42-021
  */
 
+import type { Severity } from '../../shared/types';
 import type { CliPipeline } from '../local-pipeline';
 import { filterUncertain, countVerdicts, buildHotspots } from '../local-pipeline';
 import { formatScanResults, progressBar, formatGitHubPRComment, type StaleClaim } from '../output';
+
+const VALID_SEVERITIES: ReadonlySet<string> = new Set(['high', 'medium', 'low']);
+
+export function isValidSeverity(value: string): value is Severity {
+  return VALID_SEVERITIES.has(value);
+}
 
 export async function runScan(
   pipeline: CliPipeline,
@@ -21,6 +28,7 @@ export async function runScan(
   json = false,
   max?: number,
   format?: string,
+  minSeverity?: Severity,
 ): Promise<number> {
   try {
     if (!json) write(`DocAlign: Scanning repository...`);
@@ -92,9 +100,15 @@ export async function runScan(
         evidence?: string;
       }> = [];
 
+      const SEVERITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
+      const severityThreshold = minSeverity ? (SEVERITY_ORDER[minSeverity] ?? 2) : 2;
+
       for (const fileResult of filteredFiles) {
         for (const vr of fileResult.results) {
           if (vr.verdict !== 'drifted') continue;
+          const sev = vr.severity ?? 'medium';
+          const order = SEVERITY_ORDER[sev] ?? 1;
+          if (order > severityThreshold) continue;
           const claim = fileResult.claims.find((c) => c.id === vr.claim_id);
           if (!claim) continue;
           findings.push({
@@ -102,7 +116,7 @@ export async function runScan(
             line: claim.line_number,
             claimText: claim.claim_text,
             actual: vr.specific_mismatch ?? vr.reasoning ?? 'Documentation does not match code.',
-            severity: vr.severity ?? 'medium',
+            severity: sev,
             ...(vr.evidence_files.length > 0 ? { evidence: vr.evidence_files.join(', ') } : {}),
           });
         }
