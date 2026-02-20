@@ -15,6 +15,7 @@ export default defineConfig({
     testTimeout: 30_000,
     fileParallelism: false,
     clearMocks: true,
+    setupFiles: ['./test/setup.ts'],
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
