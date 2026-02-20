@@ -112,14 +112,38 @@ fi
 
 echo ""
 
-# Step 3: Check for Claude Code
-log_info "Checking for Claude Code..."
+# Step 3: Detect AI coding assistant (Claude Code or OpenCode)
+log_info "Checking for AI coding assistant..."
 
-if ! command -v claude &> /dev/null; then
-    log_warning "Claude Code CLI not found"
+HAS_CLAUDE=false
+HAS_OPENCODE=false
+command -v claude &>/dev/null && HAS_CLAUDE=true
+command -v opencode &>/dev/null && HAS_OPENCODE=true
+
+CHOSEN_TOOL=""
+
+if $HAS_CLAUDE && $HAS_OPENCODE; then
     echo ""
-    echo "Claude Code is required for interactive setup. Install it:"
-    echo "  npm install -g @anthropic-ai/claude-code"
+    echo "Both Claude Code and OpenCode are installed. Which would you like to use?"
+    echo ""
+    echo "  1) Claude Code"
+    echo "  2) OpenCode"
+    echo ""
+    read -r -p "Enter 1 or 2: " tool_choice </dev/tty
+    case "$tool_choice" in
+        2) CHOSEN_TOOL="opencode" ;;
+        *) CHOSEN_TOOL="claude" ;;
+    esac
+elif $HAS_CLAUDE; then
+    CHOSEN_TOOL="claude"
+elif $HAS_OPENCODE; then
+    CHOSEN_TOOL="opencode"
+else
+    log_warning "No AI coding assistant found"
+    echo ""
+    echo "Install one to enable the interactive setup wizard:"
+    echo "  Claude Code:  npm install -g @anthropic-ai/claude-code"
+    echo "  OpenCode:     npm install -g opencode-ai"
     echo ""
     echo "DocAlign CLI commands are still available:"
     echo "  docalign scan       # Scan all docs"
@@ -128,7 +152,7 @@ if ! command -v claude &> /dev/null; then
     exit 0
 fi
 
-log_success "Claude Code found"
+log_success "Using: $CHOSEN_TOOL"
 
 echo ""
 
@@ -187,8 +211,8 @@ fi
 
 echo ""
 
-# Step 5: Launch Claude Code setup wizard
-log_info "Launching Claude Code setup wizard..."
+# Step 5: Launch AI coding assistant setup wizard
+log_info "Launching $CHOSEN_TOOL setup wizard..."
 echo ""
 
 PROJ_DIR="$PWD"
@@ -198,67 +222,96 @@ launch_banner() {
     echo ""
     echo "  🎉 DocAlign is installed and configured!"
     echo ""
-    echo "  The /docalign-setup wizard is starting. It will guide you"
-    echo "  through:"
-    echo ""
-    echo "    1. Discovering your documentation files"
-    echo "    2. Selecting which docs to monitor"
-    echo "    3. Writing config + YAML headers to each doc"
-    echo "    4. Extracting claims and annotating your docs"
-    echo "    5. Running an initial drift scan to find stale docs"
-    echo ""
-    echo "  When the wizard finishes, DocAlign is fully active."
-    echo "  Claude will automatically flag stale documentation"
-    echo "  whenever you change code."
+    if [ "$CHOSEN_TOOL" = "claude" ]; then
+        echo "  The /docalign-setup wizard is starting. It will guide you"
+        echo "  through:"
+        echo ""
+        echo "    1. Discovering your documentation files"
+        echo "    2. Selecting which docs to monitor"
+        echo "    3. Writing config + YAML headers to each doc"
+        echo "    4. Extracting claims and annotating your docs"
+        echo "    5. Running an initial drift scan to find stale docs"
+        echo ""
+        echo "  When the wizard finishes, DocAlign is fully active."
+        echo "  Claude will automatically flag stale documentation"
+        echo "  whenever you change code."
+    else
+        echo "  OpenCode is starting. The DocAlign MCP server is active."
+        echo "  Ask OpenCode to help you set up DocAlign, for example:"
+        echo ""
+        echo "    \"Set up DocAlign for this project\""
+    fi
     echo ""
     echo "═══════════════════════════════════════════════════════════════"
     echo ""
 }
 
-# Try to launch Claude Code in the same terminal window using 'script', which
-# allocates a fresh PTY for the child process. This bypasses the broken-TTY
-# problem that occurs when a TUI app is launched from inside a curl|bash pipe:
-# the pipe destroys the controlling terminal's interactivity, but 'script'
-# allocates a new PTY so claude gets a clean, fully interactive terminal.
+# Try to launch in the same terminal window using 'script', which allocates a
+# fresh PTY for the child process — bypassing the broken-TTY problem that occurs
+# when a TUI app is launched from inside a curl|bash pipe.
 #
 # macOS syntax:  script -q /dev/null <cmd> [args...]
 # Linux syntax:  script -q -c '<cmd> [args...]' /dev/null
-#
-# We try same-window first; fall back to new window if script is unavailable.
 
 launch_same_window() {
     launch_banner
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS BSD script: command and args follow the output file.
-        # </dev/tty redirects script's own stdin to the real keyboard so it
-        # can proxy keystrokes into the fresh PTY it allocates for claude.
-        script -q /dev/null claude "/docalign-setup" </dev/tty
+    if [ "$CHOSEN_TOOL" = "claude" ]; then
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            script -q /dev/null claude "/docalign-setup" </dev/tty
+        else
+            script -q -c 'claude "/docalign-setup"' /dev/null </dev/tty
+        fi
     else
-        # Linux util-linux script: -c takes the command as a string.
-        script -q -c 'claude "/docalign-setup"' /dev/null </dev/tty
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            script -q /dev/null opencode </dev/tty
+        else
+            script -q -c 'opencode' /dev/null </dev/tty
+        fi
     fi
 }
 
 launch_new_window() {
     launch_banner
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        osascript << APPLESCRIPT
+    if [ "$CHOSEN_TOOL" = "claude" ]; then
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            osascript << APPLESCRIPT
 tell application "Terminal"
     activate
     do script "cd '$PROJ_DIR' && claude '/docalign-setup'"
 end tell
 APPLESCRIPT
-        echo "  ➜  A new Terminal window is opening now."
-    elif command -v gnome-terminal &>/dev/null; then
-        gnome-terminal -- bash -c "cd '$PROJ_DIR' && claude '/docalign-setup'; exec bash" &
-        echo "  ➜  A new gnome-terminal window is opening now."
-    elif command -v xterm &>/dev/null; then
-        xterm -e "bash -c \"cd '$PROJ_DIR' && claude '/docalign-setup'\"" &
-        echo "  ➜  A new xterm window is opening now."
+            echo "  ➜  A new Terminal window is opening now."
+        elif command -v gnome-terminal &>/dev/null; then
+            gnome-terminal -- bash -c "cd '$PROJ_DIR' && claude '/docalign-setup'; exec bash" &
+            echo "  ➜  A new gnome-terminal window is opening now."
+        elif command -v xterm &>/dev/null; then
+            xterm -e "bash -c \"cd '$PROJ_DIR' && claude '/docalign-setup'\"" &
+            echo "  ➜  A new xterm window is opening now."
+        else
+            echo "  ➜  Open a new terminal in this directory, then run:"
+            echo ""
+            echo "         claude"
+        fi
     else
-        echo "  ➜  Open a new terminal in this directory, then run:"
-        echo ""
-        echo "         claude"
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            osascript << APPLESCRIPT
+tell application "Terminal"
+    activate
+    do script "cd '$PROJ_DIR' && opencode"
+end tell
+APPLESCRIPT
+            echo "  ➜  A new Terminal window is opening now."
+        elif command -v gnome-terminal &>/dev/null; then
+            gnome-terminal -- bash -c "cd '$PROJ_DIR' && opencode; exec bash" &
+            echo "  ➜  A new gnome-terminal window is opening now."
+        elif command -v xterm &>/dev/null; then
+            xterm -e "bash -c \"cd '$PROJ_DIR' && opencode\"" &
+            echo "  ➜  A new xterm window is opening now."
+        else
+            echo "  ➜  Open a new terminal in this directory, then run:"
+            echo ""
+            echo "         opencode"
+        fi
     fi
     echo ""
 }
