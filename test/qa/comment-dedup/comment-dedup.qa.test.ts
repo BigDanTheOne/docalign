@@ -13,7 +13,7 @@
  * We extract the core logic into testable functions or re-implement the contract.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 const COMMENT_MARKER = '<!-- docalign-report -->';
 
