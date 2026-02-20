@@ -96,11 +96,11 @@ export async function runInit(
   // Register MCP server globally via the official claude mcp add command.
   // --scope user writes to the user-level config (~/.claude.json),
   // making docalign available in every project without per-repo setup.
-  // Pass --repo explicitly so the server resolves the correct repo regardless
-  // of what cwd Claude Code uses when starting user-scope MCP servers.
+  // No --repo flag: the server defaults to process.cwd() at startup, which is
+  // whatever directory Claude Code is opened in.
   const mcpResult = spawnSync(
     "claude",
-    ["mcp", "add", "--scope", "user", "docalign", "--", "npx", "docalign", "mcp", "--repo", cwd],
+    ["mcp", "add", "--scope", "user", "docalign", "--", "npx", "docalign", "mcp"],
     { cwd, stdio: "pipe" },
   );
   if (mcpResult.status === 0) {
