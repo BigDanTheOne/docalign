@@ -204,15 +204,10 @@ if (!settings.permissions.allow.includes('mcp__docalign__*')) {
   settings.permissions.allow.push('mcp__docalign__*');
 }
 
-// (c) Add project-level MCP server registration that overrides global -----
-// This ensures the MCP server uses this project's cwd, not Claude Code's app dir
-if (!settings.mcpServers) settings.mcpServers = {};
-settings.mcpServers.docalign = {
-  type: 'stdio',
-  command: 'bash',
-  args: ['-c', 'DOCALIGN_REPO_ROOT="$PWD" exec npx docalign mcp'],
-  env: {}
-};
+// (c) Note: Project-level mcpServers in settings.local.json are not picked up by Claude Code.
+// Claude Code only reads mcpServers from the global ~/.claude.json.
+// The working approach is to pass DOCALIGN_REPO_ROOT env var when launching Claude Code.
+// See scripts/install.sh launch_same_window() and launch_new_window() for details.
 
 fs.writeFileSync(file, JSON.stringify(settings, null, 2) + '\n');
 EOF
