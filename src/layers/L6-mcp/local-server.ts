@@ -69,15 +69,9 @@ async function main(): Promise<void> {
 
   const pipeline = new LocalPipeline(repoPath);
 
-  // Pre-warm the index (non-fatal — server still starts if this fails)
-  log('Building codebase index...');
-  const warmupStart = Date.now();
-  try {
-    await pipeline.scanRepo();
-    log(`Index built in ${((Date.now() - warmupStart) / 1000).toFixed(1)}s`);
-  } catch (err) {
-    log(`Warmup scan skipped (${err instanceof Error ? err.message : String(err)}); index will build on first request.`);
-  }
+  // Index is built lazily on first tool call, not on startup
+  // This ensures fast MCP server startup and prevents Claude Code timeout
+  // The first tool invocation will trigger index building if needed
 
   const server = new McpServer({
     name: 'docalign',
