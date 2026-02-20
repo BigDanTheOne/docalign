@@ -204,6 +204,16 @@ if (!settings.permissions.allow.includes('mcp__docalign__*')) {
   settings.permissions.allow.push('mcp__docalign__*');
 }
 
+// (c) Add project-level MCP server registration that overrides global -----
+// This ensures the MCP server uses this project's cwd, not Claude Code's app dir
+if (!settings.mcpServers) settings.mcpServers = {};
+settings.mcpServers.docalign = {
+  type: 'stdio',
+  command: 'bash',
+  args: ['-c', 'DOCALIGN_REPO_ROOT="$PWD" exec npx docalign mcp'],
+  env: {}
+};
+
 fs.writeFileSync(file, JSON.stringify(settings, null, 2) + '\n');
 EOF
     log_success "MCP server config and hooks verified"
