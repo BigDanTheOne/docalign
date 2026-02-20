@@ -167,6 +167,22 @@ export async function runInit(
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
   write("  \u2713 .claude/settings.local.json (MCP server + hooks)");
 
+  // 2b. Create .mcp.json for project-level MCP configuration
+  // Claude Code reads this file to configure the docalign MCP server with explicit repo context
+  const mcpPath = path.join(cwd, ".mcp.json");
+  const mcpConfig = {
+    mcpServers: {
+      docalign: {
+        type: "stdio",
+        command: "npx",
+        args: ["docalign", "mcp", "--repo", "."],
+        env: {},
+      },
+    },
+  };
+  fs.writeFileSync(mcpPath, JSON.stringify(mcpConfig, null, 2) + "\n");
+  write("  \u2713 .mcp.json (project-level MCP configuration)");
+
   // 3. Read skill content from package files
   const skillMd = readSkillFile("skills/docalign/SKILL.md");
   const setupSkillMd = readSkillFile("skills/docalign-setup/SKILL.md");
