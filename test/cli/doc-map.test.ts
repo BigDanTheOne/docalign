@@ -14,7 +14,6 @@ import {
   renderDocFileSnippets,
   docMapPath,
   type DocMap,
-  type DocMapEntry,
 } from '../../src/cli/doc-map';
 
 // === Helpers ===

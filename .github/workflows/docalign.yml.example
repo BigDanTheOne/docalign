@@ -1,0 +1,25 @@
+# DocAlign — Example GitHub Actions Workflow
+#
+# This workflow runs DocAlign on every pull request to detect
+# documentation drift against code changes.
+#
+# Copy this file to .github/workflows/docalign.yml and configure
+# the required secrets in your repository settings.
+
+name: DocAlign Scan
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  docalign:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./action
+        with:
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          min-severity: warning
+          fail-on-drift: true

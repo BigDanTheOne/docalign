@@ -143,9 +143,10 @@ export async function runInit(
   });
 
   // Add SessionStart hook: on every new session, if config is missing, inject setup context
+  // Also provide guidance on enabling the MCP server if it's not yet enabled
   if (!settings.hooks.SessionStart) settings.hooks.SessionStart = [];
   const sessionStartCmd =
-    "bash -c 'test -f .docalign/config.yml || echo \"[DocAlign] Setup required: run /docalign-setup to configure documentation monitoring for this project.\"'";
+    "bash -c 'test -f .docalign/config.yml || echo \"[DocAlign] Setup required: run /docalign-setup to configure documentation monitoring for this project.\"; echo \"[DocAlign] If the docalign MCP server is disabled, use /mcp to enable it (docalign → enable).\"'";
   const hasSessionStartHook = (settings.hooks.SessionStart as unknown[]).some(
     (h) =>
       h != null &&
@@ -177,11 +178,12 @@ export async function runInit(
         command: "npx",
         args: ["docalign", "mcp", "--repo", "."],
         env: {},
+        enabled: true,
       },
     },
   };
   fs.writeFileSync(mcpPath, JSON.stringify(mcpConfig, null, 2) + "\n");
-  write("  \u2713 .mcp.json (project-level MCP configuration)");
+  write("  \u2713 .mcp.json (project-level MCP configuration with auto-enable)");
 
   // 3. Read skill content from package files
   const skillMd = readSkillFile("skills/docalign/SKILL.md");

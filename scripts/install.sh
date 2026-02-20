@@ -221,6 +221,7 @@ fi
 
 # Step 4c: Create .mcp.json for project-level MCP configuration
 # Claude Code reads this file to configure the docalign MCP server with explicit repo context
+# enabled: true attempts to auto-enable the MCP server on startup
 if node - <<'EOF'
 const fs = require('fs');
 const mcpConfig = {
@@ -229,14 +230,15 @@ const mcpConfig = {
       type: "stdio",
       command: "npx",
       args: ["docalign", "mcp", "--repo", "."],
-      env: {}
+      env: {},
+      enabled: true
     }
   }
 };
 fs.writeFileSync('.mcp.json', JSON.stringify(mcpConfig, null, 2) + '\n');
 EOF
 then
-    log_success ".mcp.json (project-level MCP configuration)"
+    log_success ".mcp.json (project-level MCP configuration with auto-enable)"
 else
     log_error "Failed to create .mcp.json"
     exit 1
