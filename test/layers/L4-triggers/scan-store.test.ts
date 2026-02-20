@@ -191,4 +191,87 @@ describe('scan-store', () => {
       expect(result).toHaveLength(0);
     });
   });
+
+  describe('edge cases', () => {
+    it('updateScanStatus handles non-existent scan ID gracefully', async () => {
+      const nonExistentId = randomUUID();
+      await updateScanStatus(pool, nonExistentId, 'completed');
+      const result = await getScanRun(pool, nonExistentId);
+      expect(result).toBeNull();
+    });
+
+    it('createScanRun handles very long commit SHA', async () => {
+      const longSha = 'a'.repeat(100);
+      const run = await createScanRun(pool, {
+        repoId,
+        triggerType: 'pr',
+        triggerRef: '99',
+        commitSha: longSha,
+      });
+      expect(run.commit_sha).toBe(longSha);
+    });
+
+    it('updateScanStatus handles zero values for stats', async () => {
+      const run = await createScanRun(pool, {
+        repoId,
+        triggerType: 'pr',
+        triggerRef: '100',
+        commitSha: 'sha100',
+      });
+
+      await updateScanStatus(pool, run.id, 'completed', {
+        claims_checked: 0,
+        claims_drifted: 0,
+        claims_verified: 0,
+        total_duration_ms: 0,
+      });
+
+      const updated = await getScanRun(pool, run.id);
+      expect(updated!.claims_checked).toBe(0);
+      expect(updated!.claims_drifted).toBe(0);
+      expect(updated!.claims_verified).toBe(0);
+      expect(updated!.total_duration_ms).toBe(0);
+    });
+
+    it('updateScanStatus handles partial stats update', async () => {
+      const run = await createScanRun(pool, {
+        repoId,
+        triggerType: 'pr',
+        triggerRef: '101',
+        commitSha: 'sha101',
+      });
+
+      await updateScanStatus(pool, run.id, 'completed', {
+        claims_checked: 5,
+      });
+
+      const updated = await getScanRun(pool, run.id);
+      expect(updated!.claims_checked).toBe(5);
+      expect(updated!.claims_drifted).toBe(0); // unchanged from default
+    });
+
+    it('getActiveScanRuns returns scans in reverse creation order (newest first)', async () => {
+      const run1 = await createScanRun(pool, { repoId, triggerType: 'pr', triggerRef: '201', commitSha: 'sha201' });
+      const run2 = await createScanRun(pool, { repoId, triggerType: 'pr', triggerRef: '202', commitSha: 'sha202' });
+
+      const active = await getActiveScanRuns(pool, repoId);
+      expect(active).toHaveLength(2);
+      // Ordered by created_at DESC, so newest (run2) comes first
+      expect(active[0].id).toBe(run2.id);
+      expect(active[1].id).toBe(run1.id);
+    });
+
+    it('getActiveScanRuns excludes cancelled and failed scans', async () => {
+      await createScanRun(pool, { repoId, triggerType: 'pr', triggerRef: '301', commitSha: 'sha301' });
+      const cancelled = await createScanRun(pool, { repoId, triggerType: 'pr', triggerRef: '302', commitSha: 'sha302' });
+      const failed = await createScanRun(pool, { repoId, triggerType: 'pr', triggerRef: '303', commitSha: 'sha303' });
+
+      await updateScanStatus(pool, cancelled.id, 'cancelled');
+      await updateScanStatus(pool, failed.id, 'failed');
+
+      const active = await getActiveScanRuns(pool, repoId);
+      expect(active).toHaveLength(1); // Only the queued one
+      expect(active[0].trigger_ref).toBe('301');
+    });
+  });
 });

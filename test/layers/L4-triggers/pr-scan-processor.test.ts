@@ -396,4 +396,140 @@ describe('processPRScan', () => {
     const updated = await getScanRun(pool, scanRun.id);
     expect(updated!.status).toBe('failed');
   });
+
+  describe('edge cases', () => {
+    it('handles empty PR with no files changed', async () => {
+      const scanRun = await createScanRun(pool, {
+        repoId,
+        triggerType: 'pr',
+        triggerRef: '10',
+        commitSha: 'sha10',
+      });
+
+      const deps = makeDeps({
+        fetchPRFiles: vi.fn().mockResolvedValue([]),
+      });
+
+      const job = makeFakeJob({
+        scanRunId: scanRun.id,
+        repoId,
+        prNumber: 10,
+        headSha: 'sha10',
+        installationId: 1,
+      });
+
+      await processPRScan(job, deps);
+
+      const updated = await getScanRun(pool, scanRun.id);
+      expect(updated!.status).toBe('completed');
+      expect(updated!.claims_checked).toBe(0);
+    });
+
+    it('handles files with missing status field gracefully', async () => {
+      const scanRun = await createScanRun(pool, {
+        repoId,
+        triggerType: 'pr',
+        triggerRef: '11',
+        commitSha: 'sha11',
+      });
+
+      const deps = makeDeps({
+        fetchPRFiles: vi.fn().mockResolvedValue([
+          { filename: 'file.ts', additions: 1, deletions: 0 } as never,
+        ]),
+      });
+
+      const job = makeFakeJob({
+        scanRunId: scanRun.id,
+        repoId,
+        prNumber: 11,
+        headSha: 'sha11',
+        installationId: 1,
+      });
+
+      await processPRScan(job, deps);
+
+      const updated = await getScanRun(pool, scanRun.id);
+      expect(updated!.status).toBe('completed');
+    });
+
+    it('handles multiple renames in one PR', async () => {
+      const scanRun = await createScanRun(pool, {
+        repoId,
+        triggerType: 'pr',
+        triggerRef: '12',
+        commitSha: 'sha12',
+      });
+
+      const deps = makeDeps({
+        fetchPRFiles: vi.fn().mockResolvedValue([
+          { filename: 'new1.ts', status: 'renamed', previous_filename: 'old1.ts', additions: 0, deletions: 0 },
+          { filename: 'new2.ts', status: 'renamed', previous_filename: 'old2.ts', additions: 0, deletions: 0 },
+        ]),
+      });
+
+      const job = makeFakeJob({
+        scanRunId: scanRun.id,
+        repoId,
+        prNumber: 12,
+        headSha: 'sha12',
+        installationId: 1,
+      });
+
+      await processPRScan(job, deps);
+
+      expect(deps.mapper.updateCodeFilePaths).toHaveBeenCalledWith(
+        repoId,
+        expect.arrayContaining([
+          { old_path: 'old1.ts', new_path: 'new1.ts' },
+          { old_path: 'old2.ts', new_path: 'new2.ts' },
+        ]),
+      );
+    });
+
+    it('handles claims with no mapper results', async () => {
+      const scanRun = await createScanRun(pool, {
+        repoId,
+        triggerType: 'pr',
+        triggerRef: '13',
+        commitSha: 'sha13',
+      });
+
+      const claimId = randomUUID();
+      await pool.query(
+        `INSERT INTO claims (id, repo_id, source_file, line_number, claim_text, claim_type,
+           testability, extracted_value, keywords, extraction_confidence, extraction_method, verification_status)
+         VALUES ($1, $2, 'README.md', 1, 'Test claim', 'path_reference', 'syntactic', '{}', '{}', 1.0, 'regex', 'pending')`,
+        [claimId, repoId],
+      );
+
+      const deps = makeDeps({
+        fetchPRFiles: vi.fn().mockResolvedValue([
+          { filename: 'README.md', status: 'modified', additions: 1, deletions: 0 },
+        ]),
+        mapper: {
+          mapClaim: vi.fn().mockResolvedValue([]),
+          findClaimsByCodeFiles: vi.fn().mockResolvedValue([]),
+          getMappingsForClaim: vi.fn().mockResolvedValue([]),
+          refreshMapping: vi.fn(),
+          updateCodeFilePaths: vi.fn().mockResolvedValue(0),
+          removeMappingsForFiles: vi.fn().mockResolvedValue(0),
+          getEntityLineCount: vi.fn(),
+        },
+      });
+
+      const job = makeFakeJob({
+        scanRunId: scanRun.id,
+        repoId,
+        prNumber: 13,
+        headSha: 'sha13',
+        installationId: 1,
+      });
+
+      await processPRScan(job, deps);
+
+      const updated = await getScanRun(pool, scanRun.id);
+      expect(updated!.status).toBe('completed');
+    });
+  });
 });
