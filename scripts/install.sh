@@ -204,15 +204,29 @@ if (!settings.permissions.allow.includes('mcp__docalign__*')) {
   settings.permissions.allow.push('mcp__docalign__*');
 }
 
-// (c) Note: Project-level mcpServers in settings.local.json are not picked up by Claude Code.
-// Claude Code only reads mcpServers from the global ~/.claude.json.
-// The working approach is to pass DOCALIGN_REPO_ROOT env var when launching Claude Code.
-// See scripts/install.sh launch_same_window() and launch_new_window() for details.
-
 fs.writeFileSync(file, JSON.stringify(settings, null, 2) + '\n');
 EOF
     log_success "MCP server config and hooks verified"
 fi
+
+# Step 4c: Create .mcp.json for project-level MCP configuration
+# Claude Code reads this file to configure the docalign MCP server with explicit repo context
+MCP_FILE=".mcp.json"
+node - <<'EOF'
+const fs = require('fs');
+const mcpConfig = {
+  mcpServers: {
+    docalign: {
+      type: "stdio",
+      command: "npx",
+      args: ["docalign", "mcp", "--repo", "."],
+      env: {}
+    }
+  }
+};
+fs.writeFileSync('.mcp.json', JSON.stringify(mcpConfig, null, 2) + '\n');
+EOF
+log_success ".mcp.json (project-level MCP configuration)"
 
 echo ""
 
