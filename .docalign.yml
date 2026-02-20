@@ -1,0 +1,36 @@
+# DocAlign Configuration
+doc_patterns:
+  exclude:
+    - node_modules/**
+    - vendor/**
+    - .git/**
+    - "**/CHANGELOG.md"
+    - "**/LICENSE.md"
+
+suppress:
+  # Pre-existing documentation drift — illustrative examples and references
+  # to entities that were renamed/removed before this task
+  - file: 'docs/reference/configuration.md'
+  - file: 'docs/contributing/testing.md'
+  - file: 'docs/guides/mcp-integration.md'
+    claim_type: code_example
+  - file: 'docs/guides/suppressing-findings.md'
+    claim_type: path_reference
+  - file: 'docs/reference/cli.md'
+  - file: 'docs/troubleshooting.md'
+    claim_type: path_reference
+
+verification:
+  min_severity: low
+claim_types:
+  path_reference: true
+  dependency_version: true
+  command: true
+  api_route: true
+  code_example: true
+  behavior: true
+  architecture: true
+  config: true
+  convention: true
+  environment: true
+  url_reference: true

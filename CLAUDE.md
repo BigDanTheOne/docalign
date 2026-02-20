@@ -48,7 +48,7 @@ docker compose down    # Stop local services
 1. **Read the task file before starting.** Each task references specific TDD sections, types, and test cases. Read them.
 2. **Read before writing.** Before modifying any file, read it and its relevant spec sections. Do not work from memory.
 3. **Follow existing patterns.** Match the code style, error handling, and naming conventions established by prior tasks.
-4. **TDD is the authority.** If the task file and TDD disagree, the TDD wins. If the TDD and `phases/phase4-api-contracts.md` disagree, escalate.
+4. **TDD is the authority.** If the task file and TDD disagree, the TDD wins. If the TDD and the API contracts documentation disagree, escalate.
 5. **All tests must pass.** `npm run typecheck && npm run test` must succeed after every task.
 6. **No scope creep.** Implement exactly what the task specifies. No extra features, no premature abstractions.
 7. **Escalate unknowns.** If a spec is ambiguous or contradictory, ask. Do not guess.
@@ -110,6 +110,7 @@ docker compose down    # Stop local services
 | `phases/phase4-decisions.md` | Design decisions log |
 
 ### Tasks
+<!-- docalign:skip reason="tutorial_example" description="Target project structure diagram showing aspirational/future file layout (marked with docalign:skip), not a factual claim about current state" -->
 
 | File | Content |
 |------|---------|
@@ -125,7 +126,6 @@ docker compose down    # Stop local services
 | `tasks/e8-mcp-server.md` | E8: MCP server (4 tasks, 13h) |
 | `tasks/e9-cli-sqlite.md` | E9: CLI + SQLite adapter (5 tasks, 17h) |
 
-<!-- docalign:skip reason="tutorial_example" description="Target project structure diagram showing aspirational/future file layout, not a factual claim about current state" -->
 ## Project Structure (target)
 
 ```
