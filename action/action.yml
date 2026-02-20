@@ -4,6 +4,10 @@ branding:
   icon: 'file-text'
   color: 'blue'
 
+# Required permissions in workflow:
+# permissions:
+#   pull-requests: write  # For posting/updating PR comments
+
 inputs:
   github-token:
     description: 'GitHub token for posting PR comments and annotations'
@@ -72,6 +76,9 @@ runs:
           echo "verified=0" >> "$GITHUB_OUTPUT"
           echo "drifted=0" >> "$GITHUB_OUTPUT"
         fi
+
+        # Generate PR comment markdown
+        docalign scan $EXCLUDE_ARG --format github-pr > /tmp/docalign-pr-comment.md 2>&1 || true
 
     - name: Post PR Comment
       if: github.event_name == 'pull_request'

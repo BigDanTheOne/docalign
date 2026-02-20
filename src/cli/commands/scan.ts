@@ -7,7 +7,7 @@
 
 import type { CliPipeline } from '../local-pipeline';
 import { filterUncertain, countVerdicts, buildHotspots } from '../local-pipeline';
-import { formatScanResults, progressBar } from '../output';
+import { formatScanResults, progressBar, formatGitHubPRComment, type StaleClaim } from '../output';
 
 export async function runScan(
   pipeline: CliPipeline,
@@ -20,6 +20,7 @@ export async function runScan(
   exclude: string[] = [],
   json = false,
   max?: number,
+  format?: string,
 ): Promise<number> {
   try {
     if (!json) write(`DocAlign: Scanning repository...`);
@@ -59,7 +60,28 @@ export async function runScan(
     const hotspots = buildHotspots(filteredFiles);
     const healthPercent = totalScored > 0 ? Math.round((totalVerified / totalScored) * 100) : 100;
 
-    if (json) {
+    if (format === 'github-pr') {
+      // Build stale claims list for PR comment
+      const staleClaims: StaleClaim[] = [];
+
+      for (const fileResult of filteredFiles) {
+        for (const vr of fileResult.results) {
+          if (vr.verdict !== 'drifted') continue;
+          const claim = fileResult.claims.find((c) => c.id === vr.claim_id);
+          if (!claim) continue;
+          staleClaims.push({
+            file: fileResult.file,
+            line: claim.line_number,
+            claimText: claim.claim_text,
+            actual: vr.specific_mismatch ?? vr.reasoning ?? 'Documentation does not match code.',
+            severity: vr.severity ?? undefined,
+          });
+        }
+      }
+
+      const prComment = formatGitHubPRComment(result.totalClaims, staleClaims);
+      write(prComment);
+    } else if (json) {
       // Build findings array for JSON output
       const findings: Array<{
         file: string;
