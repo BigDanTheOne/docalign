@@ -255,14 +255,22 @@ OPENCODE_PROMPT="Set up DocAlign for this project using the docalign_setup skill
 # Linux syntax:  script -q -c '<cmd> [args...]' /dev/null
 
 launch_same_window() {
-    # Only Claude Code works correctly inside script's PTY.
-    # OpenCode (Bun-based) fails to initialize process.stdout on a redirected fd,
-    # so it always goes through launch_new_window instead.
     launch_banner
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        script -q /dev/null claude "/docalign-setup" </dev/tty
+    if [ "$CHOSEN_TOOL" = "claude" ]; then
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            script -q /dev/null claude "/docalign-setup" </dev/tty
+        else
+            script -q -c 'claude "/docalign-setup"' /dev/null </dev/tty
+        fi
     else
-        script -q -c 'claude "/docalign-setup"' /dev/null </dev/tty
+        # Export the prompt so bash can expand it safely inside script's PTY,
+        # avoiding any quoting issues when script passes argv to the child.
+        export OPENCODE_PROMPT
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            script -q /dev/null bash -c 'exec opencode --prompt "$OPENCODE_PROMPT"' </dev/tty
+        else
+            script -q -c 'exec opencode --prompt "$OPENCODE_PROMPT"' /dev/null </dev/tty
+        fi
     fi
 }
 
@@ -312,7 +320,7 @@ APPLESCRIPT
     echo ""
 }
 
-if [ "$CHOSEN_TOOL" = "claude" ] && command -v script &>/dev/null; then
+if command -v script &>/dev/null; then
     launch_same_window
 else
     launch_new_window
