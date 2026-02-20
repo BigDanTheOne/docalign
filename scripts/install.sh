@@ -263,11 +263,9 @@ launch_same_window() {
             script -q -c 'claude "/docalign-setup"' /dev/null </dev/tty
         fi
     else
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            script -q /dev/null opencode --prompt "$OPENCODE_PROMPT" </dev/tty
-        else
-            script -q -c "opencode --prompt '$OPENCODE_PROMPT'" /dev/null </dev/tty
-        fi
+        # Skip 'script' for OpenCode — its PTY wrapping interferes with --prompt.
+        # Connect stdin+stdout directly to /dev/tty, same as a normal manual run.
+        opencode --prompt "$OPENCODE_PROMPT" </dev/tty >/dev/tty
     fi
 }
 
