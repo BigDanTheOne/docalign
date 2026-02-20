@@ -81,7 +81,7 @@ docker compose down    # Stop local services
 
 | File | Content |
 |------|---------|
-| `phases/phase4-api-contracts.md` | Canonical TypeScript interfaces (Section 12 = all Row types) |
+| `src/shared/types.ts` | Canonical TypeScript interfaces and Row types |
 | `phases/tdd-0-codebase-index.md` | L0: AST parsing, entity indexing, lookup APIs |
 | `phases/tdd-1-claim-extractor.md` | L1: Doc parsing, regex extractors, claim pipeline |
 | `phases/tdd-2-mapper.md` | L2: Claim-to-code mapping (3-step progressive) |
