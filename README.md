@@ -1,7 +1,7 @@
 <p align="center">
-  <img src="logo.png" alt="DocAlign" width="480">
-  <br>
   <em>🔍 Where docs meet code reality.</em>
+  <br><br>
+  <img src="logo.png" alt="DocAlign" width="480">
 </p>
 
 [![npm version](https://img.shields.io/npm/v/docalign)](https://www.npmjs.com/package/docalign)
