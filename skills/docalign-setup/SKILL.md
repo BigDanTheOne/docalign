@@ -307,7 +307,22 @@ Repository root: {absolute_repo_root}
 Split the document list into batches of the chosen size. For each batch:
 1. Spawn all agents in the batch in a **single message** (parallel)
 2. Wait for all of them to finish before starting the next batch
-3. Report progress after each batch: "Batch 2/4 complete — processed 10/19 documents"
+3. After each batch, report progress using this format:
+
+```
+━━━ Batch 2/4 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✅ docs/api.md                 14 claims extracted
+  ✅ docs/setup.md                8 claims extracted
+  ✅ docs/architecture.md        11 claims extracted
+  ⏭️  docs/guides/mcp.md          already processed
+
+  Progress: ██████████░░░░░░░░░░ 10/19 docs
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+Use ✅ for successful, ⏭️ for skipped (already processed), ❌ for failed. Build the progress bar proportionally: each █ = 5% done, each ░ = 5% remaining (20 chars total).
 
 **Step 3.4: Retry Logic**
 
@@ -323,21 +338,36 @@ Split the document list into batches of the chosen size. For each batch:
 
 **Step 3.5: Collect Results**
 
-As sub-agents complete:
+As sub-agents complete, parse each sub-agent's report to extract: claim counts by type, evidence counts, skip region counts. Aggregate across all documents.
 
-- Count successful completions
-- Collect summaries
-- Track any failures
-
-Say:
+Present the final summary using this format:
 
 ```
-✅ Document processing complete:
-• Successful: 7 docs
-• Failed: 1 doc (docs/legacy/api.md)
-• Claims extracted: ~150 total
-• Tags written: ~200 total
+┌─────────────────────────────────────────────────────┐
+│           📋 Document Processing Complete            │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  Documents             19 total                     │
+│    ✅ Processed:       17                           │
+│    ⏭️  Skipped:         2  (already done)           │
+│    ❌ Failed:           0                           │
+│                                                     │
+│  Claims Extracted     150 total                     │
+│    🔍 behavior          87                          │
+│    🏗️  architecture      34                          │
+│    ⚙️  config            29                          │
+│                                                     │
+│  Evidence                                           │
+│    ✅ With evidence:  132  (88%)                    │
+│    ⚠️  No evidence:    18  (12%) — likely drifted   │
+│                                                     │
+│  Skip Regions          45 illustrative blocks       │
+│                        tagged across all docs       │
+│                                                     │
+└─────────────────────────────────────────────────────┘
 ```
+
+Fill in real numbers from the sub-agent reports. Adjust column widths to fit actual data. If any documents failed, list them under the ❌ line.
 
 ---
 
@@ -375,52 +405,74 @@ Enter 1, 2, or 3:
 Running quick check on README.md...
 ```
 
-Call MCP tool: `check_doc` with file="README.md"
+Call MCP tool: `check_doc` with file="README.md", deep=true
 
-Present results:
+Present results using this format (fill in real data from the tool response):
 
 ```
-📊 README.md Check Results:
-
-Claims found: 15
-✅ Verified: 12 (80%)
-⚠️  Drifted: 2 (13%)
-❓ Uncertain: 1 (7%)
-
-Drifted Claims:
-• Line 23: Path "src/auth.ts" doesn't exist
-  Suggested fix: "src/authentication.ts"
-
-• Line 45: Command "npm run deploy" script not found
-  Suggested fix: Add to package.json or update docs
-
-Overall health: Good! Most docs are accurate.
+┌─────────────────────────────────────────────────────┐
+│          📊 README.md — Health Check                │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  Health Score  ████████████████░░░░  80/100          │
+│                                                     │
+│  Claims: 15 total                                   │
+│    ✅ Verified:   12  (80%)                         │
+│    ⚠️  Drifted:     2  (13%)                        │
+│    ❓ Uncertain:   1  ( 7%)                         │
+│                                                     │
+├─── Drifted Claims ──────────────────────────────────┤
+│                                                     │
+│  Line 23 │ Path "src/auth.ts" not found             │
+│          │ 💡 Did you mean src/authentication.ts?   │
+│          │                                          │
+│  Line 45 │ Script "npm run deploy" not in           │
+│          │ package.json                              │
+│          │ 💡 Add script or update docs             │
+│                                                     │
+└─────────────────────────────────────────────────────┘
 ```
+
+Build the health score bar proportionally: each █ = 5%, 20 chars total. Use real line numbers and claim text from the `check_doc` response. Only show the drifted claims section if there are drifted claims.
 
 **IF user chooses 2 (Fast Scan):**
 
 ```
 Running full scan on all selected docs...
-This will take approximately 2 minutes.
 ```
 
-For each doc, call `check_doc` and aggregate results:
+For each doc, call `check_doc` and aggregate results. Present using this format:
 
 ```
-📊 Documentation Health Report
-
-Overall Score: 87/100
-
-✅ README.md        15 claims  (93% verified)
-✅ docs/api.md      42 claims  (88% verified)
-⚠️  docs/setup.md   23 claims  (78% verified)
-   └─ 3 drifted claims found
-
-Top Issues:
-1. docs/setup.md line 34: Outdated command
-2. docs/api.md line 128: Missing parameter
-3. docs/setup.md line 56: Wrong version
+┌─────────────────────────────────────────────────────┐
+│          📊 Documentation Health Report             │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  Overall Health  ████████████████░░░░  87/100       │
+│                                                     │
+│  Document                Claims   Verified  Status  │
+│  ───────────────────────────────────────────────    │
+│  README.md                  15      93%       ✅    │
+│  docs/api.md                42      88%       ✅    │
+│  docs/architecture.md       31      97%       ✅    │
+│  docs/setup.md              23      78%       ⚠️    │
+│  docs/config.md             18     100%       ✅    │
+│                                                     │
+├─── Top Issues (up to 5) ────────────────────────────┤
+│                                                     │
+│  1. docs/setup.md:34                                │
+│     ⚠️  Command "npm run deploy" — script not found │
+│                                                     │
+│  2. docs/api.md:128                                 │
+│     ⚠️  Parameter "userId" — not in signature      │
+│                                                     │
+│  3. docs/setup.md:56                                │
+│     ⚠️  Version "3.2.1" — package.json has "4.0.0" │
+│                                                     │
+└─────────────────────────────────────────────────────┘
 ```
+
+Sort the document table by verified % ascending (worst first). Use ✅ for ≥85% verified, ⚠️ for <85%. Show up to 5 top issues, prioritizing drifted claims. If all docs are 100% verified, replace the "Top Issues" section with: "🎉 No issues found — all documentation is in sync!"
 
 **Step 4.3: Clean Up Setup Trigger**
 
@@ -441,22 +493,30 @@ date -u +"%Y-%m-%dT%H:%M:%SZ" > .docalign/.setup-complete
 
 **Step 4.5: Final Summary**
 
-Say:
+Present the final summary using this format (fill in real numbers):
 
 ```
-✅ DocAlign Setup Complete!
-
-Configuration:
-• Config file: .docalign/config.yml
-• Monitored docs: 8 files
-• Semantic claims: .docalign/semantic/
-
-Next Steps:
-• Run "docalign scan" anytime to check all docs
-• After code changes, I'll suggest checking related docs
-• Use "docalign fix" to apply suggested fixes
-
-The docalign skill is now active for daily usage.
+┌─────────────────────────────────────────────────────┐
+│             ✅ DocAlign Setup Complete!              │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  What was created                                   │
+│    📄 Config       .docalign/config.yml             │
+│    📚 Monitored    19 documentation files           │
+│    🔍 Claims       150 semantic claims indexed      │
+│    📁 Store        .docalign/semantic/              │
+│                                                     │
+│  What happens next                                  │
+│    After you edit code, I'll suggest checking        │
+│    related docs for drift. You can also run:        │
+│                                                     │
+│    docalign scan    check all docs                  │
+│    docalign check   verify a single file            │
+│    docalign fix     apply suggested corrections     │
+│                                                     │
+│  The docalign skill is now active. 🚀              │
+│                                                     │
+└─────────────────────────────────────────────────────┘
 ```
 
 ---
