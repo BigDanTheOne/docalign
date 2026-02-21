@@ -1,4 +1,4 @@
-# 🔍 Where docs meet code reality.
+# 🔍 DocAlign - Where docs meet code reality.
 
 <p align="center">
   <br><br>
