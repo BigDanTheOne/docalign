@@ -1,4 +1,6 @@
-# DocAlign
+<p align="center">
+  <img src="logo.png" alt="DocAlign" width="480">
+</p>
 
 [![npm version](https://img.shields.io/npm/v/docalign)](https://www.npmjs.com/package/docalign)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
