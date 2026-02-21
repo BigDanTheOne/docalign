@@ -21,15 +21,14 @@ metadata:
 1. Does `.docalign/.setup-complete` exist?
    - **IF YES:** Setup fully complete. Do nothing (docalign skill will handle usage).
 
-2. Does `.docalign/config.yml` exist (but no `.setup-complete`)?
-   - **IF YES:** Previous setup was interrupted (partial run). Tell the user:
+2. Otherwise (no `.setup-complete`, regardless of whether `config.yml` exists):
+   - If `.docalign/config.yml` exists, tell the user:
      ```
-     Found a partial DocAlign setup. Resuming — already-processed documents will be skipped automatically.
+     Found a partial DocAlign setup. Re-running full setup — already-processed documents will be skipped in Phase 3.
      ```
-     Then begin the Setup Wizard from Phase 1. (Phases 1-2 re-run so the user can adjust doc selection. In Phase 3, sub-agents skip docs that already have a semantic JSON file.)
-
-3. Neither file exists?
-   - This is first-time setup. Begin "Setup Wizard" from Phase 1.
+   - **Run ALL 4 phases in order: Phase 1 → Phase 2 → Phase 3 → Phase 4.**
+   - Do NOT skip Phase 1 or Phase 2. Always ask the user which docs to monitor.
+   - The only optimization is in Phase 3: sub-agents skip docs that already have a semantic JSON file.
 
 ---
 
