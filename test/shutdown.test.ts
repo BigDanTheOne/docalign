@@ -5,12 +5,13 @@ import { createRedisClient } from '../src/shared/redis';
 import { createScanQueue } from '../src/shared/queue';
 import { createDatabaseClient } from '../src/shared/db';
 import type { Server } from 'http';
+import { POSTGRES_AVAILABLE, REDIS_AVAILABLE } from './infra-guard';
 
 const TEST_REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const TEST_DB_URL =
   process.env.DATABASE_URL || 'postgres://docalign:docalign@localhost:5432/docalign_dev';
 
-describe('Graceful Shutdown', () => {
+describe.skipIf(!POSTGRES_AVAILABLE || !REDIS_AVAILABLE)('Graceful Shutdown', () => {
   it('stops accepting new HTTP requests after shutdown', async () => {
     const redis = createRedisClient(TEST_REDIS_URL);
     const queue = createScanQueue(redis);

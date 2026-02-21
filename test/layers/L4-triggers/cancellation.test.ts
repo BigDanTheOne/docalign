@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import Redis from 'ioredis';
 import { isCancelled, clearCancellationKey } from '../../../src/layers/L4-triggers/cancellation';
+import { REDIS_AVAILABLE } from '../../infra-guard';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
-describe('cancellation', () => {
+describe.skipIf(!REDIS_AVAILABLE)('cancellation', () => {
   let redis: Redis;
 
   beforeAll(async () => {
