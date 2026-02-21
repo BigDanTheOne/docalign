@@ -1,4 +1,4 @@
-# 🔍 DocAlign - Where docs meet code reality.
+# 🔍 DocAlign - Give your coding agent docs it can trust.
 
 <p align="center">
   <br><br>
