@@ -20,6 +20,7 @@ export default defineConfig({
       '**/dist/**',
       '.openclaw/**',
       '_team/**',
+      'test/qa/validate-existing/**',
     ],
   },
 });

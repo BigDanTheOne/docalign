@@ -13,4 +13,16 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: ['test/fixtures/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-namespace': 'off',
+    },
+  },
+  {
+    files: ['test/qa/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
 );

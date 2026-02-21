@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Pool } from 'pg';
+import { POSTGRES_AVAILABLE } from '../infra-guard';
 
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://docalign:docalign@localhost:5432/docalign_dev';
 
-describe('data-pipeline migrations', () => {
+describe.skipIf(!POSTGRES_AVAILABLE)('data-pipeline migrations', () => {
   let pool: Pool;
 
   beforeAll(() => {

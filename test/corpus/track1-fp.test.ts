@@ -10,12 +10,13 @@ import { randomUUID } from 'crypto';
 import { initParser } from '../../src/layers/L0-codebase-index/ast-parser';
 import { runCorpus } from './runner';
 import { corpusExpect } from './matchers';
+import { POSTGRES_AVAILABLE } from '../infra-guard';
 
 const CORPUS_PATH = 'test/fixtures/corpora/synthetic-node';
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://docalign:docalign@localhost:5432/docalign_dev';
 
-describe('Track 1 — FP gate: synthetic-node', () => {
+describe.skipIf(!POSTGRES_AVAILABLE)('Track 1 — FP gate: synthetic-node', () => {
   let pool: Pool;
   let repoId: string;
 

@@ -7,10 +7,11 @@ import type { HealthResponse } from '../../src/shared/types';
 import type Redis from 'ioredis';
 import type { Queue } from 'bullmq';
 import type { Server } from 'http';
+import { POSTGRES_AVAILABLE, REDIS_AVAILABLE } from '../infra-guard';
 
 const TEST_REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
-describe('GET /health', () => {
+describe.skipIf(!POSTGRES_AVAILABLE || !REDIS_AVAILABLE)('GET /health', () => {
   let redis: Redis;
   let queue: Queue;
   let server: Server;

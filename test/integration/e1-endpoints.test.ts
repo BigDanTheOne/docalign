@@ -11,6 +11,7 @@ import { createScanQueue } from '../../src/shared/queue';
 import { PostgresAdapter } from '../../src/shared/pg-adapter';
 import { generateRepoToken } from '../../src/shared/token';
 import type { ServerConfig } from '../../src/shared/types';
+import { POSTGRES_AVAILABLE, REDIS_AVAILABLE } from '../infra-guard';
 
 // Test config
 const TEST_WEBHOOK_SECRET = 'test-webhook-secret-for-integration-tests';
@@ -22,7 +23,7 @@ function signPayload(payload: string, secret: string): string {
   return 'sha256=' + crypto.createHmac('sha256', secret).update(payload).digest('hex');
 }
 
-describe('E1 Integration: End-to-End Endpoint Sweep', () => {
+describe.skipIf(!POSTGRES_AVAILABLE || !REDIS_AVAILABLE)('E1 Integration: End-to-End Endpoint Sweep', () => {
   let app: Application;
   let server: Server;
   let db: DatabaseClient;
