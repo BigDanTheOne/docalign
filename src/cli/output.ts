@@ -198,3 +198,90 @@ export function progressBar(current: number, total: number, width = 40): string 
   const empty = width - filled;
   return `    [${color.green('='.repeat(filled))}${' '.repeat(empty)}] ${current}/${total} claims`;
 }
+
+/**
+ * Interface for stale claim information in PR comments.
+ */
+export interface StaleClaim {
+  file: string;
+  line: number;
+  claimText: string;
+  actual: string;
+  severity?: string;
+}
+
+/**
+ * Format scan results as a GitHub PR comment with upsert marker.
+ * Includes total claims, stale count, status indicator, and collapsible details.
+ * Truncates at 65536 characters if needed.
+ */
+export function formatGitHubPRComment(
+  totalClaims: number,
+  staleClaims: StaleClaim[],
+): string {
+  const staleCount = staleClaims.length;
+  const statusIcon = staleCount === 0 ? '✅' : '❌';
+
+  const lines: string[] = [];
+
+  // Upsert marker (AC3)
+  lines.push('<!-- docalign-report -->');
+  lines.push('');
+
+  // Status indicator and summary (AC1, AC4)
+  lines.push(`## ${statusIcon} DocAlign Report`);
+  lines.push('');
+
+  // Total claims and stale count (AC2)
+  lines.push(`**Total claims checked:** ${totalClaims}`);
+  lines.push(`**Stale claims found:** ${staleCount}`);
+  lines.push('');
+
+  // Collapsible details if there are stale claims (AC5)
+  if (staleCount > 0) {
+    lines.push('<details>');
+    lines.push('<summary>View stale claims</summary>');
+    lines.push('');
+    lines.push('| File | Line | Claim | Issue |');
+    lines.push('|------|------|-------|-------|');
+
+    for (const claim of staleClaims) {
+      const file = claim.file.replace(/\|/g, '\\|');
+      const claimText = claim.claimText.replace(/\|/g, '\\|').replace(/\n/g, ' ');
+      const actual = claim.actual.replace(/\|/g, '\\|').replace(/\n/g, ' ');
+      lines.push(`| ${file} | ${claim.line} | ${claimText} | ${actual} |`);
+    }
+
+    lines.push('');
+    lines.push('</details>');
+  } else {
+    lines.push('All documentation claims are verified and up to date! 🎉');
+  }
+
+  let output = lines.join('\n');
+
+  // Truncation at 65536 characters
+  const MAX_LENGTH = 65536;
+  if (output.length > MAX_LENGTH) {
+    // Count how many claims were included before truncation
+    const truncatePoint = MAX_LENGTH - 200; // Reserve space for truncation message
+    output = output.slice(0, truncatePoint);
+
+    // Find the last complete table row
+    const lastRowEnd = output.lastIndexOf('|\n');
+    if (lastRowEnd !== -1) {
+      output = output.slice(0, lastRowEnd + 2);
+    }
+
+    // Calculate how many claims were cut off
+    const includedRows = (output.match(/\| [^|]+ \| \d+ \|/g) || []).length;
+    const remainingClaims = staleCount - includedRows;
+
+    if (remainingClaims > 0) {
+      output += `\n\n_... ${remainingClaims} more items truncated due to size limits_\n`;
+      output += '\n</details>';
+    }
+  }
+
+  return output;
+}
