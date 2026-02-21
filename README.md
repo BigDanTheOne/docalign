@@ -1,5 +1,6 @@
+# 🔍 Where docs meet code reality.
+
 <p align="center">
-  <em>🔍 Where docs meet code reality.</em>
   <br><br>
   <img src="logo.png" alt="DocAlign" width="480">
 </p>
