@@ -9,6 +9,33 @@ The main agent provides the document path, repository root, and dynamic context 
 
 ---
 
+## PRE-CHECK — Skip Already-Processed Documents
+
+Before starting any work, check if this document has already been fully processed:
+
+1. **Compute the expected JSON store file path:**
+   - Take the document's relative path (e.g. `docs/api.md`)
+   - Replace `/` with `--` and append `.json`
+   - Full path: `.docalign/semantic/{encoded-name}.json`
+   - Example: `docs/api.md` → `.docalign/semantic/docs--api.md.json`
+
+2. **Check if the file exists and is non-empty:**
+   - Read the file at that path
+   - If it exists AND contains a `"claims"` array → this document was already fully processed
+
+3. **If already processed:**
+   - Report:
+     ```
+     Document: {file_path}
+     Status: Already processed — found existing semantic file. Skipping.
+     ```
+   - Exit gracefully. Do not proceed to Phase 1 or Phase 2.
+
+4. **If not processed** (file missing, empty, or invalid):
+   - Continue to Phase 1 below.
+
+---
+
 ## PHASE 1 — Document Annotation
 
 ### Step 1: Read the document

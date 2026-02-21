@@ -1,11 +1,11 @@
 ---
 name: docalign-setup
 description: >
-  Interactive setup wizard for DocAlign. 
-  USE ONLY when .docalign/config.yml does not exist.
-  Guides user through: doc discovery → selection → configuration → 
+  Interactive setup wizard for DocAlign.
+  Guides user through: doc discovery → selection → configuration →
   document annotation → initial scan.
-  After setup completes, this skill becomes inactive and docalign skill takes over.
+  Safe to re-run after partial completion — already-processed documents are skipped.
+  After setup fully completes, this skill becomes inactive and docalign skill takes over.
 metadata:
   author: DocAlign
   version: 0.3.0
@@ -16,10 +16,20 @@ metadata:
 
 ## Auto-Trigger Condition
 
-**CHECK IMMEDIATELY ON LOAD:** Does `.docalign/config.yml` exist?
+**CHECK IMMEDIATELY ON LOAD:**
 
-- **IF NO:** This is first-time setup. Begin "Setup Wizard" workflow below.
-- **IF YES:** Setup already complete. Do nothing (docalign skill will handle usage).
+1. Does `.docalign/.setup-complete` exist?
+   - **IF YES:** Setup fully complete. Do nothing (docalign skill will handle usage).
+
+2. Does `.docalign/config.yml` exist (but no `.setup-complete`)?
+   - **IF YES:** Previous setup was interrupted (partial run). Tell the user:
+     ```
+     Found a partial DocAlign setup. Resuming — already-processed documents will be skipped automatically.
+     ```
+     Then begin the Setup Wizard from Phase 1. (Phases 1-2 re-run so the user can adjust doc selection. In Phase 3, sub-agents skip docs that already have a semantic JSON file.)
+
+3. Neither file exists?
+   - This is first-time setup. Begin "Setup Wizard" from Phase 1.
 
 ---
 
@@ -263,8 +273,14 @@ Before spawning, do this once:
    ```bash
    mkdir -p .docalign/semantic
    ```
+3. **Filter already-processed documents.** List existing `.json` files in `.docalign/semantic/`. For each selected document, compute its expected JSON filename (replace `/` with `--`, append `.json`). If the JSON file exists and is non-empty, that document was already fully processed — remove it from the list. Report to the user:
+   ```
+   Found {N} already-processed documents — skipping those.
+   Remaining: {M} documents to process.
+   ```
+   If ALL documents are already processed, skip directly to Phase 4.
 
-Then spawn one Task sub-agent per document. Use the context you already have from Phase 2 (you read each document when writing its YAML header) to populate the dynamic context block:
+Then spawn one Task sub-agent per **remaining** document. Use the context you already have from Phase 2 (you read each document when writing its YAML header) to populate the dynamic context block:
 
 ```
 Read the Document Processor spec at: {absolute_path_to_document_processor_md}
@@ -415,7 +431,15 @@ Remove the auto-trigger notice from `CLAUDE.md`:
 3. Write the updated content back
 4. If `CLAUDE.md` is now empty, delete it
 
-**Step 4.4: Final Summary**
+**Step 4.4: Write Completion Marker**
+
+Write the file `.docalign/.setup-complete` with the current ISO timestamp. This marker signals that setup finished successfully and prevents the wizard from re-triggering.
+
+```bash
+date -u +"%Y-%m-%dT%H:%M:%SZ" > .docalign/.setup-complete
+```
+
+**Step 4.5: Final Summary**
 
 Say:
 
@@ -481,10 +505,11 @@ Please ensure:
 After setup completes successfully:
 
 1. `.docalign/config.yml` now exists
-2. This skill becomes inactive (trigger condition no longer met)
-3. User restarts Claude Code
-4. **docalign skill** (daily usage) becomes active
-5. Normal workflows begin (post-change checks, health monitoring, etc.)
+2. `.docalign/.setup-complete` marker written (prevents wizard from re-triggering)
+3. This skill becomes inactive (trigger condition no longer met)
+4. User restarts Claude Code
+5. **docalign skill** (daily usage) becomes active
+6. Normal workflows begin (post-change checks, health monitoring, etc.)
 
 ---
 
