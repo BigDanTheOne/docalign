@@ -14,11 +14,12 @@ import { createMapper } from '../../src/layers/L2-mapper';
 import { createVerifier, ResultStore } from '../../src/layers/L3-verifier';
 import { LearningServiceStub } from '../../src/layers/L7-learning';
 import type { Claim, FileChange } from '../../src/shared/types';
+import { POSTGRES_AVAILABLE } from '../infra-guard';
 
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://docalign:docalign@localhost:5432/docalign_dev';
 
-describe('E3 Cross-Layer Integration (L0 → L2 → L3)', () => {
+describe.skipIf(!POSTGRES_AVAILABLE)('E3 Cross-Layer Integration (L0 → L2 → L3)', () => {
   let pool: Pool;
   let repoId: string;
 

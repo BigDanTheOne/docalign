@@ -15,6 +15,7 @@ import { initParser } from '../../src/layers/L0-codebase-index/ast-parser';
 import { runCorpus } from './runner';
 import { corpusExpect } from './matchers';
 import type { MutationDef } from './types';
+import { POSTGRES_AVAILABLE } from '../infra-guard';
 
 const CORPUS_PATH = 'test/fixtures/corpora/synthetic-node';
 const MUTATIONS_DIR = 'test/fixtures/corpora/synthetic-node/mutations';
@@ -59,7 +60,7 @@ async function withFreshRepo(pool: Pool, fn: (repoId: string) => Promise<void>):
   }
 }
 
-describe('Track 2 — FN gate: synthetic-node mutations', () => {
+describe.skipIf(!POSTGRES_AVAILABLE)('Track 2 — FN gate: synthetic-node mutations', () => {
   let pool: Pool;
 
   beforeAll(async () => {

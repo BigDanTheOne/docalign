@@ -2,11 +2,12 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { Pool } from 'pg';
 import { IndexStore } from '../../../src/layers/L0-codebase-index/index-store';
 import { randomUUID } from 'crypto';
+import { POSTGRES_AVAILABLE } from '../../infra-guard';
 
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://docalign:docalign@localhost:5432/docalign_dev';
 
-describe('IndexStore', () => {
+describe.skipIf(!POSTGRES_AVAILABLE)('IndexStore', () => {
   let pool: Pool;
   let store: IndexStore;
   let repoId: string;

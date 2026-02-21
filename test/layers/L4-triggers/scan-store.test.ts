@@ -2,11 +2,12 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { Pool } from 'pg';
 import { randomUUID } from 'crypto';
 import { createScanRun, updateScanStatus, getScanRun, getActiveScanRuns } from '../../../src/layers/L4-triggers/scan-store';
+import { POSTGRES_AVAILABLE } from '../../infra-guard';
 
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://docalign:docalign@localhost:5432/docalign_dev';
 
-describe('scan-store', () => {
+describe.skipIf(!POSTGRES_AVAILABLE)('scan-store', () => {
   let pool: Pool;
   let repoId: string;
 

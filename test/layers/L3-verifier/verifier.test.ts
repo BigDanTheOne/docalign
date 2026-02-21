@@ -17,6 +17,7 @@ import {
 } from '../../../src/layers/L3-verifier';
 import type { Claim, CodeEntity, DependencyVersion, RouteEntity, VerificationResult } from '../../../src/shared/types';
 import type { CodebaseIndexService } from '../../../src/layers/L0-codebase-index';
+import { POSTGRES_AVAILABLE } from '../../infra-guard';
 
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://docalign:docalign@localhost:5432/docalign_dev';
@@ -448,7 +449,7 @@ describe('findSimilarPaths', () => {
 });
 
 // === ResultStore (DB Integration) ===
-describe('ResultStore', () => {
+describe.skipIf(!POSTGRES_AVAILABLE)('ResultStore', () => {
   let pool: Pool;
   let resultStore: ResultStore;
   let repoId: string;

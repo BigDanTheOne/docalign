@@ -4,6 +4,7 @@ import { IndexStore, computeEntityDiff } from '../../../src/layers/L0-codebase-i
 import { initParser } from '../../../src/layers/L0-codebase-index/ast-parser';
 import type { CodeEntity, FileChange, ParsedEntity } from '../../../src/shared/types';
 import { randomUUID } from 'crypto';
+import { POSTGRES_AVAILABLE } from '../../infra-guard';
 
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://docalign:docalign@localhost:5432/docalign_dev';
@@ -69,7 +70,7 @@ describe('computeEntityDiff', () => {
   });
 });
 
-describe('IndexStore.updateFromDiff', () => {
+describe.skipIf(!POSTGRES_AVAILABLE)('IndexStore.updateFromDiff', () => {
   let pool: Pool;
   let store: IndexStore;
   let repoId: string;

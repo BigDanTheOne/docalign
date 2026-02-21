@@ -10,6 +10,7 @@ import { deduplicateMappings } from '../../../src/layers/L2-mapper/dedup';
 import { LearningServiceStub } from '../../../src/layers/L7-learning';
 import type { Claim, CodeEntity, DependencyVersion, RouteEntity } from '../../../src/shared/types';
 import type { CodebaseIndexService } from '../../../src/layers/L0-codebase-index';
+import { POSTGRES_AVAILABLE } from '../../infra-guard';
 
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://docalign:docalign@localhost:5432/docalign_dev';
@@ -265,7 +266,7 @@ describe('deduplicateMappings', () => {
 });
 
 // === Database Integration Tests ===
-describe('MapperStore', () => {
+describe.skipIf(!POSTGRES_AVAILABLE)('MapperStore', () => {
   let pool: Pool;
   let store: MapperStore;
   let repoId: string;
@@ -374,7 +375,7 @@ describe('MapperStore', () => {
 });
 
 // === Full Pipeline (with DB) ===
-describe('createMapper (pipeline)', () => {
+describe.skipIf(!POSTGRES_AVAILABLE)('createMapper (pipeline)', () => {
   let pool: Pool;
   let repoId: string;
   let claimId: string;
