@@ -1,7 +1,7 @@
 ---
 title: "Testing"
 summary: "Testing guide for DocAlign contributors: how to run tests, test structure, fixtures, and writing extraction and verification tests."
-description: "Covers running tests with Vitest (npm run test, npm run test:watch), the test directory structure mirroring src/, fixture helpers (makeClaim, makeMockIndex, makeResult), patterns for writing extraction tests and verification tests, and coverage targets by layer."
+description: "Covers running tests with Vitest, the test directory structure mirroring src/, fixture helpers (makeClaim, makeMockIndex, makeResult), patterns for writing extraction tests and verification tests, and coverage targets by layer."
 category: guide
 read_when:
   - You are writing tests for a new check or extractor
@@ -24,9 +24,10 @@ DocAlign uses Vitest for all testing. Tests mirror the source structure.
 
 ```bash
 npm run test           # Run all tests once
-npm run test:watch     # Watch mode (re-run on changes)
 npm run typecheck      # TypeScript type checking (run before tests)
 ```
+
+For watch mode (re-runs on file changes), use the `test:watch` script.
 
 **Rule:** `npm run typecheck && npm run test` must pass after every change.
 
