@@ -1,7 +1,7 @@
 ---
 title: "CLI Reference"
 summary: "Complete reference for all DocAlign CLI commands, flags, environment variables, and exit codes."
-description: "Documents all 8 CLI commands: scan (full repo scan, --json, --exclude, --max), check (single file, --section, --deep, --json), search (topic search + code-file reverse lookup), extract (semantic claims, --force, --dry-run), status (config and MCP status), configure (interactive config, --exclude, --min-severity, --reset), init (Claude Code MCP setup), viz (knowledge graph, --output, --no-open, --exclude), mcp (start MCP server, --repo). Also covers ANTHROPIC_API_KEY environment variable and exit codes (0/1/2)."
+description: "Documents all 9 CLI commands: scan (full repo scan, --json, --exclude, --max, --format=github-pr), check (single file, --section, --deep, --json), search (topic search + code-file reverse lookup), extract (semantic claims, --force, --dry-run), status (config and MCP status), configure (interactive config, --exclude, --min-severity, --reset), init (Claude Code MCP setup), viz (knowledge graph, --output, --no-open, --exclude), mcp (start MCP server, --repo). Also covers --help flag, ANTHROPIC_API_KEY environment variable, and exit codes (0/1/2)."
 category: reference
 read_when:
   - You need the exact syntax for a docalign command
@@ -45,6 +45,7 @@ docalign scan --exclude=docs/archive/old.md,docs/legacy.md
 | `--json` | Output results as JSON instead of formatted text |
 | `--max=N` | Limit hotspot results in JSON output (default: all) |
 | `--exclude=FILE[,FILE]` | Comma-separated list of files to skip |
+| `--format=github-pr` | Output scan results as GitHub PR comment markdown |
 
 **Output:** Lists each doc file with its claim count and drift status. Summary shows total verified, drifted, and health score.
 
@@ -206,10 +207,11 @@ Typically called by the MCP client, not directly. See [MCP Integration](../guide
 <!-- docalign:skip reason="user_instruction" description="docalign help command usage example" -->
 ### docalign help
 
-Show usage information and available commands.
+Show usage information and available commands. You can also pass `--help` to any command.
 
 ```bash
 docalign help
+docalign --help
 ```
 
 <!-- /docalign:skip -->
