@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-const ROOT = resolve(__dirname, '../../../..');
+const ROOT = resolve(__dirname, '../../..');
 const DOC_PATH = resolve(ROOT, 'docs/reference/configuration.md');
 const SCHEMA_PATH = resolve(ROOT, 'src/config/schema.ts');
 
@@ -10,17 +10,9 @@ function readFile(path: string): string {
   return readFileSync(path, 'utf-8');
 }
 
-// QA-DISPUTE: ROOT resolves to '../../../..' (4 levels up from __dirname) but test file is only 3
-// directories deep from repo root (test/qa/fix-config-docs/). This causes ROOT to resolve to the
-// parent of the repo root, making DOC_PATH and SCHEMA_PATH point outside the repository.
-// The correct path would be '../../..' (3 levels). All assertions in this suite are valid and the
-// documentation has been updated to satisfy them, but the file reads fail with ENOENT.
-const filesExist = existsSync(DOC_PATH) && existsSync(SCHEMA_PATH);
-const describeFn = filesExist ? describe : describe.skip;
-
-describeFn('QA contract: configuration.md accuracy', () => {
-  const doc = filesExist ? readFile(DOC_PATH) : '';
-  const schema = filesExist ? readFile(SCHEMA_PATH) : '';
+describe('QA contract: configuration.md accuracy', () => {
+  const doc = readFile(DOC_PATH);
+  const schema = readFile(SCHEMA_PATH);
 
   // Extract top-level config section names from schema
   const schemaSections = [...schema.matchAll(/^\s{4}(\w+):\s*z\b/gm)].map((m) => m[1]);
