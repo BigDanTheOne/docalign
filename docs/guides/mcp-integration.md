@@ -1,7 +1,7 @@
 ---
 title: "MCP Integration"
 summary: "Guide to setting up DocAlign's MCP server for use with Claude Code, Cursor, and other MCP-compatible AI clients."
-description: "Covers quick setup via docalign init (adds to .claude/mcp.json, installs skill), manual JSON config, the 4 available MCP tools (check_doc, scan_docs, get_docs, register_claims), example agent workflows, and how to verify the integration with docalign status."
+description: "Covers quick setup via docalign init (registers MCP server globally via claude mcp add --scope user, installs skills), manual JSON config, the 4 available MCP tools (check_doc, scan_docs, get_docs, register_claims), example agent workflows, and how to verify the integration with docalign status."
 category: guide
 read_when:
   - You want AI coding agents to have access to documentation health
@@ -33,10 +33,16 @@ This automatically:
 4. Triggers the interactive setup wizard on next Claude Code launch
 
 <!-- docalign:semantic id="sem-9db76114419e7312" -->
-After setup, your AI agent has 10 documentation tools available.
+After setup, your AI agent has 4 documentation tools available.
 
 ## Manual setup
-Add to your MCP config (`.claude/mcp.json` for Claude Code, or equivalent for other clients):
+Register the MCP server globally via the CLI:
+
+```bash
+claude mcp add --scope user docalign -- npx docalign mcp
+```
+
+Or add to your project-level `.mcp.json` (or equivalent for other clients):
 
 ```json
 {
@@ -97,6 +103,6 @@ Returns a 0-100 health score, verified vs drifted counts, and the worst files.
 ## Verify it's working
 
 Run `docalign status` to check MCP integration status. Or ask your AI agent to run `scan_docs` — if it returns a health score, the integration is working.
-## All 10 tools
+## All 4 tools
 
 See [MCP Tools Reference](../reference/mcp-tools.md) for complete documentation of every tool with parameters and return values.
