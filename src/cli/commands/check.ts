@@ -54,22 +54,43 @@ export async function runCheck(
         };
       });
 
-    const durationSec = result.durationMs / 1000;
-    const output = formatCheckResults(
-      filePath,
-      result.claims.length,
-      durationSec,
-      verified,
-      drifted,
-      findings,
-    );
+    if (options.json) {
+      write(JSON.stringify({
+        results: visibleResults.map((r) => ({
+          claim_id: r.claim_id,
+          verdict: r.verdict,
+          status: r.verdict,
+          severity: r.severity ?? 'low',
+          reasoning: r.reasoning ?? '',
+          evidence_files: r.evidence_files ?? [],
+        })),
+        verified,
+        drifted,
+        totalClaims: result.claims.length,
+        durationMs: result.durationMs,
+      }));
+    } else {
+      const durationSec = result.durationMs / 1000;
+      const output = formatCheckResults(
+        filePath,
+        result.claims.length,
+        durationSec,
+        verified,
+        drifted,
+        findings,
+      );
 
-    write(output);
+      write(output);
+    }
 
     return drifted > 0 ? 1 : 0;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    write(`Error: ${message}`);
+    if (options.json) {
+      write(JSON.stringify({ error: message, results: [] }));
+    } else {
+      write(`Error: ${message}`);
+    }
     return 2;
   }
 }
