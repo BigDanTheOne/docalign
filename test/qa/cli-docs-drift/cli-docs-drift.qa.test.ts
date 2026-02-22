@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join } from 'path';
 
 const ROOT = join(__dirname, '..', '..', '..');
@@ -20,7 +20,6 @@ function readDoc(): string {
 
 function getImplementedCommands(): string[] {
   // Each .ts file in src/cli/commands/ is a command (minus extension)
-  const { readdirSync } = require('fs');
   return readdirSync(COMMANDS_DIR)
     .filter((f: string) => f.endsWith('.ts'))
     .map((f: string) => f.replace('.ts', ''))
