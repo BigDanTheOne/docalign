@@ -34,7 +34,7 @@ doc_patterns:
     - 'documentation/**/*.md'
 - 'wiki/**/*.md'
 ```
-<!-- /docalign:skip -->
+<!-- docalign:end-skip -->
 
 ## False positives on file paths
 
@@ -49,7 +49,7 @@ suppress:
   - file: 'docs/examples.md'
     claim_type: path_reference
 ```
-<!-- /docalign:skip -->
+<!-- docalign:end-skip -->
 
 ## URL checks timing out
 
@@ -66,7 +66,7 @@ url_check:
   exclude_domains:
 - 'slow-site.example.com'
 ```
-<!-- /docalign:skip -->
+<!-- docalign:end-skip -->
 
 To disable URL checking entirely:
 
@@ -75,7 +75,7 @@ To disable URL checking entirely:
 url_check:
   enabled: false
 ```
-<!-- /docalign:skip -->
+<!-- docalign:end-skip -->
 
 ## Too many findings
 
@@ -88,7 +88,7 @@ url_check:
    verification:
 min_severity: medium
 ```
-<!-- /docalign:skip -->
+<!-- docalign:end-skip -->
 
 2. Suppress entire files or claim types:
 <!-- docalign:skip reason="user_instruction" description="YAML example showing how to suppress findings for legacy docs and url_reference claim type" -->
@@ -97,7 +97,7 @@ min_severity: medium
 - file: 'docs/legacy/**'
      - claim_type: url_reference
    ```
-<!-- /docalign:skip -->
+<!-- docalign:end-skip -->
 
 3. Use `docalign check <file>` to fix one file at a time instead of scanning everything.
 
@@ -114,7 +114,7 @@ min_severity: medium
 claude   # Follow the authentication prompts
 docalign extract
 ```
-<!-- /docalign:skip -->
+<!-- docalign:end-skip -->
 ## Config file not being picked up
 
 **Symptom:** Changes to `.docalign.yml` don't take effect.
@@ -131,8 +131,8 @@ docalign extract
 
 **Fix:**
 1. Run `docalign status` to check MCP integration status
-2. Verify `.claude/mcp.json` (or equivalent) has the correct entry:
-<!-- docalign:skip reason="user_instruction" description="JSON example showing the correct .claude/mcp.json entry for the docalign MCP server" -->
+2. Verify your MCP client configuration has the correct entry (run `docalign init` to configure automatically):
+<!-- docalign:skip reason="user_instruction" description="JSON example showing the correct MCP config entry for the docalign MCP server" -->
 ```json
    {
      "mcpServers": {
@@ -143,7 +143,7 @@ docalign extract
      }
    }
 ```
-<!-- /docalign:skip -->
+<!-- docalign:end-skip -->
 3. Restart your MCP client (Claude Code, Cursor, etc.)
 4. Try `docalign init` to reconfigure automatically
 
@@ -171,7 +171,7 @@ suppress:
   - package: 'react'
     file: 'docs/packages/legacy-app.md'
 ```
-<!-- /docalign:skip -->
+<!-- docalign:end-skip -->
 ## Getting Help
 
 - Run `docalign help` for command usage

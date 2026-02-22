@@ -31,30 +31,32 @@ suppress:
   - package: '@internal/private-pkg'
   - pattern: 'internal-.*-service'
 ```
+<!-- docalign:end-skip -->
 
 ## Suppress by file
-<!-- /docalign:skip -->
+
 Ignore all findings in a file or file pattern:
 
+<!-- docalign:skip reason="user_instruction" description="YAML examples showing file-based suppress rules with exact paths and glob patterns" -->
 ```yaml
 suppress:
   - file: 'docs/legacy.md'           # Exact file
-<!-- docalign:skip reason="user_instruction" description="YAML examples showing file-based suppress rules with exact paths and glob patterns" -->
   - file: 'docs/archive/**'           # Glob pattern
   - file: 'docs/examples/*.md'        # All examples
 ```
+<!-- docalign:end-skip -->
 
 ## Suppress by claim type
 
 Ignore all findings of a specific type:
-<!-- /docalign:skip -->
 
+<!-- docalign:skip reason="user_instruction" description="YAML examples showing claim_type-based suppress rules for url_reference and environment" -->
 ```yaml
 suppress:
   - claim_type: url_reference         # Skip dead link checks
   - claim_type: environment           # Skip env var checks
-<!-- docalign:skip reason="user_instruction" description="YAML examples showing claim_type-based suppress rules for url_reference and environment" -->
 ```
+<!-- docalign:end-skip -->
 
 <!-- docalign:semantic id="sem-c9f63433443bd8c2" claim="Valid claim types are path_reference, dependency_version, command, api_route, code_example, behavior, architecture, config, convention, environment, url_reference" -->
 Valid claim types: `path_reference`, `dependency_version`, `command`, `api_route`, `code_example`, `behavior`, `architecture`, `config`, `convention`, `environment`, `url_reference`.
@@ -62,73 +64,72 @@ Valid claim types: `path_reference`, `dependency_version`, `command`, `api_route
 ## Suppress by package
 
 Ignore findings about a specific package:
+
+<!-- docalign:skip reason="user_instruction" description="YAML examples showing package-based suppress rules" -->
 ```yaml
 suppress:
-<!-- /docalign:skip -->
   - package: '@internal/private-pkg'
   - package: 'legacy-lib'
 ```
+<!-- docalign:end-skip -->
 
 ## Suppress by pattern
-<!-- docalign:skip reason="user_instruction" description="YAML examples showing package-based suppress rules" -->
 
 Ignore findings matching a regex pattern:
 
+<!-- docalign:skip reason="user_instruction" description="YAML examples showing pattern-based suppress rules using regex against claim text" -->
 ```yaml
 suppress:
   - pattern: 'internal-.*-service'    # Regex against claim text
-<!-- /docalign:skip -->
   - pattern: 'localhost:\d+'          # Local URLs
 ```
+<!-- docalign:end-skip -->
 
 ## Combine rules
 
-<!-- docalign:skip reason="user_instruction" description="YAML examples showing pattern-based suppress rules using regex against claim text" -->
 <!-- docalign:semantic id="sem-035b93f7d0cb5fe3" claim="Multiple fields in one rule are AND-combined" -->
 Multiple fields in one rule are AND-combined:
 
+<!-- docalign:skip reason="user_instruction" description="YAML examples showing multi-field suppress rules with AND semantics" -->
 ```yaml
 suppress:
   # Ignore path claims only in examples docs
   - file: 'docs/examples.md'
-<!-- /docalign:skip -->
     claim_type: path_reference
 
   # Ignore express version drift in legacy docs
   - file: 'docs/legacy/**'
     package: 'express'
 ```
-<!-- docalign:skip reason="user_instruction" description="YAML examples showing multi-field suppress rules with AND semantics" -->
+<!-- docalign:end-skip -->
 
 ## Alternatively: disable claim types
 
 If you never want a claim type checked across the entire repo, disable it instead of suppressing:
 
+<!-- docalign:skip reason="user_instruction" description="YAML example showing how to set claim_types to false to disable extraction entirely" -->
 ```yaml
 claim_types:
-url_reference: false    # Never extract or verify URLs
+  url_reference: false    # Never extract or verify URLs
   environment: false      # Never check env vars
 ```
+<!-- docalign:end-skip -->
 
 <!-- docalign:semantic id="sem-d2d3bfa550793051" claim="Disabling a claim type is more efficient than suppressing -- the claims aren't extracted at all" -->
-<!-- /docalign:skip -->
 This is more efficient than suppressing -- the claims aren't extracted at all.
 
 ## Raise the severity floor
 
 To see only important issues without suppressing:
 
-<!-- docalign:skip reason="user_instruction" description="YAML example showing how to set claim_types to false to disable extraction entirely" -->
+<!-- docalign:skip reason="user_instruction" description="YAML example showing min_severity configuration to filter by severity level" -->
 ```yaml
 verification:
   min_severity: medium    # Only report medium and high severity
 ```
+<!-- docalign:end-skip -->
 
 ## Limits
 
 <!-- docalign:semantic id="sem-7aa983200d9271e3" claim="Maximum 200 suppress rules per config file" -->
 Maximum 200 suppress rules per config file.
-<!-- /docalign:skip -->
-
-<!-- /docalign:skip -->
-<!-- docalign:skip reason="user_instruction" description="YAML example showing min_severity configuration to filter by severity level" -->
