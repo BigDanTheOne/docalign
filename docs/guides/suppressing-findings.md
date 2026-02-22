@@ -17,7 +17,18 @@ docalign:
 
 # Suppressing Findings
 
-Not every finding is actionable. Suppress rules let you ignore specific files, patterns, claim types, or packages.
+Not every finding is actionable. Suppress rules let you ignore specific claims, files, claim types, or patterns.
+
+## Suppression scopes
+
+DocAlign supports four suppression scopes, evaluated in order of specificity (most specific first):
+
+1. **claim** — Suppress a specific claim by ID (highest priority)
+2. **file** — Suppress all claims in a specific doc file
+3. **claim_type** — Suppress all claims of a specific type
+4. **pattern** — Suppress claims matching a regex pattern (lowest priority)
+
+This evaluation order means a claim-level rule always takes priority over a broader file or pattern rule.
 
 ## Add suppress rules
 
@@ -123,6 +134,12 @@ To see only important issues without suppressing:
 verification:
   min_severity: medium    # Only report medium and high severity
 ```
+
+## Expiration and revocation
+
+Suppression rules support an `expires_at` timestamp. Once the date passes, the suppression is automatically ignored and findings reappear. Rules with no `expires_at` never expire.
+
+Rules can also be revoked. Setting `revoked: true` permanently disables a suppression without deleting it, preserving the audit trail. Revoked rules are skipped during evaluation.
 
 ## Limits
 
