@@ -5,6 +5,7 @@ import Redis from 'ioredis';
 import { Queue } from 'bullmq';
 import { createTriggerService } from '../../../src/layers/L4-triggers/trigger-service';
 import type { Claim } from '../../../src/shared/types';
+import { POSTGRES_AVAILABLE, REDIS_AVAILABLE } from '../../infra-guard';
 
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://docalign:docalign@localhost:5432/docalign_dev';
@@ -33,7 +34,7 @@ function makeClaim(overrides: Partial<Claim> & { id: string }): Claim {
   };
 }
 
-describe('TriggerService', () => {
+describe.skipIf(!POSTGRES_AVAILABLE || !REDIS_AVAILABLE)('TriggerService', () => {
   let pool: Pool;
   let redis: Redis;
   let queue: Queue;

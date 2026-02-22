@@ -7,6 +7,7 @@ import type { PRScanDependencies } from '../../../src/layers/L4-triggers/pr-scan
 import { createScanRun, getScanRun } from '../../../src/layers/L4-triggers/scan-store';
 import type { VerificationResult } from '../../../src/shared/types';
 import { LearningServiceStub } from '../../../src/layers/L7-learning';
+import { POSTGRES_AVAILABLE } from '../../infra-guard';
 
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://docalign:docalign@localhost:5432/docalign_dev';
@@ -24,7 +25,7 @@ function makeFakeJob(data: Record<string, unknown>) {
   } as any;
 }
 
-describe('processPRScan', () => {
+describe.skipIf(!POSTGRES_AVAILABLE)('processPRScan', () => {
   let pool: Pool;
   let redis: Redis;
   let repoId: string;

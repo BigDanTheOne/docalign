@@ -3,11 +3,12 @@ import { Pool } from 'pg';
 import { ClaimStore } from '../../../src/layers/L1-claim-extractor/claim-store';
 import { extractSyntactic, discoverDocFiles } from '../../../src/layers/L1-claim-extractor/syntactic';
 import { randomUUID } from 'crypto';
+import { POSTGRES_AVAILABLE } from '../../infra-guard';
 
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://docalign:docalign@localhost:5432/docalign_dev';
 
-describe('extractSyntactic', () => {
+describe.skipIf(!POSTGRES_AVAILABLE)('extractSyntactic', () => {
   let pool: Pool;
   let claimStore: ClaimStore;
   let repoId: string;

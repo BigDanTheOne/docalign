@@ -25,7 +25,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:qa": "vitest run test/qa/",
+    "test:qa": "vitest run test/qa/ && vitest run --config vitest.qa.config.ts test/qa/validate-existing/",
     "test:corpus": "vitest run test/corpus/",
     "test:corpus:fp": "vitest run test/corpus/track1-fp.test.ts",
     "test:corpus:fn": "vitest run test/corpus/track2-fn.test.ts",

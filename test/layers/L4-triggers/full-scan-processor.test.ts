@@ -3,6 +3,7 @@ import { Pool } from 'pg';
 import { randomUUID } from 'crypto';
 import { processFullScan } from '../../../src/layers/L4-triggers/full-scan-processor';
 import { createScanRun, getScanRun } from '../../../src/layers/L4-triggers/scan-store';
+import { POSTGRES_AVAILABLE } from '../../infra-guard';
 
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://docalign:docalign@localhost:5432/docalign_dev';
@@ -19,7 +20,7 @@ function makeFakeJob(data: Record<string, unknown>) {
   } as any;
 }
 
-describe('processFullScan', () => {
+describe.skipIf(!POSTGRES_AVAILABLE)('processFullScan', () => {
   let pool: Pool;
   let repoId: string;
 

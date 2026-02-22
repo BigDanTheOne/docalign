@@ -21,12 +21,13 @@ import type { PRScanDependencies } from '../../src/layers/L4-triggers/pr-scan-pr
 import type { Job } from 'bullmq';
 import type { PRScanJobData } from '../../src/layers/L4-triggers/trigger-service';
 import type { Finding } from '../../src/shared/types';
+import { POSTGRES_AVAILABLE, REDIS_AVAILABLE } from '../infra-guard';
 
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://docalign:docalign@localhost:5432/docalign_dev';
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
-describe('E4-13: Vertical Slice Integration Tests', () => {
+describe.skipIf(!POSTGRES_AVAILABLE || !REDIS_AVAILABLE)('E4-13: Vertical Slice Integration Tests', () => {
   let pool: Pool;
   let redis: Redis;
   let queue: Queue;

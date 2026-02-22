@@ -3,6 +3,7 @@ import type { StorageAdapter } from '../../src/shared/storage-adapter';
 import { SqliteAdapter } from '../../src/storage/sqlite-adapter';
 import { PostgresAdapter } from '../../src/shared/pg-adapter';
 import { createDatabaseClient, type DatabaseClient } from '../../src/shared/db';
+import { POSTGRES_AVAILABLE } from '../infra-guard';
 
 const DB_URL = 'postgres://docalign:docalign@localhost:5432/docalign_dev';
 
@@ -37,7 +38,7 @@ async function createPostgresContext(): Promise<TestContext> {
   };
 }
 
-describe('Storage Parity Tests', () => {
+describe.skipIf(!POSTGRES_AVAILABLE)('Storage Parity Tests', () => {
   beforeAll(async () => {
     pgDb = createDatabaseClient(DB_URL);
   });

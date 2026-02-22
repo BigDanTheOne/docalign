@@ -15,6 +15,7 @@ import { isClaimSuppressed, getActiveRules } from '../../../src/layers/L7-learni
 import { recordCoChanges, getCoChangeBoost } from '../../../src/layers/L7-learning/co-change';
 import { getEffectiveConfidence } from '../../../src/layers/L7-learning/confidence';
 import type { Claim, VerificationResult } from '../../../src/shared/types';
+import { POSTGRES_AVAILABLE } from '../../infra-guard';
 
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://docalign:docalign@localhost:5432/docalign_dev';
@@ -114,7 +115,7 @@ describe('isValidQuickPickReason', () => {
 // DB-backed tests: E6-1 through E6-3
 // ================================================================
 
-const describeDbBacked = process.env.CI && !process.env.DATABASE_URL ? describe.skip : describe;
+const describeDbBacked = !POSTGRES_AVAILABLE || (process.env.CI && !process.env.DATABASE_URL) ? describe.skip : describe;
 
 describeDbBacked('L7 Learning Service (DB-backed)', () => {
   let pool: Pool;

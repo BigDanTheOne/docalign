@@ -2,11 +2,12 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { Pool } from 'pg';
 import { randomUUID } from 'crypto';
 import { getUndocumentedEntities } from '../../../src/layers/L5-reporter/coverage';
+import { POSTGRES_AVAILABLE } from '../../infra-guard';
 
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://docalign:docalign@localhost:5432/docalign_dev';
 
-describe('getUndocumentedEntities', () => {
+describe.skipIf(!POSTGRES_AVAILABLE)('getUndocumentedEntities', () => {
   let pool: Pool;
   let repoId: string;
 

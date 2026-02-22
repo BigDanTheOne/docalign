@@ -3,11 +3,12 @@ import { Pool } from 'pg';
 import { ClaimStore, rawToClaim } from '../../../src/layers/L1-claim-extractor/claim-store';
 import type { RawExtraction } from '../../../src/shared/types';
 import { randomUUID } from 'crypto';
+import { POSTGRES_AVAILABLE } from '../../infra-guard';
 
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://docalign:docalign@localhost:5432/docalign_dev';
 
-describe('ClaimStore', () => {
+describe.skipIf(!POSTGRES_AVAILABLE)('ClaimStore', () => {
   let pool: Pool;
   let store: ClaimStore;
   let repoId: string;
