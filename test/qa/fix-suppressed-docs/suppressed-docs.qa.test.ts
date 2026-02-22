@@ -61,7 +61,7 @@ describe('docs/guides/mcp-integration.md', () => {
       // If mentioned, should be in a "remote" or "hosted" context, not as a local tool
       if (doc.includes(tool)) {
         // Acceptable if in a remote/hosted section; fail if presented as a local tool
-        const localSection = doc.toLowerCase().indexOf('local');
+        const _localSection = doc.toLowerCase().indexOf('local');
         const toolPos = doc.indexOf(tool);
         // Just verify it's not listed as a local tool — crude but functional
         const surroundingText = doc.slice(Math.max(0, toolPos - 200), toolPos + 200).toLowerCase();
@@ -117,8 +117,8 @@ describe('docs/guides/suppressing-findings.md', () => {
   it('should document the evaluation order: claim > file > claim_type > pattern', () => {
     // The code evaluates in this order (Level 1-4 in suppression.ts)
     const docLower = doc.toLowerCase();
-    const claimPos = docLower.indexOf('claim');
-    const filePos = docLower.indexOf('file');
+    const _claimPos = docLower.indexOf('claim');
+    const _filePos = docLower.indexOf('file');
     // Just verify the order concept is mentioned
     expect(docLower).toMatch(/order|priority|specificity|hierarchy|level/);
   });
