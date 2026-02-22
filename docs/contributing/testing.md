@@ -34,9 +34,9 @@ npm run typecheck      # TypeScript type checking (run before tests)
 ## Test Structure
 Tests mirror the `src/` directory:
 
+<!-- docalign:skip reason="sample_output" description="Directory tree showing test folder layout — structure diagram, not a factual claim about individual files" -->
 ```
 test/
-<!-- docalign:skip reason="sample_output" description="Directory tree showing test folder layout — structure diagram, not a factual claim about individual files" -->
   layers/
     L0-codebase-index/    # Index building, AST parsing
     L1-claim-extractor/   # Extraction tests per claim type
@@ -50,18 +50,21 @@ test/
   config/                 # Config loading and validation tests
   shared/                 # Utility tests
 ```
-
 <!-- /docalign:skip -->
 ## Test Fixtures
+
 ### makeClaim()
 
 <!-- docalign:semantic id="sem-52f7249e08945356" claim="makeClaim() creates a test Claim object with sensible defaults" -->
-Creates a test `Claim` object with sensible defaults. Override only what matters for your test:
+Creates a test `Claim` object with sensible defaults. Override only what matters for your test. This helper is defined locally in each test file, not imported from a shared fixtures module.
 
+<!-- docalign:skip reason="tutorial_example" description="Illustrative usage example for makeClaim() showing local helper definition pattern" -->
 ```typescript
-import { makeClaim } from '../fixtures';
+// Local helper — defined in the test file, not from a shared module
+function makeClaim(overrides: Partial<Claim> = {}): Claim {
+  return { claim_type: 'path_reference', value: '', source_file: '', line_number: 1, ...overrides };
+}
 
-<!-- docalign:skip reason="tutorial_example" description="Illustrative usage example for makeClaim() with placeholder field values" -->
 const claim = makeClaim({
   claim_type: 'path_reference',
   value: 'src/auth.ts',
@@ -69,29 +72,29 @@ const claim = makeClaim({
   line_number: 15,
 });
 ```
+<!-- /docalign:skip -->
 
 ### makeMockIndex()
-<!-- /docalign:skip -->
+
 <!-- docalign:semantic id="sem-87b235d4c73676c3" claim="makeMockIndex() creates a mock CodebaseIndex that verifiers use to check claims" -->
-Creates a mock `CodebaseIndex` that verifiers use to check claims:
+Creates a mock `CodebaseIndex` that verifiers use to check claims. Like `makeClaim()`, this is a local helper defined in the test file.
 
+<!-- docalign:skip reason="tutorial_example" description="Illustrative usage example for makeMockIndex() with placeholder field values" -->
 ```typescript
-import { makeMockIndex } from '../fixtures';
-
+// Local helper — defined in the test file, not from a shared module
 const index = makeMockIndex({
   files: ['src/auth.ts', 'src/index.ts'],
-<!-- docalign:skip reason="tutorial_example" description="Illustrative usage example for makeMockIndex() with placeholder field values" -->
   packages: { express: '^4.18.0', react: '^18.2.0' },
   scripts: { build: 'tsc', test: 'vitest', lint: 'eslint .' },
   engines: { node: '>=18.0.0' },
   license: 'MIT',
 });
 ```
+<!-- /docalign:skip -->
 
 <!-- docalign:semantic id="sem-c186b1e2ccdb63ff" claim="makeMockIndex() available fields: files, packages, scripts, engines, license, headings, envVars, exports" -->
 **Available fields:**
 - `files`: Array of file paths that "exist" in the mock repo
-<!-- /docalign:skip -->
 - `packages`: Object of package name → version string
 - `scripts`: Object of script name → command
 - `engines`: Object of engine → version constraint
@@ -108,13 +111,13 @@ Not a test fixture -- this is the production helper used to build `VerificationR
 
 Extraction tests verify that regex patterns correctly identify claims in documentation lines:
 
+<!-- docalign:skip reason="tutorial_example" description="Illustrative extraction test example using hypothetical extractPathReferences function" -->
 ```typescript
 describe('extractPathReferences', () => {
-it('extracts inline file paths', () => {
+  it('extracts inline file paths', () => {
     const results = extractPathReferences('See `src/auth.ts` for details', 1, ctx);
     expect(results).toHaveLength(1);
     expect(results[0]).toMatchObject({
-<!-- docalign:skip reason="tutorial_example" description="Illustrative extraction test example using hypothetical extractPathReferences function" -->
       claim_type: 'path_reference',
       value: 'src/auth.ts',
       line_number: 1,
@@ -132,18 +135,19 @@ it('extracts inline file paths', () => {
   });
 });
 ```
+<!-- /docalign:skip -->
 
 **Testing principles for extractors:**
 - Test positive cases (lines that should match)
 - Test negative cases (lines that should not match)
 - Test edge cases (multiple matches, unusual formatting, embedded in markdown)
-<!-- /docalign:skip -->
 - Test that claim_type, value, and line_number are correct
 
 ## Writing Verification Tests
 
 Verification tests check that claims are correctly verified against the codebase:
 
+<!-- docalign:skip reason="tutorial_example" description="Illustrative verification test example using hypothetical verifyPathReference function and local helpers" -->
 ```typescript
 describe('verifyPathReference', () => {
   it('verifies existing file', () => {
@@ -152,9 +156,9 @@ describe('verifyPathReference', () => {
 
     const result = verifyPathReference(claim, index);
     expect(result?.verdict).toBe('verified');
-});
-it('drifts for missing file', () => {
-<!-- docalign:skip reason="tutorial_example" description="Illustrative verification test example using hypothetical verifyPathReference function and simplified makeMockIndex fields" -->
+  });
+
+  it('drifts for missing file', () => {
     const claim = makeClaim({ claim_type: 'path_reference', value: 'src/missing.ts' });
     const index = makeMockIndex({ files: ['src/auth.ts'] });
 
@@ -172,6 +176,7 @@ it('drifts for missing file', () => {
   });
 });
 ```
+<!-- /docalign:skip -->
 
 **Testing principles for verifiers:**
 - Test the `verified` path (claim matches code)
@@ -181,10 +186,10 @@ it('drifts for missing file', () => {
 - Test edge cases (empty index, null values)
 
 ## Config Tests
-<!-- /docalign:skip -->
 
 Config tests verify YAML parsing, default merging, and validation:
 
+<!-- docalign:skip reason="tutorial_example" description="Illustrative config test example using hypothetical parseConfig function and placeholder values" -->
 ```typescript
 describe('parseConfig', () => {
   it('returns defaults for empty config', () => {
@@ -194,11 +199,11 @@ describe('parseConfig', () => {
 
   it('validates numeric ranges', () => {
     const config = parseConfig('verification:\n  max_claims_per_pr: 999');
-// Should clamp to 200 or warn
+    // Should clamp to 200 or warn
+  });
 });
-});
-<!-- docalign:skip reason="tutorial_example" description="Illustrative config test example using hypothetical parseConfig function and placeholder values" -->
 ```
+<!-- /docalign:skip -->
 
 ## Test Coverage
 
@@ -210,7 +215,6 @@ Coverage targets vary by layer:
 
 Run coverage report:
 
-<!-- /docalign:skip -->
 ```bash
-npm run test -- --coverage
+npx vitest run --coverage
 ```

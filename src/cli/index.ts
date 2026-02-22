@@ -83,7 +83,7 @@ export async function run(
       return runCheck(pipeline, args[0], {
         section: options.section,
         deep: !!flags.deep,
-        json: !!flags.json,
+        json: !!flags.json || options.format === 'json',
       }, write);
 
     case 'scan':
