@@ -27,7 +27,7 @@ describe('docs/contributing/testing.md — drift checks', () => {
     );
     const parsed = JSON.parse(result);
     const drifted = (parsed.results ?? parsed).filter(
-      (r: any) => r.status === 'drifted' || r.verdict === 'drifted'
+      (r: Record<string, string>) => r.status === 'drifted' || r.verdict === 'drifted'
     );
     expect(drifted).toHaveLength(0);
   });
@@ -36,7 +36,7 @@ describe('docs/contributing/testing.md — drift checks', () => {
     // The doc should NOT claim these are importable from a shared fixtures module
     // They are locally defined in test files
     const sharedFixtureImportPattern = /import\s*\{[^}]*makeClaim[^}]*\}\s*from\s*['"][^'"]*fixtures['"]/;
-    const sharedMockIndexImportPattern = /import\s*\{[^}]*makeMockIndex[^}]*\}\s*from\s*['"][^'"]*fixtures['"]/;
+    const _sharedMockIndexImportPattern = /import\s*\{[^}]*makeMockIndex[^}]*\}\s*from\s*['"][^'"]*fixtures['"]/;
 
     // If the doc shows import examples, they should not suggest shared fixture paths
     // OR the doc should clarify these are locally defined
