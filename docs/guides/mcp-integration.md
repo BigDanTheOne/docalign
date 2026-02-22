@@ -33,7 +33,7 @@ This automatically:
 4. Triggers the interactive setup wizard on next Claude Code launch
 
 <!-- docalign:semantic id="sem-9db76114419e7312" -->
-After setup, your AI agent has 10 documentation tools available.
+After setup, your AI agent has 4 local documentation tools available.
 
 ## Manual setup
 Add to your MCP config (`.claude/mcp.json` for Claude Code, or equivalent for other clients):
@@ -49,21 +49,18 @@ Add to your MCP config (`.claude/mcp.json` for Claude Code, or equivalent for ot
 }
 ```
 
-## What agents can do
+The local MCP server uses stdio transport and communicates over stdin/stdout.
 
-With MCP integration, your AI agent can:
-
-### Find docs affected by code changes
-
-After changing `src/auth/middleware.ts`:
-
-```
-Use get_docs with code_file="src/auth/middleware.ts"
+You can also start the MCP server manually:
+```bash
+docalign mcp --repo <path>
 ```
 
-Returns all doc claims that reference that file, showing which docs might need updating.
+## Local tools
 
-### Check if documentation is accurate
+The local MCP server provides 4 tools: `check_doc`, `scan_docs`, `get_docs`, and `register_claims`.
+
+### check_doc — Check if documentation is accurate
 
 ```
 Use check_doc with file="README.md" for a quick check
@@ -72,20 +69,7 @@ Use check_doc with file="README.md", deep=true for a thorough audit
 
 `check_doc` runs syntactic checks. With `deep=true` it also adds semantic claims and shows unchecked sections.
 
-### Search documentation by topic
-
-```
-Use get_docs with query="authentication"
-```
-
-<!-- docalign:semantic id="sem-2d5a71308583e52c" status="drifted" -->
-Returns doc sections about authentication ranked by relevance, with verification status.
-
-### Fix stale documentation
-
-When `check_doc` or `scan_docs` reports drift, Claude Code can fix the documentation directly: it reads the drift report, checks the referenced code files, and edits the documentation to match reality. No separate fix command needed.
-
-### Get a quality overview
+### scan_docs — Get a quality overview
 
 ```
 Use scan_docs
@@ -94,9 +78,32 @@ Use scan_docs
 <!-- docalign:semantic id="sem-63f2b4167bcf748c" status="verified" -->
 Returns a 0-100 health score, verified vs drifted counts, and the worst files.
 
+### get_docs — Find docs by topic or code file
+
+```
+Use get_docs with query="authentication"
+Use get_docs with code_file="src/auth/middleware.ts"
+```
+
+<!-- docalign:semantic id="sem-2d5a71308583e52c" status="drifted" -->
+Returns doc sections ranked by relevance, with verification status. Use `code_file` to find all docs that reference a specific source file.
+
+### register_claims — Persist semantic claims
+
+```
+Use register_claims with claims=[{source_file: "README.md", line_number: 10, ...}]
+```
+
+Saves semantic claims discovered during analysis to `.docalign/semantic/` for future verification.
+
+### Fix stale documentation
+
+When `check_doc` or `scan_docs` reports drift, Claude Code can fix the documentation directly: it reads the drift report, checks the referenced code files, and edits the documentation to match reality. No separate fix command needed.
+
+## Remote-only tools (hosted server mode)
+
+The hosted DocAlign server mode provides additional tools (`get_docs_for_file`, `get_doc_health`, `list_stale_docs`, `report_drift`) that require a PostgreSQL database. These remote tools are not available locally — only the 4 tools above are available in local/CLI mode.
+
 ## Verify it's working
 
 Run `docalign status` to check MCP integration status. Or ask your AI agent to run `scan_docs` — if it returns a health score, the integration is working.
-## All 10 tools
-
-See [MCP Tools Reference](../reference/mcp-tools.md) for complete documentation of every tool with parameters and return values.
