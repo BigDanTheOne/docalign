@@ -10,7 +10,7 @@
  */
 
 import { runCheck } from './commands/check';
-import { runScan } from './commands/scan';
+import { runScan, isValidSeverity } from './commands/scan';
 import { runSearch } from './commands/search';
 import { runInit } from './commands/init';
 import { runStatus } from './commands/status';
@@ -86,9 +86,16 @@ export async function run(
         json: !!flags.json,
       }, write);
 
-    case 'scan':
+    case 'scan': {
+      const minSev = options['min-severity'];
+      if (minSev && !isValidSeverity(minSev)) {
+        write(`Error: Invalid --min-severity value "${minSev}". Must be one of: high, medium, low`);
+        return 2;
+      }
       return runScan(pipeline, write, undefined, exclude, !!flags.json,
-        options.max ? parseInt(options.max, 10) : undefined, options.format);
+        options.max ? parseInt(options.max, 10) : undefined, options.format,
+        minSev && isValidSeverity(minSev) ? minSev : undefined);
+    }
 
     case 'search':
       return runSearch(pipeline, args[0], {
@@ -144,7 +151,7 @@ export async function run(
       write('  --format=github-pr      Output scan results as GitHub PR comment markdown');
       write('  --dry-run               Show what would be extracted (extract command)');
       write('  --force                 Re-extract all sections (extract command)');
-      write('  --min-severity=LEVEL    Set minimum severity (configure command)');
+      write('  --min-severity=LEVEL    Filter findings by minimum severity: high, medium, low (scan, configure)');
       write('  --reset                 Reset config to defaults (configure command)');
       write('  --output=PATH           Output path for viz HTML (default: .docalign/viz.html)');
       write('  --no-open               Do not auto-open viz in browser');

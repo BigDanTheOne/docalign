@@ -53,15 +53,21 @@ runs:
       env:
         ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
         DOCALIGN_EXCLUDE: ${{ inputs.exclude }}
+        DOCALIGN_MIN_SEVERITY: ${{ inputs.min-severity }}
       run: |
         EXCLUDE_ARG=""
         if [ -n "$DOCALIGN_EXCLUDE" ]; then
           EXCLUDE_ARG="--exclude=$DOCALIGN_EXCLUDE"
         fi
 
+        MIN_SEV_ARG=""
+        if [ -n "$DOCALIGN_MIN_SEVERITY" ]; then
+          MIN_SEV_ARG="--min-severity=$DOCALIGN_MIN_SEVERITY"
+        fi
+
         # Run scan with JSON output, capture exit code
         set +e
-        OUTPUT=$(docalign scan $EXCLUDE_ARG --json 2>&1)
+        OUTPUT=$(docalign scan ${EXCLUDE_ARG:+"$EXCLUDE_ARG"} ${MIN_SEV_ARG:+"$MIN_SEV_ARG"} --json 2>&1)
         EXIT_CODE=$?
         set -e
 
