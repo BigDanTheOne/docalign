@@ -29,7 +29,7 @@ These are the claims that go stale — and that no regex can catch.
 
 **On every commit**, a Claude Code **PostToolUse hook** fires when Claude runs `git commit`. It reads which source files changed and tells Claude to invoke the `/docalign` skill. The skill then reverse-looks up which stored claims reference those files, re-verifies only those claims against the updated code, and reports any mismatches.
 
-Change `src/auth.ts` and only auth-related docs are re-checked — not your entire doc tree. Extraction runs once; verification runs on every commit, scoped to what changed.
+Change `src/middleware/auth.ts` and only auth-related docs are re-checked — not your entire doc tree. Extraction runs once; verification runs on every commit, scoped to what changed.
 
 ## What It Finds
 
@@ -37,7 +37,7 @@ Change `src/auth.ts` and only auth-related docs are re-checked — not your enti
 
 | Category | Example |
 |----------|---------|
-| File paths | `src/auth.ts` referenced but doesn't exist |
+| File paths | `src/middleware/auth.ts` referenced but doesn't exist |
 | Dependencies | README says `express 4.17`, package.json has `4.18` |
 | CLI commands | `npm run deploy` but no `deploy` script defined |
 | API routes | `GET /api/users` not found in route handlers |
@@ -125,7 +125,7 @@ Works with zero configuration. To customize, create `.docalign.yml`:
 ```yaml
 doc_patterns:
   include: ['README.md', 'docs/**/*.md']
-  exclude: ['docs/archive/**']
+  exclude: ['**/CHANGELOG.md']
 
 claim_types:
   url_reference: false   # Skip dead link checks

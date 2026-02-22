@@ -40,5 +40,5 @@ docalign init                        # Set up MCP for Claude Code
 
 ## Source
 
-- Repository: https://github.com/anthropics/docalign
+- Repository: https://github.com/BigDanTheOne/docalign
 - License: MIT
