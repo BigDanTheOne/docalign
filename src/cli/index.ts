@@ -99,7 +99,7 @@ export async function run(
       }, write);
 
     case 'status':
-      return runStatus(write);
+      return runStatus(pipeline, write, !!flags.json);
 
     case 'viz': {
       const vizExclude = options.exclude ? options.exclude.split(',').map((s) => s.trim()) : [];
