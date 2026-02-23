@@ -233,6 +233,31 @@ export function registerLocalTools(
     },
   );
 
+  // Tool 2b: scan_repo — Force a fresh full-repo scan with exclusions
+  s.tool(
+    'scan_repo',
+    'Trigger a fresh repo-wide documentation scan with optional exclusions.',
+    {
+      force: z.boolean().optional().describe('Force fresh scan bypassing cache'),
+      exclude: z.array(z.string()).optional().describe('File paths or globs to exclude'),
+    },
+    async ({ force, exclude }: { force?: boolean; exclude?: string[] }) => {
+      try {
+        const scanResult = await pipeline.scanRepo(undefined, exclude);
+        const resp = formatHealthResponse(scanResult);
+        const data = JSON.parse(resp.content[0].text);
+        data.force = force ?? false;
+        data.excluded = exclude ?? [];
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (err) {
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: err instanceof Error ? err.message : String(err) }) }],
+          isError: true,
+        };
+      }
+    },
+  );
+
   // Tool 3: get_docs — Search documentation or reverse-lookup by code file
   const searchIndex = new DocSearchIndex();
   let searchIndexBuilt = false;
