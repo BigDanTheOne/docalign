@@ -7,7 +7,7 @@ const ROOT = resolve(__dirname, '..', '..', '..');
 const CONFIG_PATH = resolve(ROOT, '.docalign.yml');
 
 describe('.docalign.yml update and validation', () => {
-  let config: any;
+  let config: Record<string, unknown>;
 
   it('should be valid YAML', () => {
     const content = readFileSync(CONFIG_PATH, 'utf-8');
