@@ -39,14 +39,15 @@ describe('registerLocalTools', () => {
     } as unknown as McpServer;
   });
 
-  it('registers all 4 tools', () => {
+  it('registers all 5 tools', () => {
     registerLocalTools(server, mockPipeline, '/tmp/test-repo');
 
-    expect(server.tool).toHaveBeenCalledTimes(4);
+    expect(server.tool).toHaveBeenCalledTimes(5);
     expect(registeredTools).toContain('check_doc');
     expect(registeredTools).toContain('scan_docs');
     expect(registeredTools).toContain('get_docs');
     expect(registeredTools).toContain('register_claims');
+    expect(registeredTools).toContain('get_drift_report');
   });
 
   it('get_docs has correct description', () => {
