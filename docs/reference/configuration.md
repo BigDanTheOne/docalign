@@ -114,7 +114,7 @@ coverage:
 ```
 <!-- /docalign:skip -->
 
-## Sections
+## Configuration Reference Sections
 
 ### doc_patterns
 

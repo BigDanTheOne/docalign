@@ -2,11 +2,10 @@
  * QA: Full PR comment pipeline integration tests.
  * Exercises: scan results → comment formatting → GitHub API posting (mocked).
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   buildSummaryComment,
   determineOutcome,
-  determineCheckConclusion,
 } from '../../../src/layers/L5-reporter/comment-formatter';
 import type {
   Finding,
