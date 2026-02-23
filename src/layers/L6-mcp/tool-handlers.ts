@@ -17,6 +17,7 @@ import {
   type SemanticClaimFile,
   type SemanticClaimRecord,
 } from '../../cli/semantic-store';
+import { loadReports } from './drift-reports';
 import fs from 'fs';
 import path from 'path';
 
@@ -465,6 +466,86 @@ export function registerLocalTools(
             text: JSON.stringify({
               registered: claims.length,
               claim_ids: allIds,
+            }, null, 2),
+          }],
+        };
+      } catch (err) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
+          }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  // Tool 5: get_drift_report — Full drift report with per-file breakdown
+  s.tool(
+    'get_drift_report',
+    'Get a comprehensive drift report for the repository. Returns health score, per-file claim breakdowns, agent-reported drift, and timing. Use include_verified=false to see only drifted claims, max_files to limit output.',
+    {
+      include_verified: z.boolean().optional().describe('Include verified claims in results (default: true)'),
+      max_files: z.number().int().min(1).max(100).optional().describe('Maximum number of files to return'),
+    },
+    async ({ include_verified, max_files }: { include_verified?: boolean; max_files?: number }) => {
+      try {
+        const includeVerified = include_verified !== false;
+        const result = await pipeline.scanRepo();
+
+        // Load agent-reported drift
+        let agentReportedDrift: unknown[] = [];
+        try {
+          agentReportedDrift = loadReports(repoRoot);
+        } catch {
+          // No reports file — that's fine
+        }
+
+        // Build per-file breakdown
+        let files = result.files.map((f) => {
+          const visible = filterUncertain(f.results);
+          let filteredResults = visible;
+          if (!includeVerified) {
+            filteredResults = visible.filter((r) => r.verdict !== 'verified');
+          }
+          return {
+            file: f.file,
+            claims: f.claims,
+            results: filteredResults,
+          };
+        });
+
+        // Filter out files with no results when not including verified
+        if (!includeVerified) {
+          files = files.filter((f) => f.results.length > 0);
+        }
+
+        // Apply max_files limit
+        if (max_files != null) {
+          files = files.slice(0, max_files);
+        }
+
+        // Compute health score
+        let totalVerified = 0;
+        let totalDrifted = 0;
+        for (const f of result.files) {
+          const visible = filterUncertain(f.results);
+          const counts = countVerdicts(visible);
+          totalVerified += counts.verified;
+          totalDrifted += counts.drifted;
+        }
+        const totalScored = totalVerified + totalDrifted;
+        const healthScore = totalScored > 0 ? Math.round((totalVerified / totalScored) * 100) : 0;
+
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              health_score: healthScore,
+              files,
+              agent_reported_drift: agentReportedDrift,
+              duration_ms: result.durationMs,
             }, null, 2),
           }],
         };
