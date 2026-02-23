@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { parse as parseYaml } from 'yaml';
 
-const ROOT = resolve(__dirname, '..', '..', '..', '..');
+const ROOT = resolve(__dirname, '..', '..', '..');
 const CONFIG_PATH = resolve(ROOT, '.docalign.yml');
 
 describe('.docalign.yml update and validation', () => {
