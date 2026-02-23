@@ -14,6 +14,7 @@ import {
   saveClaimsForFile,
   hashContent,
   generateClaimId,
+  getClaimById,
   type SemanticClaimFile,
   type SemanticClaimRecord,
 } from '../../cli/semantic-store';
@@ -465,6 +466,123 @@ export function registerLocalTools(
             text: JSON.stringify({
               registered: claims.length,
               claim_ids: allIds,
+            }, null, 2),
+          }],
+        };
+      } catch (err) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
+          }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  // Tool 5: get_claim_detail — Retrieve full details of a single claim
+  s.tool(
+    'get_claim_detail',
+    'Retrieve detailed information about a specific documentation claim. Look up by claim_id for direct access, or by file+line to find the nearest claim to a given location.',
+    {
+      claim_id: z.string().optional().describe('Direct lookup by semantic claim ID'),
+      file: z.string().optional().describe('Doc file path (relative to repo root) for nearest-claim lookup'),
+      line: z.number().int().optional().describe('Line number in the doc file for nearest-claim lookup'),
+    },
+    async ({ claim_id, file, line }: { claim_id?: string; file?: string; line?: number }) => {
+      try {
+        // Input validation: need either claim_id or file+line
+        if (!claim_id && !file) {
+          return {
+            content: [{
+              type: 'text' as const,
+              text: JSON.stringify({ error: 'Provide either claim_id or file+line' }),
+            }],
+            isError: true,
+          };
+        }
+
+        // Mode 1: Direct lookup by claim_id
+        if (claim_id) {
+          const claim = getClaimById(repoRoot, claim_id);
+          if (!claim) {
+            return {
+              content: [{
+                type: 'text' as const,
+                text: JSON.stringify({ error: `Claim not found: ${claim_id}` }),
+              }],
+              isError: true,
+            };
+          }
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const ver = claim.last_verification as Record<string, any> | null;
+          const evidenceFiles: string[] =
+            ver?.evidence_files ??
+            (claim.evidence_entities ?? []).map((e) => e.file);
+
+          return {
+            content: [{
+              type: 'text' as const,
+              text: JSON.stringify({
+                claim_id: claim.id,
+                source_file: claim.source_file,
+                line_number: claim.line_number,
+                claim_text: claim.claim_text,
+                claim_type: claim.claim_type,
+                verdict: claim.last_verification?.verdict ?? null,
+                confidence: claim.last_verification?.confidence ?? null,
+                reasoning: claim.last_verification?.reasoning ?? null,
+                evidence_files: evidenceFiles,
+                section_heading: claim.section_heading,
+                keywords: claim.keywords,
+              }, null, 2),
+            }],
+          };
+        }
+
+        // Mode 2: Lookup by file + line (nearest claim)
+        const result = await pipeline.checkFile(file!, true);
+
+        if (result.claims.length === 0) {
+          return {
+            content: [{
+              type: 'text' as const,
+              text: JSON.stringify({ error: `No claims found in file: ${file}` }),
+            }],
+            isError: true,
+          };
+        }
+
+        const targetLine = line ?? 1;
+        // Find nearest claim by line distance (earlier claim wins on tie)
+        let nearest = result.claims[0];
+        let nearestDist = Math.abs(nearest.line_number - targetLine);
+        for (let i = 1; i < result.claims.length; i++) {
+          const dist = Math.abs(result.claims[i].line_number - targetLine);
+          if (dist < nearestDist) {
+            nearest = result.claims[i];
+            nearestDist = dist;
+          }
+        }
+
+        const verification = result.results.find((r) => r.claim_id === nearest.id);
+
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              claim_id: nearest.id,
+              source_file: nearest.source_file,
+              line_number: nearest.line_number,
+              claim_text: nearest.claim_text,
+              claim_type: nearest.claim_type,
+              verdict: verification?.verdict ?? null,
+              confidence: verification?.confidence ?? null,
+              reasoning: verification?.reasoning ?? null,
+              evidence_files: verification?.evidence_files ?? [],
+              keywords: nearest.keywords,
             }, null, 2),
           }],
         };
