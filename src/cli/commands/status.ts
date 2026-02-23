@@ -7,6 +7,73 @@ import path from 'path';
 import { loadDocAlignConfig } from '../../config/loader';
 import { discoverDocFiles } from '../../layers/L1-claim-extractor/syntactic';
 
+/** Status data shape returned by getStatusData() and used by MCP get_status tool. */
+export interface StatusData {
+  git: { detected: boolean };
+  config: { found: boolean; path: string | null; warnings: Array<{ field: string; message: string }> };
+  mcp_configured: boolean;
+  skill_installed: boolean;
+  llm_available: boolean;
+  doc_files: number;
+  drift: null;
+}
+
+/**
+ * Collect status data as a plain object.
+ * Used by the MCP get_status tool and `docalign status --json`.
+ */
+export async function getStatusData(): Promise<StatusData> {
+  const cwd = process.cwd();
+
+  const hasGit = fs.existsSync(path.join(cwd, '.git'));
+
+  const configPath = path.join(cwd, '.docalign.yml');
+  const hasConfig = fs.existsSync(configPath);
+  let configWarnings: Array<{ field: string; message: string }> = [];
+  if (hasConfig) {
+    const { warnings } = loadDocAlignConfig(configPath);
+    configWarnings = warnings;
+  }
+
+  const claudeSettingsPath = path.join(cwd, '.claude', 'settings.local.json');
+  let mcpConfigured = false;
+  if (fs.existsSync(claudeSettingsPath)) {
+    try {
+      const settings = JSON.parse(fs.readFileSync(claudeSettingsPath, 'utf-8'));
+      mcpConfigured = !!settings?.mcpServers?.docalign;
+    } catch {
+      // ignore
+    }
+  }
+
+  const skillPath = path.join(cwd, '.claude', 'skills', 'docalign', 'SKILL.md');
+  const hasSkill = fs.existsSync(skillPath);
+  const hasLLMKey = !!process.env.ANTHROPIC_API_KEY;
+
+  let docFileCount = 0;
+  try {
+    const files = getFileTree(cwd);
+    const docFiles = discoverDocFiles(files);
+    docFileCount = docFiles.length;
+  } catch {
+    // unable to scan
+  }
+
+  return {
+    git: { detected: hasGit },
+    config: {
+      found: hasConfig,
+      path: hasConfig ? configPath : null,
+      warnings: configWarnings,
+    },
+    mcp_configured: mcpConfigured,
+    skill_installed: hasSkill,
+    llm_available: hasLLMKey,
+    doc_files: docFileCount,
+    drift: null,
+  };
+}
+
 export async function runStatus(
   write: (msg: string) => void = console.log,
 ): Promise<number> {
