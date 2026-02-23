@@ -26,7 +26,7 @@ describe('QA contract: configuration.md accuracy', () => {
   });
 
   describe('claim types match schema', () => {
-    const schemaClaimTypes = [
+    const _schemaClaimTypes = [
       ...schema.matchAll(/['"](\w+)['"]\s*(?:,\s*$|\])/gm),
     ]
       .map((m) => m[1])

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * QA: Error path coverage for PR comment posting.
  * Tests: missing token, API errors (403, 422, 5xx), network failures.
