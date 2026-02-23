@@ -4,7 +4,7 @@
  *
  * Tests the get_drift_report tool handler via mocked server.tool() capture.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerLocalTools } from '../../../../src/layers/L6-mcp/tool-handlers';
 import type { CliPipeline } from '../../../../src/cli/local-pipeline';
