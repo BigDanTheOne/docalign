@@ -78,6 +78,91 @@ describe('registerLocalTools', () => {
     expect(registeredTools).not.toContain('list_drift');
   });
 
+  describe('scan_repo handler integration', () => {
+    it('invokes pipeline.scanRepo with force=true and returns structured content', async () => {
+      const spyPipeline: CliPipeline = {
+        ...mockPipeline,
+        scanRepo: vi.fn().mockResolvedValue({
+          files: [{
+            file: 'README.md',
+            claims: [{ id: 'c1', source_file: 'README.md', line_number: 1, claim_text: 'test', claim_type: 'path_reference' }],
+            results: [{ claim_id: 'c1', verdict: 'verified', severity: null, reasoning: 'ok', suggested_fix: null, evidence_files: [] }],
+          }],
+          totalClaims: 1,
+          totalVerified: 1,
+          totalDrifted: 0,
+          totalUncertain: 0,
+          durationMs: 42,
+        }),
+      };
+
+      registerLocalTools(server, spyPipeline, '/tmp/test-repo');
+
+      const toolCall = (server.tool as ReturnType<typeof vi.fn>).mock.calls.find(
+        (c: unknown[]) => c[0] === 'scan_repo',
+      );
+      expect(toolCall).toBeDefined();
+
+      const handler = toolCall![3];
+      const result = await handler({ force: true, exclude: ['CHANGELOG.md'] });
+
+      expect(result.isError).toBeUndefined();
+      expect(result.content).toHaveLength(1);
+      expect(result.content[0].type).toBe('text');
+
+      const data = JSON.parse(result.content[0].text);
+      expect(data.force).toBe(true);
+      expect(data.excluded).toEqual(['CHANGELOG.md']);
+      expect(data.health_score).toBeDefined();
+      expect(spyPipeline.scanRepo).toHaveBeenCalledWith(undefined, ['CHANGELOG.md'], true);
+    });
+
+    it('passes force=false by default when force param is omitted', async () => {
+      const spyPipeline: CliPipeline = {
+        ...mockPipeline,
+        scanRepo: vi.fn().mockResolvedValue({
+          files: [],
+          totalClaims: 0,
+          totalVerified: 0,
+          totalDrifted: 0,
+          totalUncertain: 0,
+          durationMs: 5,
+        }),
+      };
+
+      registerLocalTools(server, spyPipeline, '/tmp/test-repo');
+
+      const toolCall = (server.tool as ReturnType<typeof vi.fn>).mock.calls.find(
+        (c: unknown[]) => c[0] === 'scan_repo',
+      );
+      const handler = toolCall![3];
+      const result = await handler({});
+
+      const data = JSON.parse(result.content[0].text);
+      expect(data.force).toBe(false);
+      expect(data.excluded).toEqual([]);
+      expect(spyPipeline.scanRepo).toHaveBeenCalledWith(undefined, undefined, false);
+    });
+
+    it('returns isError: true when scanRepo rejects', async () => {
+      const errorPipeline: CliPipeline = {
+        ...mockPipeline,
+        scanRepo: vi.fn().mockRejectedValue(new Error('Scan exploded')),
+      };
+
+      registerLocalTools(server, errorPipeline, '/tmp/test-repo');
+
+      const toolCall = (server.tool as ReturnType<typeof vi.fn>).mock.calls.find(
+        (c: unknown[]) => c[0] === 'scan_repo',
+      );
+      const handler = toolCall![3];
+      const result = await handler({ force: true });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Scan exploded');
+    });
+  });
+
   describe('error handling', () => {
     it('handles checkFile rejection gracefully', async () => {
       const errorPipeline: CliPipeline = {
