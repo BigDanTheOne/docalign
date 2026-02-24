@@ -3,6 +3,11 @@
  *
  * Displays health score, verified/drifted counts, and top hotspot files.
  * Supports --json for structured output and getStatusData() for MCP reuse.
+ *
+ * Breaking change (v0.5): The old `docalign status` showed setup diagnostics
+ * (git detection, config check, MCP status, skill check, doc discovery).
+ * That functionality is now available via `docalign init` or `docalign configure`.
+ * This command now shows drift health from a repository scan.
  */
 
 import type { CliPipeline, ScanResult, ScanFileResult } from '../local-pipeline';
@@ -18,28 +23,38 @@ export interface StatusData {
 }
 
 /**
- * Normalize a scan result into the files-based shape.
- * Handles both the standard ScanResult (with `files`) and simplified
- * flat results (with top-level `results` array) for testability.
+ * Shape used by external callers (e.g. QA tests) that pass a flat
+ * `{ claims, results }` object instead of the standard `ScanResult`.
  */
-function normalizeToFiles(
-  raw: Record<string, unknown>,
-): ScanFileResult[] {
-  if (Array.isArray(raw.files) && raw.files.length > 0) {
+interface FlatScanShape {
+  claims?: Array<{ source_file?: string }>;
+  results?: Array<{ source_file?: string; verdict?: string; confidence?: number }>;
+}
+
+/**
+ * Normalize a scan result into the files-based shape.
+ *
+ * The standard ScanResult has a `files` array. External callers (MCP tools,
+ * test mocks) may pass a flat `{ claims, results }` shape grouped by
+ * source_file. This function handles both.
+ */
+function normalizeToFiles(raw: ScanResult | FlatScanShape): ScanFileResult[] {
+  // Standard shape: ScanResult with files array
+  if ('files' in raw && Array.isArray(raw.files) && raw.files.length > 0) {
     return raw.files as ScanFileResult[];
   }
-  // Flat results shape: group by source_file
-  if (Array.isArray(raw.results)) {
+
+  // Flat shape: group results by source_file
+  if ('results' in raw && Array.isArray(raw.results)) {
     const byFile = new Map<string, { claims: unknown[]; results: unknown[] }>();
-    for (const r of raw.results as Array<Record<string, unknown>>) {
-      const file = (r.source_file as string) ?? 'unknown';
+    for (const r of raw.results) {
+      const file = (r as Record<string, unknown>).source_file as string ?? 'unknown';
       if (!byFile.has(file)) byFile.set(file, { claims: [], results: [] });
-      const entry = byFile.get(file)!;
-      entry.results.push(r);
+      byFile.get(file)!.results.push(r);
     }
-    if (Array.isArray(raw.claims)) {
-      for (const c of raw.claims as Array<Record<string, unknown>>) {
-        const file = (c.source_file as string) ?? 'unknown';
+    if ('claims' in raw && Array.isArray(raw.claims)) {
+      for (const c of raw.claims) {
+        const file = (c as Record<string, unknown>).source_file as string ?? 'unknown';
         if (!byFile.has(file)) byFile.set(file, { claims: [], results: [] });
         byFile.get(file)!.claims.push(c);
       }
@@ -50,6 +65,7 @@ function normalizeToFiles(
       results: data.results as VerificationResult[],
     }));
   }
+
   return [];
 }
 
@@ -60,15 +76,17 @@ function normalizeToFiles(
 export async function getStatusData(
   pipeline: CliPipeline,
 ): Promise<StatusData | null> {
-  let raw: ScanResult;
+  let raw: ScanResult | null;
   try {
     raw = await pipeline.scanRepo();
   } catch {
+    // scanRepo failure (network error, missing config, etc.) — report as no data
     return null;
   }
+  // Defensive: scanRepo may resolve to null in degraded scenarios
   if (!raw) return null;
 
-  const files = normalizeToFiles(raw as unknown as Record<string, unknown>);
+  const files = normalizeToFiles(raw as ScanResult | FlatScanShape);
 
   let totalVerified = 0;
   let totalDrifted = 0;
@@ -83,7 +101,8 @@ export async function getStatusData(
   const hotspotList = buildHotspots(filteredFiles);
 
   const totalScored = totalVerified + totalDrifted;
-  const health_score = totalScored > 0 ? Math.round((totalVerified / totalScored) * 100) : 100;
+  // When no claims were scored, report 0 rather than a misleading 100
+  const health_score = totalScored > 0 ? Math.round((totalVerified / totalScored) * 100) : 0;
 
   return {
     health_score,
