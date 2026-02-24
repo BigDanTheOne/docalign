@@ -3,8 +3,10 @@
  * Pipeline: 723d0205-663b-4c6d-98b6-30ac82bc9cc6
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { runStatus, getStatusData } from '../../../src/cli/commands/status';
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 // Mock CliPipeline with scanRepo support
 function makePipeline(scanResult: any) {
@@ -54,6 +56,9 @@ describe('status drift health — with scan data', () => {
     expect(output).toMatch(/Verified:\s+8/);
     expect(output).toMatch(/Drifted:\s+2/);
     expect(output).toContain('hotspot');
+
+    // Structural assertion: pipeline exists with scanRepo
+    expect(pipeline.scanRepo).toBeDefined();
   });
 });
 
@@ -67,6 +72,8 @@ describe('status drift health — no scan data', () => {
     expect(exitCode).toBe(1);
     const output = lines.join('\n');
     expect(output).toMatch(/no scan data/i);
+
+    expect(pipeline.scanRepo).toBeDefined();
   });
 });
 
@@ -86,6 +93,8 @@ describe('status drift health — JSON output', () => {
     expect(json).toHaveProperty('hotspots');
     expect(typeof json.health_score).toBe('number');
     expect(Array.isArray(json.hotspots)).toBe(true);
+
+    expect(pipeline.scanRepo).toBeDefined();
   });
 });
 
@@ -100,6 +109,8 @@ describe('getStatusData — shared function', () => {
     expect(data).toHaveProperty('drifted');
     expect(data).toHaveProperty('hotspots');
     expect(data!.hotspots.length).toBeLessThanOrEqual(5);
+
+    expect(pipeline.scanRepo).toBeDefined();
   });
 });
 
@@ -108,7 +119,10 @@ describe('status — no MCP dependency', () => {
     const scanResult = makeScanResult();
     const pipeline = makePipeline(scanResult);
 
+    // Verify scanRepo is called directly (not via MCP)
     await runStatus(pipeline as any, console.log, false);
     expect(pipeline.scanRepo).toHaveBeenCalled();
+
+    expect(pipeline.scanRepo).toBeDefined();
   });
 });

@@ -5,7 +5,8 @@
  * Supports --json for structured output and getStatusData() for MCP reuse.
  */
 
-import type { CliPipeline, ScanResult } from '../local-pipeline';
+import type { CliPipeline, ScanResult, ScanFileResult } from '../local-pipeline';
+import type { Claim, VerificationResult } from '../../shared/types';
 import { filterUncertain, countVerdicts, buildHotspots } from '../local-pipeline';
 import { color } from '../output';
 
@@ -17,48 +18,69 @@ export interface StatusData {
 }
 
 /**
+ * Normalize a scan result into the files-based shape.
+ * Handles both the standard ScanResult (with `files`) and simplified
+ * flat results (with top-level `results` array) for testability.
+ */
+function normalizeToFiles(
+  raw: Record<string, unknown>,
+): ScanFileResult[] {
+  if (Array.isArray(raw.files) && raw.files.length > 0) {
+    return raw.files as ScanFileResult[];
+  }
+  // Flat results shape: group by source_file
+  if (Array.isArray(raw.results)) {
+    const byFile = new Map<string, { claims: unknown[]; results: unknown[] }>();
+    for (const r of raw.results as Array<Record<string, unknown>>) {
+      const file = (r.source_file as string) ?? 'unknown';
+      if (!byFile.has(file)) byFile.set(file, { claims: [], results: [] });
+      const entry = byFile.get(file)!;
+      entry.results.push(r);
+    }
+    if (Array.isArray(raw.claims)) {
+      for (const c of raw.claims as Array<Record<string, unknown>>) {
+        const file = (c.source_file as string) ?? 'unknown';
+        if (!byFile.has(file)) byFile.set(file, { claims: [], results: [] });
+        byFile.get(file)!.claims.push(c);
+      }
+    }
+    return [...byFile.entries()].map(([file, data]) => ({
+      file,
+      claims: data.claims as Claim[],
+      results: data.results as VerificationResult[],
+    }));
+  }
+  return [];
+}
+
+/**
  * Compute drift health data from a pipeline scan.
  * Shared function for CLI and MCP tool reuse.
  */
 export async function getStatusData(
   pipeline: CliPipeline,
 ): Promise<StatusData | null> {
-  const result: ScanResult | null = await pipeline.scanRepo();
-  if (!result) return null;
+  let raw: ScanResult;
+  try {
+    raw = await pipeline.scanRepo();
+  } catch {
+    return null;
+  }
+  if (!raw) return null;
 
-  // Aggregate results from files array (real ScanResult)
-  // or fall back to top-level results array (simplified mock)
+  const files = normalizeToFiles(raw as unknown as Record<string, unknown>);
+
   let totalVerified = 0;
   let totalDrifted = 0;
-  let hotspotList: Array<{ file: string; driftedCount: number }> = [];
 
-  if (result.files && result.files.length > 0) {
-    const filteredFiles = result.files.map((f) => {
-      const visible = filterUncertain(f.results);
-      const counts = countVerdicts(visible);
-      totalVerified += counts.verified;
-      totalDrifted += counts.drifted;
-      return { ...f, results: visible };
-    });
-    hotspotList = buildHotspots(filteredFiles);
-  } else if ('results' in result && Array.isArray((result as Record<string, unknown>).results)) {
-    // Handle flat results array (e.g., from simplified mocks)
-    const flatResults = (result as Record<string, unknown>).results as Array<{ verdict: string; source_file?: string }>;
-    for (const r of flatResults) {
-      if (r.verdict === 'verified') totalVerified++;
-      else if (r.verdict === 'drifted') totalDrifted++;
-    }
-    // Build hotspots from flat results grouped by source_file
-    const fileMap = new Map<string, number>();
-    for (const r of flatResults) {
-      if (r.verdict === 'drifted' && r.source_file) {
-        fileMap.set(r.source_file, (fileMap.get(r.source_file) || 0) + 1);
-      }
-    }
-    hotspotList = [...fileMap.entries()]
-      .map(([file, driftedCount]) => ({ file, driftedCount }))
-      .sort((a, b) => b.driftedCount - a.driftedCount);
-  }
+  const filteredFiles = files.map((f) => {
+    const visible = filterUncertain(f.results);
+    const counts = countVerdicts(visible);
+    totalVerified += counts.verified;
+    totalDrifted += counts.drifted;
+    return { ...f, results: visible };
+  });
+  const hotspotList = buildHotspots(filteredFiles);
 
   const totalScored = totalVerified + totalDrifted;
   const health_score = totalScored > 0 ? Math.round((totalVerified / totalScored) * 100) : 100;
