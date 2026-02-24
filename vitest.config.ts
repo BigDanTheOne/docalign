@@ -3,10 +3,12 @@ import { resolve } from 'path';
 
 export default defineConfig({
   resolve: {
-    alias: {
-      '@': resolve(__dirname, './src'),
-      '~test': resolve(__dirname, './test'),
-    },
+    alias: [
+      { find: '@', replacement: resolve(__dirname, './src') },
+      { find: '~test', replacement: resolve(__dirname, './test') },
+      // Map test/src → src so relative imports from test/qa/** resolve without a symlink
+      { find: /^(\.\.\/)+src\//, replacement: resolve(__dirname, './src') + '/' },
+    ],
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
   },
   test: {
