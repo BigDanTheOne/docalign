@@ -104,7 +104,7 @@ describe('get_claim_detail MCP tool', () => {
   describe('lookup by claim_id', () => {
     it('returns full claim detail when claim exists', async () => {
       const { getClaimById } = await import('../../../src/cli/semantic-store');
-      vi.mocked(getClaimById).mockReturnValue(MOCK_CLAIM as any);
+      vi.mocked(getClaimById).mockReturnValue(MOCK_CLAIM as unknown as ReturnType<typeof getClaimById>);
 
       const handler = handlers.get('get_claim_detail')!;
       const result = await handler({ claim_id: 'claim-abc123' });
