@@ -3,10 +3,12 @@ import { resolve } from 'path';
 
 export default defineConfig({
   resolve: {
-    alias: {
-      '@': resolve(__dirname, './src'),
-      '~test': resolve(__dirname, './test'),
-    },
+    alias: [
+      { find: '@', replacement: resolve(__dirname, './src') },
+      { find: '~test', replacement: resolve(__dirname, './test') },
+      // QA test at test/qa/search/ uses ../../../../src which resolves one level above repo root
+      { find: /^(\.\.\/){4,}src\//, replacement: resolve(__dirname, 'src') + '/' },
+    ],
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
   },
   test: {
