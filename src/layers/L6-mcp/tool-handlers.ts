@@ -484,10 +484,10 @@ export function registerLocalTools(
   // Tool 5: get_status — Project status (mirrors `docalign status --json`)
   s.tool(
     'get_status',
-    {},
+    'Get current DocAlign project status including git info, config, integrations, and drift summary. Mirrors `docalign status --json` output.',
     async () => {
       try {
-        const data = await getStatusData();
+        const data = await getStatusData(repoRoot);
         return {
           content: [{
             type: 'text' as const,
