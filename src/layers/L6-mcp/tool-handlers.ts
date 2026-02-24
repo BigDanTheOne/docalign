@@ -17,6 +17,7 @@ import {
   type SemanticClaimFile,
   type SemanticClaimRecord,
 } from '../../cli/semantic-store';
+import { getStatusData } from '../../cli/commands/status';
 import fs from 'fs';
 import path from 'path';
 
@@ -466,6 +467,31 @@ export function registerLocalTools(
               registered: claims.length,
               claim_ids: allIds,
             }, null, 2),
+          }],
+        };
+      } catch (err) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
+          }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  // Tool 5: get_status — Project status (mirrors `docalign status --json`)
+  s.tool(
+    'get_status',
+    'Get current DocAlign project status including git info, config, integrations, and drift summary. Mirrors `docalign status --json` output.',
+    async () => {
+      try {
+        const data = await getStatusData(repoRoot);
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify(data, null, 2),
           }],
         };
       } catch (err) {

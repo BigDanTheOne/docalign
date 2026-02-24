@@ -2,7 +2,7 @@
  * QA: Comment deduplication with pagination.
  * Tests the findExistingComment logic from post-comment.mjs.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 const COMMENT_MARKER = '<!-- docalign-report -->';
 const SUMMARY_MARKER_PREFIX = '<!-- docalign-summary scan-run-id=';
