@@ -44,6 +44,7 @@ describe('MCP command — tool registration', () => {
   beforeEach(() => {
     mockServer = createMockMcpServer();
     mockPipeline = createMockPipeline();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     registerLocalTools(mockServer as any, mockPipeline, '/tmp/fake-repo');
   });
 
