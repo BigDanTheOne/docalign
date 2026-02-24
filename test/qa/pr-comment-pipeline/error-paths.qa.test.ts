@@ -44,7 +44,7 @@ describe('QA: Error paths', () => {
     it('throws when token is undefined', async () => {
       const mockFetch = vi.fn();
       await expect(
-        githubApi(mockFetch as any, undefined, 'GET', '/repos/o/r/issues/1/comments'),
+        githubApi(mockFetch as unknown as typeof globalThis.fetch, undefined, 'GET', '/repos/o/r/issues/1/comments'),
       ).rejects.toThrow('No GitHub token available');
       expect(mockFetch).not.toHaveBeenCalled();
     });
@@ -52,7 +52,7 @@ describe('QA: Error paths', () => {
     it('throws when token is empty string', async () => {
       const mockFetch = vi.fn();
       await expect(
-        githubApi(mockFetch as any, '', 'GET', '/repos/o/r/issues/1/comments'),
+        githubApi(mockFetch as unknown as typeof globalThis.fetch, '', 'GET', '/repos/o/r/issues/1/comments'),
       ).rejects.toThrow('No GitHub token available');
     });
   });
@@ -63,7 +63,7 @@ describe('QA: Error paths', () => {
         new Response(JSON.stringify({ message: 'Resource not accessible by integration' }), { status: 403 }),
       );
       await expect(
-        githubApi(mockFetch as any, 'token-123', 'POST', '/repos/o/r/issues/1/comments', { body: 'test' }),
+        githubApi(mockFetch as unknown as typeof globalThis.fetch, 'token-123', 'POST', '/repos/o/r/issues/1/comments', { body: 'test' }),
       ).rejects.toThrow('403');
     });
   });
@@ -74,7 +74,7 @@ describe('QA: Error paths', () => {
         new Response(JSON.stringify({ message: 'Validation Failed', errors: [{ code: 'too_long' }] }), { status: 422 }),
       );
       await expect(
-        githubApi(mockFetch as any, 'token-123', 'PATCH', '/repos/o/r/issues/comments/42', { body: 'x'.repeat(70000) }),
+        githubApi(mockFetch as unknown as typeof globalThis.fetch, 'token-123', 'PATCH', '/repos/o/r/issues/comments/42', { body: 'x'.repeat(70000) }),
       ).rejects.toThrow('422');
     });
   });
@@ -85,7 +85,7 @@ describe('QA: Error paths', () => {
         new Response('Internal Server Error', { status: 500 }),
       );
       await expect(
-        githubApi(mockFetch as any, 'token-123', 'GET', '/repos/o/r/issues/1/comments'),
+        githubApi(mockFetch as unknown as typeof globalThis.fetch, 'token-123', 'GET', '/repos/o/r/issues/1/comments'),
       ).rejects.toThrow('500');
     });
 
@@ -94,7 +94,7 @@ describe('QA: Error paths', () => {
         new Response('Bad Gateway', { status: 502 }),
       );
       await expect(
-        githubApi(mockFetch as any, 'token-123', 'GET', '/repos/o/r/issues/1/comments'),
+        githubApi(mockFetch as unknown as typeof globalThis.fetch, 'token-123', 'GET', '/repos/o/r/issues/1/comments'),
       ).rejects.toThrow('502');
     });
 
@@ -103,7 +103,7 @@ describe('QA: Error paths', () => {
         new Response('Service Unavailable', { status: 503 }),
       );
       await expect(
-        githubApi(mockFetch as any, 'token-123', 'POST', '/repos/o/r/issues/1/comments', { body: 'test' }),
+        githubApi(mockFetch as unknown as typeof globalThis.fetch, 'token-123', 'POST', '/repos/o/r/issues/1/comments', { body: 'test' }),
       ).rejects.toThrow('503');
     });
   });
@@ -112,7 +112,7 @@ describe('QA: Error paths', () => {
     it('propagates fetch TypeError for network errors', async () => {
       const mockFetch = vi.fn().mockRejectedValue(new TypeError('fetch failed'));
       await expect(
-        githubApi(mockFetch as any, 'token-123', 'GET', '/repos/o/r/issues/1/comments'),
+        githubApi(mockFetch as unknown as typeof globalThis.fetch, 'token-123', 'GET', '/repos/o/r/issues/1/comments'),
       ).rejects.toThrow('fetch failed');
     });
   });
@@ -125,9 +125,9 @@ describe('QA: Error paths', () => {
         const mockFetch = vi.fn().mockResolvedValue(
           new Response('Forbidden', { status: 403 }),
         );
-        await githubApi(mockFetch as any, 'token-123', 'POST', '/repos/o/r/issues/1/comments', { body: 'test' });
-      } catch (err: any) {
-        errorMessage = err.message;
+        await githubApi(mockFetch as unknown as typeof globalThis.fetch, 'token-123', 'POST', '/repos/o/r/issues/1/comments', { body: 'test' });
+      } catch (err: unknown) {
+        errorMessage = (err as Error).message;
         // In post-comment.mjs this is console.error + no process.exit(1)
       }
       expect(errorMessage).toContain('403');
