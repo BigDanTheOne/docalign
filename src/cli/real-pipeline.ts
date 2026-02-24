@@ -234,7 +234,7 @@ export class LocalPipeline implements CliPipeline {
     const startTime = Date.now();
     await this.ensureInitialized();
 
-    const fileTree = await this.index.getFileTree('local');
+    const fileTree = await this.index.getFileTree?.('local') ?? [];
     let docFiles = discoverDocFiles(fileTree);
 
     // Apply user-specified and config-based exclusions
@@ -910,7 +910,7 @@ If an assertion is correct and the code genuinely doesn't match (real drift), re
     if (results.length === 0) return;
 
     const inlineTags = parseTags(content);
-    if (inlineTags.length === 0) return;
+    if (!inlineTags?.length) return;
 
     const resultByClaimId = new Map(results.map((r) => [r.claim_id, r]));
 
@@ -938,7 +938,7 @@ If an assertion is correct and the code genuinely doesn't match (real drift), re
    */
   private loadSemanticClaimsTagFirst(docFile: string, content: string): Claim[] {
     const inlineTags = parseTags(content);
-    if (inlineTags.length === 0) return [];
+    if (!inlineTags?.length) return [];
 
     const data = this.getCachedSemanticStore(docFile);
     if (!data) return [];
