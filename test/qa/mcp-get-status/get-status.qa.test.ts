@@ -8,7 +8,7 @@
  * 3. Graceful degradation: drift is null when unavailable
  * 4. Output parity: MCP result matches CLI --json shape
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // --- AC1: getStatusData() extraction ---
 
@@ -39,7 +39,6 @@ describe('getStatusData() extraction', () => {
 
 describe('MCP get_status tool registration', () => {
   it('should register a get_status tool with no required params', async () => {
-    const { McpServer } = await import('@modelcontextprotocol/sdk/server/mcp.js');
     const { registerLocalTools } = await import('../../../src/layers/L6-mcp/tool-handlers');
 
     const registeredTools = new Map<string, { schema: unknown; handler: unknown }>();
@@ -49,35 +48,34 @@ describe('MCP get_status tool registration', () => {
         registeredTools.set(name, { schema, handler });
       }),
       resource: vi.fn(),
-    } as unknown as InstanceType<typeof McpServer>;
+    } as unknown as Record<string, unknown>;
 
     // Provide minimal pipeline mock
-    const mockPipeline = {} as any;
-    registerLocalTools(mockServer, mockPipeline, '/tmp/fake-repo');
+    const mockPipeline = {} as Record<string, unknown>;
+    registerLocalTools(mockServer as never, mockPipeline as never, '/tmp/fake-repo');
 
     expect(registeredTools.has('get_status')).toBe(true);
     const tool = registeredTools.get('get_status')!;
     // Schema should have no required fields (empty object or no required array)
     const schema = tool.schema as Record<string, unknown>;
     if (schema && typeof schema === 'object') {
-      const required = (schema as any).required;
+      const required = (schema as Record<string, unknown>).required;
       expect(!required || (Array.isArray(required) && required.length === 0)).toBe(true);
     }
   });
 
   it('should return getStatusData() result as JSON content', async () => {
-    const { McpServer } = await import('@modelcontextprotocol/sdk/server/mcp.js');
     const { registerLocalTools } = await import('../../../src/layers/L6-mcp/tool-handlers');
 
-    const handlers = new Map<string, Function>();
+    const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
     const mockServer = {
-      tool: vi.fn((name: string, _schema: unknown, handler: Function) => {
+      tool: vi.fn((name: string, _schema: unknown, handler: (...args: unknown[]) => Promise<unknown>) => {
         handlers.set(name, handler);
       }),
       resource: vi.fn(),
-    } as unknown as InstanceType<typeof McpServer>;
+    } as unknown as Record<string, unknown>;
 
-    registerLocalTools(mockServer, {} as any, '/tmp/fake-repo');
+    registerLocalTools(mockServer as never, {} as never, '/tmp/fake-repo');
 
     const handler = handlers.get('get_status')!;
     const result = await handler({});
