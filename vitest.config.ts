@@ -6,7 +6,10 @@ export default defineConfig({
     alias: [
       { find: '@', replacement: resolve(__dirname, './src') },
       { find: '~test', replacement: resolve(__dirname, './test') },
-      // QA test at test/qa/search/ uses ../../../../src which resolves one level above repo root
+      // QA tests under test/qa/<topic>/ use ../../../../src/ (4+ levels deep).
+      // From depth 4, relative ../../../.. overshoots the repo root.
+      // This alias rewrites those deep relative imports to the absolute src/ path.
+      // Required because QA test files are auto-generated and cannot be modified.
       { find: /^(\.\.\/){4,}src\//, replacement: resolve(__dirname, 'src') + '/' },
     ],
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
