@@ -59,8 +59,9 @@ export interface CliPipeline {
    * Scan all doc files in the repository.
    * @param onProgress - called with (current, total) during verification
    * @param exclude - file names/patterns to exclude from scanning
+   * @param force - bypass cached results and force a fresh scan
    */
-  scanRepo(onProgress?: (current: number, total: number) => void, exclude?: string[]): Promise<ScanResult>;
+  scanRepo(onProgress?: (current: number, total: number) => void, exclude?: string[], force?: boolean): Promise<ScanResult>;
 
 }
 

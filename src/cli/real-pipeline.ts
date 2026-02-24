@@ -230,8 +230,11 @@ export class LocalPipeline implements CliPipeline {
     return listHeadings(content).map((h) => `${'#'.repeat(h.level)} ${h.text}`);
   }
 
-  async scanRepo(onProgress?: (current: number, total: number) => void, exclude?: string[]): Promise<ScanResult> {
+  async scanRepo(onProgress?: (current: number, total: number) => void, exclude?: string[], force?: boolean): Promise<ScanResult> {
     const startTime = Date.now();
+    if (force) {
+      this.semanticStoreCache.clear();
+    }
     await this.ensureInitialized();
 
     const fileTree = await this.index.getFileTree('local');

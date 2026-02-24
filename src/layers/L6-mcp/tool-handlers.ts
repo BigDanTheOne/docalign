@@ -233,6 +233,37 @@ export function registerLocalTools(
     },
   );
 
+  // Tool 2b: scan_repo — Force a fresh full-repo scan with exclusions
+  s.tool(
+    'scan_repo',
+    'Trigger a fresh repo-wide documentation scan with optional exclusions.',
+    {
+      force: z.boolean().optional().describe('Force fresh scan bypassing cache'),
+      exclude: z.array(z.string()).optional().describe('File paths or globs to exclude'),
+    },
+    async ({ force, exclude }: { force?: boolean; exclude?: string[] }) => {
+      try {
+        const useForce = force ?? false;
+        const scanResult = await pipeline.scanRepo(undefined, exclude, useForce);
+        const resp = formatHealthResponse(scanResult);
+        if (!resp.content.length) {
+          return {
+            content: [{ type: 'text' as const, text: JSON.stringify({ health_score: 100, total_scored: 0, verified: 0, drifted: 0, doc_files_scanned: 0, duration_ms: 0, hotspots: [], force: useForce, excluded: exclude ?? [] }, null, 2) }],
+          };
+        }
+        const data = JSON.parse(resp.content[0].text);
+        data.force = useForce;
+        data.excluded = exclude ?? [];
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (err) {
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: err instanceof Error ? err.message : String(err) }) }],
+          isError: true,
+        };
+      }
+    },
+  );
+
   // Tool 3: get_docs — Search documentation or reverse-lookup by code file
   const searchIndex = new DocSearchIndex();
   let searchIndexBuilt = false;
