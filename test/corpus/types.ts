@@ -70,3 +70,34 @@ export interface SidecarClaim {
 export interface SidecarFile {
   claims: SidecarClaim[];
 }
+
+// === LLM Fixture types (Tracks 3 & 4) ===
+
+export interface LlmFixtureEntry {
+  file_path: string;
+  response: {
+    skip_regions: Array<{
+      start_line: number;
+      end_line: number;
+      reason: string;
+      description?: string;
+    }>;
+    claims: Array<{
+      claim_text: string;
+      claim_type: 'behavior' | 'architecture' | 'config';
+      keywords: string[];
+      line_number: number;
+      evidence_entities?: Array<{ symbol: string; file: string }>;
+      evidence_assertions?: Array<{
+        pattern: string;
+        scope: string;
+        expect: 'exists' | 'absent';
+        description: string;
+      }>;
+    }>;
+  };
+}
+
+export interface LlmFixtureFile {
+  entries: LlmFixtureEntry[];
+}

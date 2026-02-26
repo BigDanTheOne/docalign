@@ -1,0 +1,147 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Track 3 — Extract snapshot: synthetic-node > extract produces expected tags for each fixture entry > extract-tags:README.md 1`] = `
+{
+  "claims": [
+    {
+      "claim_text": "JWT authentication, rate limiting, and structured logging included",
+      "claim_type": "architecture",
+      "evidence_assertions": [
+        {
+          "description": "Auth middleware should reference JWT",
+          "expect": "exists",
+          "pattern": "jwt",
+          "scope": "src/middleware/auth.ts",
+        },
+      ],
+      "evidence_entities": [
+        {
+          "file": "src/middleware/auth.ts",
+          "symbol": "auth",
+        },
+        {
+          "file": "src/middleware/rateLimit.ts",
+          "symbol": "rateLimit",
+        },
+        {
+          "file": "src/middleware/logger.ts",
+          "symbol": "logger",
+        },
+      ],
+      "keywords": [
+        "JWT",
+        "authentication",
+        "rate limiting",
+        "logging",
+      ],
+      "line_number": 13,
+    },
+    {
+      "claim_text": "Server runs on port 3000 by default",
+      "claim_type": "config",
+      "evidence_assertions": [
+        {
+          "description": "Config should define default port as 3000",
+          "expect": "exists",
+          "pattern": "3000",
+          "scope": "src/config/index.ts",
+        },
+      ],
+      "evidence_entities": [
+        {
+          "file": "src/config/index.ts",
+          "symbol": "PORT",
+        },
+      ],
+      "keywords": [
+        "port",
+        "3000",
+        "default",
+      ],
+      "line_number": 15,
+    },
+  ],
+  "skipRegions": [
+    {
+      "description": "Badge image URLs are decorative, not verifiable code claims",
+      "end_line": 3,
+      "reason": "badge_urls",
+      "start_line": 1,
+    },
+    {
+      "description": "Node.js version prerequisite is an external requirement, not a codebase claim",
+      "end_line": 9,
+      "reason": "prerequisite_version",
+      "start_line": 9,
+    },
+    {
+      "description": "Express 3.x vs 4.x migration note is historical context, not a codebase claim",
+      "end_line": 30,
+      "reason": "comparison_content",
+      "start_line": 30,
+    },
+  ],
+}
+`;
+
+exports[`Track 3 — Extract snapshot: synthetic-node > extract produces expected tags for each fixture entry > extract-tags:docs/api/users.md 1`] = `
+{
+  "claims": [
+    {
+      "claim_text": "POST /api/v1/users returns 201 Created with user object",
+      "claim_type": "behavior",
+      "evidence_assertions": [
+        {
+          "description": "Users route should return 201 status for POST",
+          "expect": "exists",
+          "pattern": "201",
+          "scope": "src/routes/users.ts",
+        },
+      ],
+      "evidence_entities": [
+        {
+          "file": "src/services/UserService.ts",
+          "symbol": "createUser",
+        },
+        {
+          "file": "src/routes/users.ts",
+          "symbol": "users",
+        },
+      ],
+      "keywords": [
+        "POST",
+        "users",
+        "201",
+        "Created",
+      ],
+      "line_number": 59,
+    },
+  ],
+  "skipRegions": [
+    {
+      "description": "Example JSON response body is illustrative, not a verifiable claim",
+      "end_line": 32,
+      "reason": "example_response",
+      "start_line": 22,
+    },
+    {
+      "description": "Example single-user JSON response is illustrative",
+      "end_line": 51,
+      "reason": "example_response",
+      "start_line": 48,
+    },
+    {
+      "description": "Example curl command is instructional, not a codebase claim",
+      "end_line": 74,
+      "reason": "example_curl",
+      "start_line": 69,
+    },
+    {
+      "description": "Example POST response body is illustrative",
+      "end_line": 81,
+      "reason": "example_response",
+      "start_line": 79,
+    },
+  ],
+}
+`;

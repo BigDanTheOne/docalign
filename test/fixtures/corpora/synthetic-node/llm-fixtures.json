@@ -1,0 +1,118 @@
+{
+  "entries": [
+    {
+      "file_path": "README.md",
+      "response": {
+        "skip_regions": [
+          {
+            "start_line": 1,
+            "end_line": 3,
+            "reason": "badge_urls",
+            "description": "Badge image URLs are decorative, not verifiable code claims"
+          },
+          {
+            "start_line": 9,
+            "end_line": 9,
+            "reason": "prerequisite_version",
+            "description": "Node.js version prerequisite is an external requirement, not a codebase claim"
+          },
+          {
+            "start_line": 30,
+            "end_line": 30,
+            "reason": "comparison_content",
+            "description": "Express 3.x vs 4.x migration note is historical context, not a codebase claim"
+          }
+        ],
+        "claims": [
+          {
+            "claim_text": "JWT authentication, rate limiting, and structured logging included",
+            "claim_type": "architecture",
+            "keywords": ["JWT", "authentication", "rate limiting", "logging"],
+            "line_number": 13,
+            "evidence_entities": [
+              { "symbol": "auth", "file": "src/middleware/auth.ts" },
+              { "symbol": "rateLimit", "file": "src/middleware/rateLimit.ts" },
+              { "symbol": "logger", "file": "src/middleware/logger.ts" }
+            ],
+            "evidence_assertions": [
+              {
+                "pattern": "jwt",
+                "scope": "src/middleware/auth.ts",
+                "expect": "exists",
+                "description": "Auth middleware should reference JWT"
+              }
+            ]
+          },
+          {
+            "claim_text": "Server runs on port 3000 by default",
+            "claim_type": "config",
+            "keywords": ["port", "3000", "default"],
+            "line_number": 15,
+            "evidence_entities": [
+              { "symbol": "PORT", "file": "src/config/index.ts" }
+            ],
+            "evidence_assertions": [
+              {
+                "pattern": "3000",
+                "scope": "src/config/index.ts",
+                "expect": "exists",
+                "description": "Config should define default port as 3000"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "file_path": "docs/api/users.md",
+      "response": {
+        "skip_regions": [
+          {
+            "start_line": 22,
+            "end_line": 32,
+            "reason": "example_response",
+            "description": "Example JSON response body is illustrative, not a verifiable claim"
+          },
+          {
+            "start_line": 48,
+            "end_line": 51,
+            "reason": "example_response",
+            "description": "Example single-user JSON response is illustrative"
+          },
+          {
+            "start_line": 69,
+            "end_line": 74,
+            "reason": "example_curl",
+            "description": "Example curl command is instructional, not a codebase claim"
+          },
+          {
+            "start_line": 79,
+            "end_line": 81,
+            "reason": "example_response",
+            "description": "Example POST response body is illustrative"
+          }
+        ],
+        "claims": [
+          {
+            "claim_text": "POST /api/v1/users returns 201 Created with user object",
+            "claim_type": "behavior",
+            "keywords": ["POST", "users", "201", "Created"],
+            "line_number": 59,
+            "evidence_entities": [
+              { "symbol": "createUser", "file": "src/services/UserService.ts" },
+              { "symbol": "users", "file": "src/routes/users.ts" }
+            ],
+            "evidence_assertions": [
+              {
+                "pattern": "201",
+                "scope": "src/routes/users.ts",
+                "expect": "exists",
+                "description": "Users route should return 201 status for POST"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
