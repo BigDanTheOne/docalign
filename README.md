@@ -63,18 +63,23 @@ Semantic claims are extracted once per document, assigned stable IDs, cached alo
 
 See [Checks Reference](docs/reference/checks.md) for all claim types.
 
-## Setup
-
-Run this from the root of your project:
+## Quick Start
 
 ```bash
-cd your_project_root
-curl -fsSL https://raw.githubusercontent.com/BigDanTheOne/docalign/main/scripts/install.sh | bash
+npm install -g docalign
 ```
 
-The script checks prerequisites (Node 18+, git), installs DocAlign globally, runs `docalign init` to configure the MCP server and skills, then launches Claude Code. Claude walks you through selecting which docs to monitor and runs the initial extraction — one sub-agent per document, in parallel.
+```bash
+docalign init
+```
 
-After setup, Claude automatically checks documentation after code changes and answers "are my docs accurate?" directly. No further configuration required.
+```bash
+docalign scan
+```
+
+```
+✓ 3 docs scanned — 2 verified, 1 drifted
+```
 
 ## Claude Code Skill
 
