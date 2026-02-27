@@ -118,6 +118,29 @@ npx docalign check README.md   # Check a single file
 
 See [CLI Reference](docs/reference/cli.md) for all commands and flags.
 
+## CI/CD
+
+Add DocAlign to your GitHub Actions workflow to verify docs on every pull request. Use `--format=github-pr` for inline PR annotations.
+
+```yaml
+name: DocAlign
+on: [pull_request]
+jobs:
+  docalign:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: BigDanTheOne/docalign-action@v1
+        with:
+          docalign_token: ${{ secrets.DOCALIGN_TOKEN }}
+          docalign_server_url: ${{ vars.DOCALIGN_SERVER_URL }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          scan_run_id: ${{ github.run_id }}
+          repo_id: ${{ github.repository }}
+```
+
+Set `ANTHROPIC_API_KEY` as a repository secret in your GitHub repo settings.
+
 ## Configuration
 
 Works with zero configuration. To customize, create `.docalign.yml`:
