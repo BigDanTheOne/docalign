@@ -146,6 +146,8 @@ See [Configuration Reference](docs/reference/configuration.md) for all options.
 
 **Explanation:** [How it works](docs/explanation/how-it-works.md) · [Verification tiers](docs/explanation/verification-tiers.md)
 
+**Examples:** [Basic scan](examples/basic-scan/) · [GitHub Action](examples/github-action/) · [MCP setup](examples/mcp-setup/)
+
 **Contributing:** [Architecture](docs/contributing/architecture.md) · [Design patterns](docs/contributing/design-patterns.md) · [Adding a check](docs/contributing/adding-a-check.md) · [Testing](docs/contributing/testing.md)
 
 [Troubleshooting](docs/troubleshooting.md)
