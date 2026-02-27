@@ -1,0 +1,20 @@
+name: DocAlign PR Check
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  docalign:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: BigDanTheOne/docalign/agent-action@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
