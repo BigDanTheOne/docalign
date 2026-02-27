@@ -17,10 +17,25 @@ import { startMcpServer } from './commands/mcp';
 import { runExtract } from './commands/extract';
 import { resolveRepoRoot } from '../lib/repo-root-resolver';
 import { loadDocAlignConfig } from '../config/loader';
+import { getGlobalHelp, getCommandHelp } from './help';
 
 async function main(): Promise<void> {
   // Detect command before creating pipeline (some commands don't need one)
   const rawCommand = process.argv[2] ?? '';
+  const hasHelp = process.argv.includes('--help') || process.argv.includes('-h');
+
+  // Handle --help before any pipeline creation
+  if (hasHelp) {
+    if (rawCommand && rawCommand !== '--help' && rawCommand !== '-h') {
+      const cmdHelp = getCommandHelp(rawCommand);
+      if (cmdHelp) {
+        console.log(cmdHelp);
+        process.exit(0);
+      }
+    }
+    console.log(getGlobalHelp());
+    process.exit(0);
+  }
 
   if (rawCommand === 'init') {
     const exitCode = await runInit();

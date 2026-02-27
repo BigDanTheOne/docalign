@@ -17,6 +17,7 @@ import { runStatus } from './commands/status';
 import { runConfigure } from './commands/configure';
 import { runViz } from './commands/viz';
 import type { CliPipeline } from './local-pipeline';
+import { getGlobalHelp, getCommandHelp } from './help';
 
 export interface CliArgs {
   command: string;
@@ -75,6 +76,19 @@ export async function run(
   const { command, args, flags, options } = parseArgs(argv);
   const exclude = options.exclude ? options.exclude.split(',').map((s) => s.trim()) : [];
 
+  // Handle --help flag for any command
+  if (flags.help || flags.h) {
+    if (command) {
+      const cmdHelp = getCommandHelp(command);
+      if (cmdHelp) {
+        write(cmdHelp);
+        return 0;
+      }
+    }
+    write(getGlobalHelp());
+    return 0;
+  }
+
   switch (command) {
     case 'init':
       return runInit(write);
@@ -121,37 +135,7 @@ export async function run(
 
     case 'help':
     case '':
-      write('Usage: docalign <command> [options]');
-      write('');
-      write('Commands:');
-      write('  init            Set up DocAlign for Claude Code (MCP + skill)');
-      write('  check <file>    Check a single documentation file');
-      write('  scan            Scan entire repository');
-      write('  search <query>  Search documentation by topic');
-      write('  extract [file]  Extract semantic claims using Claude CLI');
-      write('  status          Show configuration and integration status');
-      write('  configure       Create or update .docalign.yml');
-      write('  viz             Generate interactive knowledge graph');
-      write('  mcp             Start MCP server (used by Claude Code)');
-      write('');
-      write('Options:');
-      write('  --section=HEADING       Check a specific section (check command)');
-      write('  --deep                  Include unchecked sections in output (check command)');
-      write('  --json                  Output results as JSON');
-      write('  --code-file=PATH        Reverse lookup: find docs referencing a code file (search command)');
-      write('  --verified-only         Only return verified sections (search command)');
-      write('  --exclude=FILE[,FILE]   Exclude files from scan (comma-separated)');
-      write('  --format=github-pr      Output scan results as GitHub PR comment markdown');
-      write('  --dry-run               Show what would be extracted (extract command)');
-      write('  --force                 Re-extract all sections (extract command)');
-      write('  --min-severity=LEVEL    Set minimum severity (configure command)');
-      write('  --reset                 Reset config to defaults (configure command)');
-      write('  --output=PATH           Output path for viz HTML (default: .docalign/viz.html)');
-      write('  --no-open               Do not auto-open viz in browser');
-      write('  --help                  Show this help message');
-      write('');
-      write('Environment:');
-      write('  ANTHROPIC_API_KEY       Enable LLM verification (Tier 3)');
+      write(getGlobalHelp());
       return 0;
 
     default:
