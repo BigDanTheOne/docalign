@@ -77,7 +77,7 @@ docalign check README.md --verbose
 <!-- docalign:semantic id="sem-b83c64788ff816a8" claim="--verbose flag shows all claims, including verified ones. Without it, only drifted claims appear." -->
 The `--verbose` flag shows all claims, including verified ones. Without it, only drifted claims appear.
 
-## Understanding Results
+## Understanding Output
 
 Each finding has three parts:
 
@@ -125,6 +125,16 @@ docalign configure
 ```
 
 Or create `.docalign.yml` manually. See [Custom Configuration](guides/custom-configuration.md).
+
+## Troubleshooting
+
+**No claims found**: Make sure your docs contain verifiable statements like file paths, command names, dependency versions, or environment variables. Plain prose without concrete references won't produce claims.
+
+**Scan is slow on large repos**: Use `.docalign.yml` to limit which directories are scanned, or pass specific files to `docalign check`.
+
+**Health score seems wrong**: Uncertain claims are excluded from the score. Run with `--verbose` to see which claims were marked uncertain and why.
+
+**MCP server not connecting**: Confirm `docalign init` completed and your MCP client config points to the correct binary path. See [MCP Integration](guides/mcp-integration.md) for setup details.
 
 ## Next Steps
 
