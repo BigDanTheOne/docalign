@@ -150,6 +150,19 @@ See [Configuration Reference](docs/reference/configuration.md) for all options.
 
 [Troubleshooting](docs/troubleshooting.md)
 
+## How DocAlign Compares
+
+| Feature | DocAlign | vale | markdown-link-check | remark-lint | doctoc |
+|---------|----------|------|---------------------|-------------|--------|
+| Prose style linting | ❌ | ✅ | ❌ | ✅ | ❌ |
+| Dead link detection | ✅ | ❌ | ✅ | ❌ | ❌ |
+| File path verification | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Dependency version check | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Semantic claim extraction | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Behavioral drift detection | ✅ | ❌ | ❌ | ❌ | ❌ |
+| MCP server for AI agents | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Auto-fix suggestions | ✅ | ❌ | ❌ | ❌ | ❌ |
+
 ## License
 
 MIT
